@@ -1,0 +1,15 @@
+[package]
+name = "langualinker"
+version = "0.1.0"
+description = "LanguaLinker Tauri shell"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[build-dependencies]
+tauri-build = "2.2.0"
+
+[dependencies]
+langualinker-contracts = { path = "../crates/contracts" }
+serde.workspace = true
+tauri = "2.6.2"

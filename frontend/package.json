@@ -1,0 +1,23 @@
+{
+  "name": "langua-linker-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.6.0",
+    "svelte": "5.57.2"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "5.0.3",
+    "@tauri-apps/cli": "2.6.2",
+    "svelte-check": "4.1.5",
+    "typescript": "5.8.3",
+    "vite": "6.4.4"
+  }
+}

@@ -1,0 +1,1 @@
+//! Pure domain layer. Flashcard behavior is introduced after GUI acceptance.

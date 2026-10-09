@@ -1,0 +1,1 @@
+//! Infrastructure adapters belong here after contract and GUI acceptance.
