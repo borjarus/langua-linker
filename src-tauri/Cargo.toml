@@ -7,9 +7,9 @@ rust-version.workspace = true
 license.workspace = true
 
 [build-dependencies]
-tauri-build = "2.2.0"
+tauri-build = { version = "2.2.0", features = [] }
 
 [dependencies]
 langualinker-contracts = { path = "../crates/contracts" }
 serde.workspace = true
-tauri = "2.6.2"
+tauri = { version = "2.6.2", features = [] }
