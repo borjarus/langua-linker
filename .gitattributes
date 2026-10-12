@@ -1,0 +1,3 @@
+# Checksummed reference assets (scripts/fixtures.lock.json): store and check out byte-for-byte.
+content/decks/** -text
+tests/fixtures/** -text

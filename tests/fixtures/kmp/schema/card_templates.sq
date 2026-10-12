@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS card_templates (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    deck_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    front_template TEXT NOT NULL DEFAULT '',
+    back_template TEXT NOT NULL DEFAULT ''
+);
+
+getTemplatesByDeckId:
+SELECT * FROM card_templates WHERE deck_id = :deckId;
+
+insertTemplate:
+INSERT INTO card_templates (deck_id, name, front_template, back_template)
+VALUES (:deckId, :name, :frontTemplate, :backTemplate);
+
+updateTemplate:
+UPDATE card_templates SET name = :name, front_template = :frontTemplate, back_template = :backTemplate WHERE id = :id;
+
+deleteTemplate:
+DELETE FROM card_templates WHERE id = :id;
+
+deleteTemplatesByDeckId:
+DELETE FROM card_templates WHERE deck_id = :deckId;

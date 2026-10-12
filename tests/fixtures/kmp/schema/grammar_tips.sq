@@ -1,0 +1,30 @@
+CREATE TABLE IF NOT EXISTS grammar_tips (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    card_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    source TEXT NOT NULL DEFAULT 'Bundled',
+    created_at INTEGER NOT NULL
+);
+
+getTipsByCardId:
+SELECT * FROM grammar_tips WHERE card_id = :cardId ORDER BY sort_order;
+
+insertTip:
+INSERT INTO grammar_tips (card_id, content, sort_order, source, created_at)
+VALUES (:cardId, :content, :sortOrder, :source, :createdAt);
+
+updateTipOrder:
+UPDATE grammar_tips SET sort_order = :sortOrder WHERE id = :id;
+
+updateTipContent:
+UPDATE grammar_tips SET content = :content WHERE id = :id;
+
+deleteTip:
+DELETE FROM grammar_tips WHERE id = :id;
+
+deleteTipsByCardId:
+DELETE FROM grammar_tips WHERE card_id = :cardId;
+
+lastInsertRowId:
+SELECT last_insert_rowid();
