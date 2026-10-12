@@ -19,6 +19,7 @@ use tracing_subscriber::fmt::format::Writer;
 
 /// Field names whose values are safe to log (identifiers, codes, counts, timings).
 pub const ALLOWED_FIELDS: &[&str] = &[
+    "app_variant",
     "app_version",
     "code",
     "command",

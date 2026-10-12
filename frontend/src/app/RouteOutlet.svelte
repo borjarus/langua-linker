@@ -15,13 +15,14 @@
   import StudyScreen from '../features/study/StudyScreen.svelte'
   import SummaryScreen from '../features/summary/SummaryScreen.svelte'
   import { useServices } from './context'
+  import { screenKey } from './routes'
 
   const { router } = useServices()
   /** Statically false in beta/release builds, so the gallery chunk is not emitted. */
   const GALLERY_ENABLED = import.meta.env.VITE_APP_PROFILE !== 'release' && import.meta.env.VITE_APP_PROFILE !== 'beta'
   const route = $derived(router.current)
-  // Each navigation remounts the screen, so per-screen state and subscriptions start clean.
-  const routeKey = $derived(`${route.name}:${JSON.stringify(route.params)}:${JSON.stringify(route.query)}`)
+  // Each navigation to another screen remounts it, so per-screen state and subscriptions start clean.
+  const routeKey = $derived(screenKey(route))
 </script>
 
 {#key routeKey}

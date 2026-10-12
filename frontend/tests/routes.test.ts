@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ROUTE_PATTERNS, buildPath, deepLinkToPath, href, matchPath, parseHash } from '../src/app/routes'
+import { ROUTE_PATTERNS, buildPath, deepLinkToPath, href, matchPath, parseHash, screenKey } from '../src/app/routes'
 
 describe('route table', () => {
   it('contains the nine primary routes from the plan', () => {
@@ -51,5 +51,13 @@ describe('deep-link adapter', () => {
     expect(deepLinkToPath('langualinker://app/settings/backup')).toBeNull()
     expect(deepLinkToPath('langualinker://app/gallery')).toBeNull()
     expect(deepLinkToPath('not a url')).toBeNull()
+  })
+})
+
+describe('screen identity', () => {
+  it('ignores the query only on screens that handle it in place', () => {
+    expect(screenKey(matchPath('/browser?q=Haus'))).toBe(screenKey(matchPath('/browser')))
+    expect(screenKey(matchPath('/study/1?session=s1'))).not.toBe(screenKey(matchPath('/study/1')))
+    expect(screenKey(matchPath('/deck/1'))).not.toBe(screenKey(matchPath('/deck/2')))
   })
 })

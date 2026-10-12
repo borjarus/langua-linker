@@ -64,6 +64,10 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+  /* Intrinsic widths (input size, longest <option>) grow with system text size; at 200% they
+     exceed a phone screen and Android WebView then widens the whole page. */
+  min-width: 0;
+  max-width: 100%;
 }
 
 .btn {

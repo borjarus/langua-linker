@@ -100,6 +100,19 @@ export function parseHash(hash: string): Route | null {
   return matchPath(raw)
 }
 
+/** Screens that update their own query (search text, filters) and react to it in place. */
+const QUERY_IN_PLACE: ReadonlySet<Route['name']> = new Set(['browser'])
+
+/**
+ * Identity of the rendered screen: a new key remounts the screen and moves focus to its heading.
+ * Query changes count too, except on screens that handle them in place — remounting those while
+ * the user types would drop focus and close the mobile keyboard.
+ */
+export function screenKey(route: Route): string {
+  const query = QUERY_IN_PLACE.has(route.name) ? '' : JSON.stringify(route.query)
+  return `${route.name}:${JSON.stringify(route.params)}:${query}`
+}
+
 export function buildPath(target: RouteTarget): string {
   const pattern: string = ROUTE_PATTERNS[target.name]
   const params = (target.params ?? {}) as Record<string, string>

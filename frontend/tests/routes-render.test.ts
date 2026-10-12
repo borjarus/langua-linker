@@ -104,6 +104,21 @@ describe('scenario states render on real screens', () => {
     stop()
   })
 
+  it('query-only navigation keeps focus in the search field; a new screen focuses its heading', async () => {
+    const { services, stop } = await renderAt('#/browser')
+    const search = await screen.findByRole('searchbox')
+    search.focus()
+    await services.router.replace({ name: 'browser', query: { q: 'Haus' } })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(window.location.hash).toBe('#/browser?q=Haus')
+    expect(document.activeElement).toBe(search)
+
+    await services.router.navigate({ name: 'stats' })
+    await waitFor(() => expect(document.activeElement).toBe(heading()))
+    expect(heading()).toHaveTextContent('Statistics')
+    stop()
+  })
+
   it('shell shows the demo banner and primary navigation in Polish', async () => {
     const { stop } = await renderAt('#/home', { language: 'pl' })
     expect(screen.getByText(/Tryb demonstracyjny/)).toBeInTheDocument()

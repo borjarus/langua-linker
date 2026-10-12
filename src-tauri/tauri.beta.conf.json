@@ -1,0 +1,10 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "LanguaLinker Beta",
+  "identifier": "com.mila.langualinker.beta",
+  "build": {
+    "beforeDevCommand": "npm run dev --prefix ../frontend -- --mode beta",
+    "beforeBuildCommand": "npm run build:beta --prefix ../frontend",
+    "frontendDist": "../frontend/dist-beta"
+  }
+}

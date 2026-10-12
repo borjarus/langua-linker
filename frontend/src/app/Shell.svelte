@@ -6,7 +6,7 @@
   import { useServices } from './context'
   import DemoBanner from './DemoBanner.svelte'
   import RouteOutlet from './RouteOutlet.svelte'
-  import type { RouteName } from './routes'
+  import { screenKey, type RouteName } from './routes'
 
   const { i18n, router } = useServices()
 
@@ -20,10 +20,15 @@
   const activeName = $derived(router.current.name)
 
   // Focus and scroll are restored after each navigation so keyboard and screen-reader users land
-  // on the new screen's heading instead of the previous position.
+  // on the new screen's heading instead of the previous position. A navigation that keeps the
+  // screen (see `screenKey`, e.g. search text) must not steal focus — on mobile that closes the keyboard.
+  let shownScreen: string | null = null
   $effect(() => {
-    void router.current
+    const key = screenKey(router.current)
     const kind = router.kind
+    const sameScreen = key === shownScreen
+    shownScreen = key
+    if (sameScreen) return
     void tick().then(() => {
       router.restoreScroll()
       if (kind === 'initial') return
@@ -97,7 +102,8 @@
 
   .nav ul {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    /* minmax(0, …): columns never grow past the screen, even when a label cannot shrink further. */
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     margin: 0;
     padding: 0;
     list-style: none;

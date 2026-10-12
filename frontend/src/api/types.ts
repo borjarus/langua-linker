@@ -83,7 +83,8 @@ export interface AppInfoDto {
   apiVersion: string
   appName: string
   appVersion: string
-  mode: string
+  /** Native build variant (`dev` | `beta` | `release`); the in-memory mock reports `demo`. */
+  mode: 'demo' | 'dev' | 'beta' | 'release'
 }
 
 export type JobKind = 'prepareContent' | 'import' | 'export' | 'backup' | 'restore' | 'llm'

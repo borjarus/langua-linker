@@ -602,7 +602,7 @@ export class MockAppApi implements AppApi {
   // ------------------------------------------------------------ app
 
   getAppInfo() {
-    return this.#query('getAppInfo', () => ({ apiVersion: API_VERSION, appName: 'LanguaLinker', appVersion: '0.1.0', mode: 'demo' }))
+    return this.#query('getAppInfo', () => ({ apiVersion: API_VERSION, appName: 'LanguaLinker', appVersion: '0.1.0', mode: 'demo' as const }))
   }
 
   getAttributions() {

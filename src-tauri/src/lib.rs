@@ -6,6 +6,9 @@ use tauri::{AppHandle, Builder, Emitter, Manager, Runtime};
 
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+/// Build variant (`dev` | `beta` | `release`), validated by `build.rs`.
+pub const APP_VARIANT: &str = env!("LL_APP_VARIANT");
+
 /// Event emitted once the shell is ready; the frontend treats it as a signal only.
 pub const APP_READY_EVENT: &str = "app-ready";
 
@@ -19,12 +22,7 @@ fn app_info() -> AppInfoDto {
         api_version: API_VERSION.to_owned(),
         app_name: "LanguaLinker".to_owned(),
         app_version: APP_VERSION.to_owned(),
-        mode: if cfg!(debug_assertions) {
-            "development"
-        } else {
-            "release"
-        }
-        .to_owned(),
+        mode: APP_VARIANT.to_owned(),
     }
 }
 
@@ -48,6 +46,7 @@ fn start_diagnostics<R: Runtime>(app: &tauri::App<R>) {
             app.manage(guard);
             tracing::info!(
                 app_version = APP_VERSION,
+                app_variant = APP_VARIANT,
                 platform = std::env::consts::OS,
                 "app started"
             );
@@ -135,7 +134,44 @@ mod tests {
         assert_eq!(value["apiVersion"], API_VERSION);
         assert_eq!(value["appName"], "LanguaLinker");
         assert_eq!(value["appVersion"], APP_VERSION);
-        assert!(value["mode"].is_string());
+        assert!(["dev", "beta", "release"].contains(&value["mode"].as_str().unwrap()));
+    }
+
+    fn config(json: &str) -> serde_json::Value {
+        serde_json::from_str(json).unwrap()
+    }
+
+    #[test]
+    fn variants_install_side_by_side() {
+        let release = config(include_str!("../tauri.conf.json"));
+        let dev = config(include_str!("../tauri.dev.conf.json"));
+        let beta = config(include_str!("../tauri.beta.conf.json"));
+        let mobile = config(include_str!("../tauri.mobile.conf.json"));
+        let base = release["identifier"].as_str().unwrap();
+        assert_eq!(base, "com.mila.langualinker");
+        // Mobile projects are generated for the base identifier; Gradle adds the variant suffix.
+        assert_eq!(mobile["identifier"], base);
+        for (overlay, variant) in [(&dev, "dev"), (&beta, "beta")] {
+            assert_eq!(overlay["identifier"], format!("{base}.{variant}"));
+            assert_ne!(overlay["productName"], release["productName"]);
+        }
+    }
+
+    #[test]
+    fn only_dev_bundles_the_demo_frontend() {
+        let frontend = |json: &str| config(json)["build"]["frontendDist"].clone();
+        assert_eq!(
+            frontend(include_str!("../tauri.conf.json")),
+            "../frontend/dist-release"
+        );
+        assert_eq!(
+            frontend(include_str!("../tauri.beta.conf.json")),
+            "../frontend/dist-beta"
+        );
+        assert_eq!(
+            frontend(include_str!("../tauri.dev.conf.json")),
+            "../frontend/dist"
+        );
     }
 
     #[test]
