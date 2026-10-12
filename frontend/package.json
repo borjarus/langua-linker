@@ -20,7 +20,8 @@
     "variant": "node scripts/tauri-variant.mjs",
     "app:dev": "node scripts/tauri-variant.mjs dev dev",
     "android:dev": "node scripts/tauri-variant.mjs dev android dev",
-    "android:apk": "node scripts/tauri-variant.mjs dev android build --debug --apk"
+    "android:apk": "node scripts/tauri-variant.mjs dev android build --debug --apk",
+    "ios:dev": "node scripts/tauri-variant.mjs dev ios dev"
   },
   "dependencies": {
     "@tauri-apps/api": "2.12.2",
