@@ -6,10 +6,22 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+# Mobile targets load the app as a library; the name differs from the binary to avoid
+# output collisions on Windows.
+[lib]
+name = "langualinker_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
 [build-dependencies]
-tauri-build = { version = "2.2.0", features = [] }
+tauri-build = { version = "=2.7.1", features = [] }
 
 [dependencies]
 langualinker-contracts = { path = "../crates/contracts" }
+langualinker-infrastructure = { path = "../crates/infrastructure" }
+tracing.workspace = true
 serde.workspace = true
-tauri = { version = "2.6.2", features = [] }
+tauri = { version = "=2.12.2", features = [] }
+
+[dev-dependencies]
+serde_json.workspace = true
+tauri = { version = "=2.12.2", features = ["test"] }

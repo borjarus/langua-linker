@@ -1,0 +1,73 @@
+{
+  "source": {
+    "repository": "LanguaLinker (KMP)",
+    "commit": "c2fa62fe0d260e71eef09d99ae5fd0c66b020151",
+    "files": [
+      "shared/src/commonMain/kotlin/com/mila/langualinker/fsrs/FsrsParameters.kt",
+      "shared/src/commonTest/kotlin/com/mila/langualinker/FsrsTest.kt"
+    ],
+    "status": "Reference specification only. KMP used Float (f32) and whole-day elapsed time; these are NOT numeric conformance vectors. Phase 9 must generate vectors from a pinned FSRS-6 reference implementation and cross-check the defaults below."
+  },
+  "parameters": {
+    "weightCount": 21,
+    "defaultWeights": [0.2120, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194, 0.0010, 1.8722, 0.1666, 0.7960, 1.4835, 0.0614, 0.2629, 1.6483, 0.6014, 1.8729, 0.5425, 0.0912, 0.0658, 0.1542],
+    "defaultDesiredRetention": 0.9,
+    "desiredRetentionRange": [0.7, 0.99],
+    "defaultMaximumIntervalDays": 36500,
+    "minimumStability": 0.1,
+    "difficultyRange": [1, 10]
+  },
+  "exactChecks": [
+    { "id": "R_at_S_is_0.9", "rule": "retrievability(elapsedDays = S, S) ≈ 0.9", "inputs": { "S": [1, 5, 10, 50, 100] }, "tolerance": 0.001 },
+    { "id": "R_at_zero_elapsed_is_1", "rule": "retrievability(0, 10) ≈ 1.0", "tolerance": 0.001 },
+    { "id": "R_non_positive_S_is_0", "rule": "retrievability(5, S) = 0 for S ∈ {0, -1}" },
+    { "id": "interval_at_0.9_equals_S", "rule": "|nextInterval(S, 0.9) − S| ≤ 1 day", "inputs": { "S": [1, 5, 10, 50] } },
+    { "id": "interval_min_1", "rule": "nextInterval(0.001) ≥ 1" },
+    { "id": "interval_capped", "rule": "nextInterval(1e6) = maximumInterval" },
+    { "id": "S0_equals_w0_w3", "rule": "initialStability(Again|Hard|Good|Easy) = w0|w1|w2|w3", "tolerance": 0.0001 },
+    { "id": "D0_again_equals_w4", "rule": "initialDifficulty(Again) = w4", "tolerance": 0.001 },
+    { "id": "params_reject_bad_weight_count", "rule": "constructing parameters with 2 weights fails" },
+    { "id": "params_reject_retention_0.5", "rule": "desiredRetention = 0.5 is rejected" },
+    { "id": "params_reject_retention_1.01", "rule": "desiredRetention = 1.01 is rejected" }
+  ],
+  "properties": [
+    { "id": "R_decreasing", "rule": "R(5,10) > R(10,10) > R(20,10)" },
+    { "id": "R_bounded", "rule": "0 ≤ R(1000, 1) ≤ 1" },
+    { "id": "interval_shorter_for_higher_retention", "rule": "nextInterval(20, 0.95) < nextInterval(20, 0.90)" },
+    { "id": "S0_ordering", "rule": "S0(Again) < S0(Hard) < S0(Good) < S0(Easy); all ≥ 0.1" },
+    { "id": "D0_ordering", "rule": "D0(Again) > D0(Hard) > D0(Good) > D0(Easy); all in [1,10]" },
+    { "id": "D_good_stable", "rule": "|nextDifficulty(5, Good) − 5| < 0.5" },
+    { "id": "D_again_up_easy_down", "rule": "nextDifficulty(5, Again) > 5 > nextDifficulty(5, Easy)" },
+    { "id": "D_clamped", "rule": "nextDifficulty(1, Easy) ≥ 1 and nextDifficulty(10, Again) ≤ 10" },
+    { "id": "D_linear_damping", "rule": "|nextDifficulty(9.9, Again) − 9.9| < |nextDifficulty(5, Again) − 5|" },
+    { "id": "S_recall_non_decreasing", "rule": "stabilityAfterRecall(D=5, S=10, R=0.9, r) ≥ 10 for r ∈ {Hard, Good, Easy}" },
+    { "id": "S_recall_rating_order", "rule": "Hard ≤ Good ≤ Easy at D=5, S=10, R=0.9" },
+    { "id": "S_recall_spacing_effect", "rule": "stabilityAfterRecall(5, 20, 0.1, Good) > stabilityAfterRecall(5, 20, 0.9, Good)" },
+    { "id": "S_recall_harder_grows_slower", "rule": "stabilityAfterRecall(8, 10, 0.9, Good) < stabilityAfterRecall(2, 10, 0.9, Good)" },
+    { "id": "S_forget_not_above_prelapse", "rule": "stabilityAfterForgetting(D=5, S=20, R=0.9) ≤ 20" },
+    { "id": "S_forget_min", "rule": "stabilityAfterForgetting(10, 0.1, 0.9) ≥ 0.1" },
+    { "id": "S_forget_monotonic_in_S", "rule": "stabilityAfterForgetting(5, 100, 0.5) > stabilityAfterForgetting(5, 10, 0.5)" },
+    { "id": "S_short_term_good_easy", "rule": "shortTermStability(5, r) ≥ 5 for r ∈ {Good, Easy}; Easy ≥ Good at S=2; all ≥ 0.1 at S=0.1" }
+  ],
+  "schedulerTransitions": {
+    "note": "KMP scheduler policy (day granularity, no learning steps in minutes). Plan Phase 9 step 5 defines the target policy ([1m,10m] learning, [10m] relearning); transitions below are inputs for that decision, not requirements.",
+    "cases": [
+      { "from": "New", "rating": "Again", "to": "Learning" },
+      { "from": "New", "rating": "Hard", "to": "Learning" },
+      { "from": "New", "rating": "Good", "to": "Learning" },
+      { "from": "New", "rating": "Easy", "to": "Review", "scheduledDaysAtLeast": 1 },
+      { "from": "Learning", "rating": "Good", "to": "Review" },
+      { "from": "Learning", "rating": "Again", "to": "Learning" },
+      { "from": "Review", "rating": "Again", "to": "Relearning", "lapsesDelta": 1, "stability": "decreases" },
+      { "from": "Review", "rating": "Good", "to": "Review", "interval": "non-decreasing" },
+      { "from": "Relearning", "rating": "Good", "to": "Review" },
+      { "from": "Relearning", "rating": "Again", "to": "Relearning" }
+    ],
+    "invariants": [
+      "reps = 1 after the first review with any rating",
+      "nextReviewDate = reviewDate + scheduledDays",
+      "Easy path stability > Good path stability after two reviews",
+      "desiredRetention 0.99 gives scheduledDays ≤ desiredRetention 0.70 after New→Good→Good"
+    ]
+  }
+}

@@ -1,0 +1,38 @@
+-- word_card_id is nullable: deleting a word card must not orphan the link, and a
+-- wordCardRef that matches no word-deck card degrades to an Unresolved link.
+CREATE TABLE IF NOT EXISTS sentence_word_links (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    sentence_card_id INTEGER NOT NULL,
+    word_card_id INTEGER,
+    position_in_sentence INTEGER NOT NULL DEFAULT 0,
+    surface_form TEXT NOT NULL,
+    resolution TEXT NOT NULL DEFAULT 'Unresolved'
+);
+
+CREATE INDEX IF NOT EXISTS idx_sentence_word_links_sentence_card
+    ON sentence_word_links(sentence_card_id);
+
+CREATE INDEX IF NOT EXISTS idx_sentence_word_links_word_card
+    ON sentence_word_links(word_card_id);
+
+getLinksBySentenceCardId:
+SELECT * FROM sentence_word_links WHERE sentence_card_id = :sentenceCardId ORDER BY position_in_sentence;
+
+insertLink:
+INSERT INTO sentence_word_links (sentence_card_id, word_card_id, position_in_sentence, surface_form, resolution)
+VALUES (:sentenceCardId, :wordCardId, :positionInSentence, :surfaceForm, :resolution);
+
+updateLinkResolution:
+UPDATE sentence_word_links SET word_card_id = :wordCardId, resolution = :resolution WHERE id = :id;
+
+unresolveLinksByWordCardId:
+UPDATE sentence_word_links SET word_card_id = NULL, resolution = 'Unresolved' WHERE word_card_id = :wordCardId;
+
+deleteLink:
+DELETE FROM sentence_word_links WHERE id = :id;
+
+deleteLinksBySentenceCardId:
+DELETE FROM sentence_word_links WHERE sentence_card_id = :sentenceCardId;
+
+lastInsertRowId:
+SELECT last_insert_rowid();

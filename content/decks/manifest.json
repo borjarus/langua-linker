@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "comment": "Order matters: word decks must be imported before the sentence decks that reference them, otherwise every wordCardRef resolves to nothing.",
+  "decks": [
+    "de_words_a1",
+    "de_sentences_a1",
+    "en_words_a1",
+    "en_sentences_a1"
+  ]
+}

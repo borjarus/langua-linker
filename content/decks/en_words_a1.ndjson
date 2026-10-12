@@ -1,0 +1,46 @@
+{"front": "I", "back": "ja", "tags": ["pronoun", "A1"]}
+{"front": "you", "back": "ty / wy", "tags": ["pronoun", "A1"]}
+{"front": "we", "back": "my", "tags": ["pronoun", "A1"]}
+{"front": "it", "back": "to / ono", "tags": ["pronoun", "A1"]}
+{"front": "me", "back": "mnie", "tags": ["pronoun", "A1"]}
+{"front": "my", "back": "mój", "tags": ["pronoun", "A1"]}
+{"front": "your", "back": "twój", "tags": ["pronoun", "A1"]}
+{"front": "this", "back": "to / ten", "tags": ["pronoun", "A1"]}
+{"front": "the", "back": "ten / ta / to (rodzajnik określony)", "tags": ["article", "A1"]}
+{"front": "a", "back": "jakiś (rodzajnik nieokreślony)", "tags": ["article", "A1"]}
+{"front": "to", "back": "do (kierunek)", "tags": ["preposition", "A1"]}
+{"front": "from", "back": "z (pochodzenie)", "tags": ["preposition", "A1"]}
+{"front": "on", "back": "w (o dniach) / na", "tags": ["preposition", "A1"]}
+{"front": "for", "back": "od / przez (czas)", "tags": ["preposition", "A1"]}
+{"front": "I am", "back": "jestem", "tags": ["phrase", "A1"]}
+{"front": "do not", "back": "nie (operator przeczenia)", "tags": ["phrase", "A1"]}
+{"front": "to be", "back": "być", "tags": ["verb", "A1"]}
+{"front": "to go", "back": "iść / jechać", "tags": ["verb", "A1"]}
+{"front": "to come", "back": "przychodzić / pochodzić", "tags": ["verb", "A1"]}
+{"front": "to want", "back": "chcieć", "tags": ["verb", "A1"]}
+{"front": "to do", "back": "robić", "tags": ["verb", "A1"]}
+{"front": "to cost", "back": "kosztować", "tags": ["verb", "A1"]}
+{"front": "to understand", "back": "rozumieć", "tags": ["verb", "A1"]}
+{"front": "to help", "back": "pomagać", "tags": ["verb", "A1"]}
+{"front": "to learn", "back": "uczyć się", "tags": ["verb", "A1"]}
+{"front": "to meet", "back": "spotykać", "tags": ["verb", "A1"]}
+{"front": "can", "back": "móc / umieć", "tags": ["verb", "A1"]}
+{"front": "cinema", "back": "kino", "tags": ["noun", "A1"]}
+{"front": "name", "back": "imię / nazwa", "tags": ["noun", "A1"]}
+{"front": "sister", "back": "siostra", "tags": ["noun", "A1"]}
+{"front": "station", "back": "dworzec / stacja", "tags": ["noun", "A1"]}
+{"front": "coffee", "back": "kawa", "tags": ["noun", "A1"]}
+{"front": "weather", "back": "pogoda", "tags": ["noun", "A1"]}
+{"front": "day", "back": "dzień", "tags": ["noun", "A1"]}
+{"front": "Monday", "back": "poniedziałek", "tags": ["noun", "A1"]}
+{"front": "Poland", "back": "Polska", "tags": ["noun", "A1"]}
+{"front": "English", "back": "angielski (język)", "tags": ["noun", "A1"]}
+{"front": "today", "back": "dzisiaj", "tags": ["adverb", "A1"]}
+{"front": "tonight", "back": "dzisiaj wieczorem", "tags": ["adverb", "A1"]}
+{"front": "where", "back": "gdzie", "tags": ["adverb", "A1"]}
+{"front": "what", "back": "co / jaki", "tags": ["adverb", "A1"]}
+{"front": "how", "back": "jak", "tags": ["adverb", "A1"]}
+{"front": "much", "back": "dużo", "tags": ["adverb", "A1"]}
+{"front": "please", "back": "proszę", "tags": ["adverb", "A1"]}
+{"front": "every", "back": "każdy", "tags": ["adjective", "A1"]}
+{"front": "nice", "back": "ładny / miły", "tags": ["adjective", "A1"]}

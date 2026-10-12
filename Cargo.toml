@@ -15,4 +15,8 @@ license = "UNLICENSED"
 
 [workspace.dependencies]
 serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
 thiserror = "2.0.12"
+tracing = "=0.1.44"
+tracing-appender = "=0.2.5"
+tracing-subscriber = { version = "=0.3.23", features = ["env-filter", "fmt"] }

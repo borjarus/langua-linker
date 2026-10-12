@@ -1,0 +1,35 @@
+-- Migration 1 -> 2
+--
+-- sentence_word_links.word_card_id becomes nullable and gains a resolution state.
+--
+-- Before this migration the importer stored 0 for "no matching word card", which is a
+-- dangling foreign key masquerading as a real one. SQLite cannot drop a NOT NULL
+-- constraint in place, so the table is rebuilt; NULLIF turns the old 0 placeholders into
+-- genuine NULLs and those rows are marked Unresolved.
+
+CREATE TABLE sentence_word_links_new (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    sentence_card_id INTEGER NOT NULL,
+    word_card_id INTEGER,
+    position_in_sentence INTEGER NOT NULL DEFAULT 0,
+    surface_form TEXT NOT NULL,
+    resolution TEXT NOT NULL DEFAULT 'Unresolved'
+);
+
+INSERT INTO sentence_word_links_new (id, sentence_card_id, word_card_id, position_in_sentence, surface_form, resolution)
+SELECT
+    id,
+    sentence_card_id,
+    NULLIF(word_card_id, 0),
+    position_in_sentence,
+    surface_form,
+    CASE WHEN NULLIF(word_card_id, 0) IS NULL THEN 'Unresolved' ELSE 'Resolved' END
+FROM sentence_word_links;
+
+DROP TABLE sentence_word_links;
+
+ALTER TABLE sentence_word_links_new RENAME TO sentence_word_links;
+
+CREATE INDEX idx_sentence_word_links_sentence_card ON sentence_word_links(sentence_card_id);
+
+CREATE INDEX idx_sentence_word_links_word_card ON sentence_word_links(word_card_id);

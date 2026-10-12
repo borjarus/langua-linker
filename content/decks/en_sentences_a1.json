@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": 1,
+  "name": "Angielski A1 — zdania",
+  "language": "en",
+  "sourceLanguage": "pl",
+  "deckType": "Linguistic",
+  "cardType": "sentence",
+  "cardsFile": "en_sentences_a1.ndjson",
+  "wordDeckRef": "en_words_a1",
+  "license": {
+    "source": "original",
+    "attribution": null
+  }
+}

@@ -1,0 +1,95 @@
+{
+  "source": {
+    "repository": "LanguaLinker (KMP), read-only reference",
+    "commit": "c2fa62fe0d260e71eef09d99ae5fd0c66b020151",
+    "copiedAt": "2026-10-12",
+    "note": "Assets were copied once; this repository is their source of truth from now on. See docs/migration/kmp-manifest.md."
+  },
+  "expectedContentRecords": 113,
+  "files": {
+    "content/decks/de_sentences_a1.json": {
+      "sha256": "2fa9a5093e6eb69da827f955f2062d4cdbe2099b9bd02c353f6699415c58b4ba",
+      "bytes": 328
+    },
+    "content/decks/de_sentences_a1.ndjson": {
+      "sha256": "4dc5041398ff5b3e4802bdc0e4367ffa959f12e9a3b12833d972202f44b8cd12",
+      "bytes": 5858,
+      "records": 12
+    },
+    "content/decks/de_words_a1.json": {
+      "sha256": "3724a572e4bf29d5828c869db71499b067c19543f0b7810b9b638bd0f28bd152",
+      "bytes": 288
+    },
+    "content/decks/de_words_a1.ndjson": {
+      "sha256": "b172a917e456b7ec5d73fbe3eff5906addcec9cb4dcdef2927dc6678b9fd037e",
+      "bytes": 2896,
+      "records": 43
+    },
+    "content/decks/en_sentences_a1.json": {
+      "sha256": "6c14e37a1301b2cae74ea807f6297b5646300de2e4f2a533ab19b94c230dc7af",
+      "bytes": 328
+    },
+    "content/decks/en_sentences_a1.ndjson": {
+      "sha256": "9138f6274f7cc14c7707d18136542a8d68b157cfa2b9967bc9918562c5de8696",
+      "bytes": 5446,
+      "records": 12
+    },
+    "content/decks/en_words_a1.json": {
+      "sha256": "89188f352b9783f4f91c50fc4d998ee42c5f0412ed93570bf0e3894145b4c001",
+      "bytes": 288
+    },
+    "content/decks/en_words_a1.ndjson": {
+      "sha256": "53f9337013d4439ef86ccd47122ca17110633588c1805d3a7e87048481433a0b",
+      "bytes": 3090,
+      "records": 46
+    },
+    "content/decks/manifest.json": {
+      "sha256": "f32f2f66ced5e92aae9f84f4d06a352d398dcc9e53918fcf5e75d8df69590321",
+      "bytes": 281
+    },
+    "tests/fixtures/fsrs/kmp-fsrs-spec.json": {
+      "sha256": "20cfc72dc21a095217da53d3fdd9adc43f78b97cefc4d3e83ca51d5c2954a54b",
+      "bytes": 5272
+    },
+    "tests/fixtures/kmp/apkg/sample_german_a1_sentences.apkg": {
+      "sha256": "1ed524102963e7baeee4b84b068eaa4fa22e70a54d0fe99a526468b89e51db73",
+      "bytes": 330741
+    },
+    "tests/fixtures/kmp/schema/1.sqm": {
+      "sha256": "c83455d99f41484d68cb475eb2cb18fec83c3bda6e82f15666c3dd8c4109b9de",
+      "bytes": 1340
+    },
+    "tests/fixtures/kmp/schema/associations.sq": {
+      "sha256": "120d59635ae106ca9ee90f786cbe0dedbb352de093cbbb4f17a6c18574cded0e",
+      "bytes": 1117
+    },
+    "tests/fixtures/kmp/schema/card_templates.sq": {
+      "sha256": "2b38ea20cab0dd6006c8370832eab6af6ae8ff13fdaf69c81a2bf552c1679500",
+      "bytes": 761
+    },
+    "tests/fixtures/kmp/schema/cards.sq": {
+      "sha256": "d544444f210cb15acd0ea2da7290e35f2c07504887fd57c31d5d8c01f960db80",
+      "bytes": 2910
+    },
+    "tests/fixtures/kmp/schema/deck_settings.sq": {
+      "sha256": "441b1ff149963e73e2c0a0ad1b1f44a432761c0f763667dac84919db4ef01ffa",
+      "bytes": 575
+    },
+    "tests/fixtures/kmp/schema/decks.sq": {
+      "sha256": "57f3477f41737a29cb67c27796c75ddbacdbd74a69097b948a735181405b76cd",
+      "bytes": 798
+    },
+    "tests/fixtures/kmp/schema/grammar_tips.sq": {
+      "sha256": "dfc3875c419266f7fbb99daf6c1c30a4fbba81dc2d2db81e1276467ff6549407",
+      "bytes": 870
+    },
+    "tests/fixtures/kmp/schema/review_logs.sq": {
+      "sha256": "dec44124cf52809748e3dd256b4672f89e67f92baa6872150c36bef1ff158aa3",
+      "bytes": 896
+    },
+    "tests/fixtures/kmp/schema/sentence_word_links.sq": {
+      "sha256": "07f39938da07e237ad2648542abfe2069b3d3b26f32fdfa4928fcafcb0fecdc9",
+      "bytes": 1500
+    }
+  }
+}

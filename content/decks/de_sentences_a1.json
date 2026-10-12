@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": 1,
+  "name": "Niemiecki A1 — zdania",
+  "language": "de",
+  "sourceLanguage": "pl",
+  "deckType": "Linguistic",
+  "cardType": "sentence",
+  "cardsFile": "de_sentences_a1.ndjson",
+  "wordDeckRef": "de_words_a1",
+  "license": {
+    "source": "original",
+    "attribution": null
+  }
+}

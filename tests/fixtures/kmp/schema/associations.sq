@@ -1,0 +1,35 @@
+CREATE TABLE IF NOT EXISTS associations (
+    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    card_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'Generated',
+    is_favorite INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_associations_card_favorite ON associations(card_id, is_favorite);
+
+getAssociationById:
+SELECT * FROM associations WHERE id = :id;
+
+getAssociationsByCardId:
+SELECT * FROM associations WHERE card_id = :cardId ORDER BY created_at DESC;
+
+getFavoritesByCardId:
+SELECT * FROM associations WHERE card_id = :cardId AND is_favorite = 1 ORDER BY created_at DESC;
+
+insertAssociation:
+INSERT INTO associations (card_id, content, type, is_favorite, created_at)
+VALUES (:cardId, :content, :type, :isFavorite, :createdAt);
+
+updateFavorite:
+UPDATE associations SET is_favorite = :isFavorite WHERE id = :id;
+
+deleteAssociation:
+DELETE FROM associations WHERE id = :id;
+
+deleteAssociationsByCardId:
+DELETE FROM associations WHERE card_id = :cardId;
+
+lastInsertRowId:
+SELECT last_insert_rowid();

@@ -233,7 +233,7 @@ Every phase:
 - [ ] Ships a schema change with a migration, fixture test, and recovery plan.
 - [ ] Keeps secrets, card content, and prompts out of unredacted logs/telemetry.
 - [ ] Updates ADRs, documentation, and the UI→backend matrix.
-- [ ] Records a demonstration and limitations; from Phase 1, performs smoke tests on physical Android and iOS devices.
+- [ ] Records a demonstration and limitations; from Phase 1, performs smoke tests on the Android emulator and iOS simulator; physical Android and iOS devices are required from the Phase 6 gate onward (owner decision 2026-10-12).
 
 In Phases 2–6, functional tests may use mocks, but mobile smoke tests use the real shell/WebView. A browser test does not close the DoD for a native application.
 
@@ -273,7 +273,7 @@ After Phase 6, all screens exist as accepted GUI. After Phase 10, the first real
 ### Steps
 
 1. Create an archival KMP tag/branch; do not delete code before securing fixtures/content.
-2. Inventory the FSRS engine, the declared 135 data-layer tests, v1/v2 migrations, importer/resolver, and 4 decks/113 cards; these figures describe the input state and must be verified. [file:1]
+2. Inventory the FSRS engine, the declared 135 data-layer tests, v1/v2 migrations, importer/resolver, and 4 decks/113 cards; these figures describe the input state and must be verified.
 3. Classify artifacts: migrate unchanged (content/vectors), port (logic), replace (Compose/Gradle/platform APIs), or remove after migration.
 4. Determine whether production installations exist. Without them, the new Rust schema may start at v1. With them, backup and import/migration are mandatory; never reset data during an update.
 5. Preserve fixtures for every real version of the old database and a manifest of fields/GUIDs/logs/configuration.
@@ -283,10 +283,12 @@ After Phase 6, all screens exist as accepted GUI. After Phase 10, the first real
 
 ### Tests and DoD
 
-- [ ] The migration manifest covers tables/artifacts and readable copies.
-- [ ] The fresh-database versus existing-user-data migration decision is approved.
-- [ ] Content, licenses, vectors, and migration history are preserved.
-- [ ] New phases contain no unjustified completed statuses; the target frontend is unambiguous.
+- [x] The migration manifest covers tables/artifacts and readable copies.
+- [x] The fresh-database versus existing-user-data migration decision is approved.
+- [x] Content, licenses, vectors, and migration history are preserved.
+- [x] New phases contain no unjustified completed statuses; the target frontend is unambiguous.
+
+> **Status 2026-10-12.** [docs/migration/kmp-audit.md](migration/kmp-audit.md) classifies artifacts by category (FSRS, models, use cases, SQL, importers, content, APKG, tests) and keeps the KMP repository as a read-only reference; no inherited ✅ remains and D-09 (Svelte 5 + TypeScript) is closed. D-12 resolved: fresh database ([ADR-08](adr/ADR-08-fresh-database.md)); the project is a clean slate that reuses KMP code and assets as reference. Instead of an archival tag in the KMP repository (owner decision: no changes there), the source commit `c2fa62f` is recorded and all reused assets are copied with SHA-256 checksums ([scripts/fixtures.lock.json](../scripts/fixtures.lock.json), verified in CI by `scripts/verify-fixtures.mjs`). [docs/migration/kmp-manifest.md](migration/kmp-manifest.md) maps every KMP table/column to the Rust schema and inventories the 137 KMP tests. Copied: 4 decks/113 records (`content/decks`), schema + v1→v2 migration and the APKG (`tests/fixtures/kmp`), FSRS defaults and test specification (`tests/fixtures/fsrs/kmp-fsrs-spec.json`). Caveats carried forward: license metadata is preserved but rights are not yet confirmed ([content/PROVENANCE.md](../content/PROVENANCE.md), release-blocking for D-04); KMP had property tests, not numeric FSRS vectors, so Phase 9 must generate them from a pinned reference; content lacks note GUIDs, word-link ranges and pre-generated associations.
 
 ## PHASE 1 — Rust + Tauri 2.x + Svelte 5 + TypeScript toolchain
 
@@ -320,11 +322,13 @@ After Phase 6, all screens exist as accepted GUI. After Phase 10, the first real
 
 ### Tests and DoD
 
-- [ ] The Svelte shell starts on physical Android/iPhone and in browser demo.
-- [ ] Command/event/error/permission tests pass.
+- [ ] The Svelte shell starts in the Android emulator, the iOS simulator and the browser demo. *(Changed 2026-10-12 by owner decision: emulator/simulator instead of physical devices in Phase 1; physical-device review moves to the Phase 6 gate.)*
+- [x] Command/event/error/permission tests pass.
 - [ ] Native spike result: works / requires plugin / deferred, with an ADR.
-- [ ] svelte-check and build pass; React is not a UI dependency.
+- [x] svelte-check and build pass; React is not a UI dependency.
 - [ ] Versions are pinned, CI is green, and no unsupported “all platforms work” claim remains.
+
+> **Status 2026-10-12 (update).** Done: Cargo workspace; Tauri shell as library + `mobile_entry_point`; Svelte 5/TS strict/Vite with `check`/`lint`/`lint:i18n`/`test`/`build`; exact pins (Rust `tauri =2.12.2`, `tauri-build =2.7.1`, npm `@tauri-apps/api`/`cli` 2.12.2 — previously a 2.12 vs 2.6 drift), lockfiles; toolchain 1.90.0 with rustfmt/clippy; CSP; capabilities with an app command manifest (`core:event:default` + `allow-get-app-info` only). Tests: IPC through the mock runtime (allowed command, ACL denial, unknown command, `app-ready` event, capability content) plus contract/error tests in Rust and TS. Step 15: rotating file logs with field redaction, content-free crash report and controlled crash test, `appVersion` in `AppInfoDto`; telemetry absent (off). Android: JDK 17, SDK, NDK r27 LTS and targets installed; `gen/android` generated; a debug APK (aarch64) builds on Windows ([docs/release/mobile-setup.md](release/mobile-setup.md)); manual `mobile.yml` CI job. Android emulator (API 36.1, x86_64): the debug APK installs and the Svelte shell renders the demo dashboard (2026-10-12). Open: the iOS simulator on the owner's Mac (`tauri ios init` there) and the remaining smoke checklist rows — [docs/release/device-smoke.md](release/device-smoke.md); native spikes with ADR-07/ADR-12; CI has not yet run on the remote.
 
 ## PHASE 2 — Design system, routing, and mock API contracts
 
@@ -362,11 +366,13 @@ After Phase 6, all screens exist as accepted GUI. After Phase 10, the first real
 
 ### Tests and DoD
 
-- [ ] Every route opens a placeholder with the correct state/mock.
+- [x] Every route opens a placeholder with the correct state/mock.
 - [ ] The gallery works in PL/EN, light/dark, and 200% without loss of function.
-- [ ] Components do not import Tauri APIs; the adapter is replaceable through context.
+- [x] Components do not import Tauri APIs; the adapter is replaceable through context.
 - [ ] Runes/lifecycle/query/router/i18n patterns are approved.
-- [ ] The demo banner and CI check prevent accidental mocks in release.
+- [x] The demo banner and CI check prevent accidental mocks in release.
+
+> **Status 2026-10-12.** Implemented in `frontend/src`: tokens (light/dark, 4–32 spacing, motion with `prefers-reduced-motion`), responsive shell (bottom nav / sidebar at 52rem), the 16 listed components plus `Icon`, `Disclosure`, `LinkedText`, debug `/gallery`; reference controller `features/study/studyController.svelte.ts`; contract v0.2 (`api/types.ts`, `appApi.ts`, operation catalogue `operations.ts`), `MockAppApi` with nine seeded scenarios; custom query service (ADR-02); hash router with params, guards, focus/scroll restoration and deep-link validation (ADR-01); i18next + runes adapter, PL/EN plurals and the literal-string CI check (ADR-05). Evidence: 99 Vitest tests (routes render on mock data, contract/transport rules, scenarios, router, query races, i18n parity/CLDR plurals, dialog focus trap, 50k VirtualList DOM bound, controller double-tap/retry/no-repeat), ESLint `no-restricted-imports` for `@tauri-apps/*`, `verify:release`. Open: visual verification of the gallery in PL/EN × light/dark × 200% (jsdom cannot prove layout — Playwright snapshots per [docs/testing/ui-test-matrix.md](testing/ui-test-matrix.md)), physical WebView check of 48 px targets, and approval of ADR-01/02/05 and [docs/frontend/patterns.md](frontend/patterns.md). Phase 1 device/spike items remain open in parallel.
 
 ## PHASE 3 — Learning GUI: Dashboard → Session → Summary
 
@@ -499,7 +505,7 @@ After Phase 6, all screens exist as accepted GUI. After Phase 10, the first real
 4. Freeze contract v1 with versioning, not a ban on change; complete DTOs for screens.
 5. Dual-adapter contract tests: mock and future real adapter, fake repository mappings in Rust.
 6. Approve the per-screen integration checklist; no silent mock fallback.
-7. Physical TalkBack/VoiceOver/WebView/orientation/keyboard-resize review.
+7. Physical TalkBack/VoiceOver/WebView/orientation/keyboard-resize review — first run on physical Android and iOS devices (deferred here from Phase 1); emulator results do not close this step.
 8. Screenshot baseline/demo of the entire application. GUI milestone ≠ working domain.
 9. svelte-check/lint/reactivity cleanup green; no remaining React-specific dependencies in the active frontend.
 
@@ -1055,14 +1061,14 @@ D-01–D-08 originate from the input plan; D-09–D-14 arise from the stack/cont
 
 | ADR | Decision | Phase | Resolution/proposal | Acceptance criterion |
 |---|---|---|---|---|
-| ADR-01 | Svelte 5 router | 1–2 | Typed hash router; library only after compatibility spike | Deep links/back/focus/scroll restoration |
-| ADR-02 | Cache/query frontend | 2 | Custom query service or verified Svelte adapter | Refresh/offline/race tests |
+| ADR-01 | Svelte 5 router | 1–2 | ACCEPTED: in-house typed hash router; a library may replace it later behind the same API — [ADR-01](adr/ADR-01-router.md) | Deep links/back/focus/scroll restoration |
+| ADR-02 | Cache/query frontend | 2 | ACCEPTED: framework-neutral `QueryClient` + runes binding `useQuery` — [ADR-02](adr/ADR-02-query-cache.md) | Refresh/offline/race tests |
 | ADR-03 | VirtualList | 4 | Framework-neutral adapter or verified library | 50k/frame profiling/focus |
 | ADR-04 | Charts | 5 | Framework-neutral SVG or verified library | Accessibility/empty/200% |
-| ADR-05 | i18n adapter | 2 | i18next core + Svelte adapter | PL/EN/plurals/typed keys |
+| ADR-05 | i18n adapter | 2 | ACCEPTED: i18next core + runes adapter (`I18n`) — [ADR-05](adr/ADR-05-i18n.md) | PL/EN/plurals/typed keys |
 | ADR-06 | SQLite/migrations | 7 | rusqlite/bundled/Rust only/serial writes | Migrations/recovery/benchmark |
 | ADR-07 | SecretStore | 1/7 | Keystore/Keychain; custom plugin after spike | Real-device save/read/delete |
-| ADR-08 | KMP migration | 0/7 | Fresh DB or backup → staging → swap | Zero data loss/idempotence |
+| ADR-08 | KMP migration | 0/7 | ACCEPTED: fresh Rust DB (schema v1), no KMP user-data migration — [ADR-08](adr/ADR-08-fresh-database.md) | KMP fixtures kept as reference/vectors only |
 | ADR-09 | Backup/encryption | 5/12 | Manifest+checksum; passphrase separate | Clean restore/corrupt recovery |
 | ADR-10 | LLM BYOK/proxy | 0/13 | Provider-neutral; BYOK beta, hybrid after cost decision | Quota/kill/cost/latency |
 | ADR-11 | APKG scope | 0/14 | CSV+legacy export v1; import/new formats v1.1 | Supported matrix/loss report |
@@ -1085,7 +1091,7 @@ D-02 versus the old plan’s recommended hybrid requires a conscious choice: the
 | D-09 | WebFrontend framework/language | 1–2 | RESOLVED: Svelte 5 + TypeScript strict + Vite SPA; router/query ADR |
 | D-10 | SQLite/migrations | 7 | rusqlite/bundled/Rust only/serial writes |
 | D-11 | Secret backend/mobile plugins | 1/7 | Keystore/Keychain; Stronghold separate model |
-| D-12 | Old KMP users/data migration | 0/7 | Mandatory audit; no assumptions |
+| D-12 | Old KMP users/data migration | 0/7 | RESOLVED 2026-10-12: fresh database; no production KMP data is migrated |
 | D-13 | Retention/forecast/day/range semantics | 2/9/12/14 | True retention/cutoff/UTC/UTF-16 half-open |
 | D-14 | External backup/encryption | 5/12 | Rolling+share; encryption separate |
 
