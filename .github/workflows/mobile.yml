@@ -35,16 +35,14 @@ jobs:
           path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
           retention-days: 14
 
-  # iOS: enable after `tauri ios init` has been run on a Mac and src-tauri/gen/apple is committed.
-  # Device builds need signing; this job builds for the simulator only.
-  # ios-simulator:
-  #   runs-on: macos-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - run: rustup target add aarch64-apple-ios-sim
-  #     - uses: actions/setup-node@v4
-  #       with: { node-version: 24 }
-  #     - run: npm ci
-  #       working-directory: frontend
-  #     - run: npm run variant -- dev ios build --debug --target aarch64-sim
-  #       working-directory: frontend
+  ios-simulator:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup target add aarch64-apple-ios-sim
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run variant -- dev ios build --debug --target aarch64-sim
+        working-directory: frontend
