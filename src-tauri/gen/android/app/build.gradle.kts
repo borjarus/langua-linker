@@ -13,12 +13,24 @@ val tauriProperties = Properties().apply {
     }
 }
 
+// App variant from frontend/scripts/tauri-variant.mjs. The Kotlin package and Tauri identifier stay
+// `com.mila.langualinker` (the CLI requires it); only the installed application id gets a suffix,
+// so dev/beta/release install side by side with separate data. Unset (e.g. Android Studio) = dev.
+val appVariant = System.getenv("LL_APP_VARIANT") ?: "dev"
+require(appVariant in setOf("dev", "beta", "release")) { "Unknown LL_APP_VARIANT \"$appVariant\"" }
+
 android {
     compileSdk = 34
     namespace = "com.mila.langualinker"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
+        manifestPlaceholders["appLabel"] = when (appVariant) {
+            "dev" -> "LanguaLinker Dev"
+            "beta" -> "LanguaLinker Beta"
+            else -> "LanguaLinker"
+        }
         applicationId = "com.mila.langualinker"
+        applicationIdSuffix = if (appVariant == "release") null else ".$appVariant"
         minSdk = 26
         targetSdk = 34
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()

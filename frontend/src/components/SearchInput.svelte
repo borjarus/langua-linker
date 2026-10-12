@@ -61,6 +61,8 @@
 <style>
   .search {
     display: grid;
+    /* An auto track would grow to the input's intrinsic width at large text sizes. */
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-1);
   }
 
@@ -92,6 +94,11 @@
     border: 0;
     background: transparent;
     outline: none;
+  }
+
+  /* The component has its own labelled clear button; hide Chromium/WebKit's native one. */
+  .input::-webkit-search-cancel-button {
+    appearance: none;
   }
 
   .error {
