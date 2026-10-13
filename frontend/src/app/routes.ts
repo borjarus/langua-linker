@@ -17,6 +17,7 @@ export const ROUTE_PATTERNS = {
   settingsAttributions: '/settings/attributions',
   onboarding: '/onboarding',
   gallery: '/gallery',
+  diagnostics: '/diagnostics',
 } as const
 
 export type RouteName = keyof typeof ROUTE_PATTERNS

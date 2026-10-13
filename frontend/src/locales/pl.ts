@@ -89,6 +89,7 @@ export const pl: LocaleResource = {
     settingsAttributions: 'Licencje i atrybucje',
     onboarding: 'Witaj',
     gallery: 'Galeria komponentów',
+    diagnostics: 'Diagnostyka natywna',
     notFound: 'Nie znaleziono strony',
   },
   notFound: {
@@ -351,5 +352,18 @@ export const pl: LocaleResource = {
     virtualList: 'Lista wirtualna (50 000 wierszy)',
     virtualRow: 'Wiersz {{index}}',
     progress: 'Panel postępu',
+  },
+  diagnostics: {
+    intro: 'Testy możliwości natywnych z fazy 1 (ADR-07, ADR-12). Tylko w buildach dev.',
+    secretStore: 'Magazyn sekretów',
+    secretStoreHint: 'Zapisuje, odczytuje, nadpisuje i usuwa wartość testową w magazynie systemowym. Uruchom ponownie po restarcie aplikacji, aby sprawdzić, czy dane przetrwały restart.',
+    run: 'Uruchom test',
+    nativeOnly: 'Dostępne tylko w aplikacji natywnej; demo w przeglądarce nie ma magazynu systemowego.',
+    passed: 'Wszystkie kroki zaliczone',
+    failed: 'Niektóre kroki nie powiodły się',
+    backend: 'Magazyn',
+    persisted: 'Przetrwało restart',
+    yes: 'Tak',
+    noFirstRun: 'Nie (oczekiwane przy pierwszym uruchomieniu)',
   },
 }

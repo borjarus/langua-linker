@@ -72,6 +72,7 @@
       <li><a class="btn" href="#/onboarding">{i18n.t('routes.onboarding')}<Icon name="back" /></a></li>
       {#if profile !== 'release'}
         <li><a class="btn" href="#/gallery">{i18n.t('routes.gallery')}<Icon name="back" /></a></li>
+        <li><a class="btn" href="#/diagnostics">{i18n.t('routes.diagnostics')}<Icon name="back" /></a></li>
       {/if}
     </ul>
   </nav>

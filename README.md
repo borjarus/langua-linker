@@ -56,7 +56,7 @@ Android builds on Windows and iOS on a Mac are described in [docs/release/mobile
 The build profile is chosen with Vite's `--mode` (`VITE_APP_PROFILE`):
 
 - `demo` (default for `dev`/`build`): in-memory `MockAppApi`, purple demo banner with a scenario switcher (`happy`, `newUser`, `empty`, `loading`, `error`, `offline`, `quota`, `ambiguous`, `large`). Nothing is persisted; the chosen scenario is remembered in local storage.
-- `dev` (`--mode dev`): Tauri adapter plus `/gallery`.
+- `dev` (`--mode dev`): Tauri adapter plus `/gallery` and `/diagnostics` (native capability probes, ADR-07/ADR-12; the Rust commands are granted only by the dev variant's `diagnostics` capability).
 - `beta`/`release` (`build:beta`/`build:release`): only the Tauri adapter; the demo adapter and `/gallery` are not emitted. `verify:beta`/`verify:release` check the bundles.
 
 ## App variants

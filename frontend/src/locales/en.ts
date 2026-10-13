@@ -87,6 +87,7 @@ export const en = {
     settingsAttributions: 'Licenses & attributions',
     onboarding: 'Welcome',
     gallery: 'Component gallery',
+    diagnostics: 'Native diagnostics',
     notFound: 'Page not found',
   },
   notFound: {
@@ -321,5 +322,18 @@ export const en = {
     virtualList: 'Virtual list (50,000 rows)',
     virtualRow: 'Row {{index}}',
     progress: 'Progress panel',
+  },
+  diagnostics: {
+    intro: 'Phase 1 native capability checks (ADR-07, ADR-12). Dev builds only.',
+    secretStore: 'Secret store',
+    secretStoreHint: 'Saves, reads, overwrites and deletes a test value in the system store. Run it again after restarting the app to check that data survives a restart.',
+    run: 'Run test',
+    nativeOnly: 'Available only in the native app; the browser demo has no system store.',
+    passed: 'All steps passed',
+    failed: 'Some steps failed',
+    backend: 'Store',
+    persisted: 'Survived a restart',
+    yes: 'Yes',
+    noFirstRun: 'No (expected on the first run)',
   },
 } as const

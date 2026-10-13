@@ -19,6 +19,7 @@
       }
     ],
     "security": {
+      "capabilities": ["default"],
       "csp": "default-src 'self'; connect-src ipc: http://ipc.localhost; img-src 'self' asset:; style-src 'self' 'unsafe-inline'"
     }
   },

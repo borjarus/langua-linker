@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "diagnostics",
+  "description": "Phase 1 native spikes (ADR-07, ADR-12). Enabled only by tauri.dev.conf.json; beta/release list just `default`.",
+  "windows": ["main"],
+  "permissions": ["allow-probe-secret-store"]
+}
