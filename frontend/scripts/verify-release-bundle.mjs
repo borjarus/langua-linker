@@ -9,6 +9,8 @@ const FORBIDDEN = [
   ['LL_DEMO_ADAPTER_INCLUDED', 'demo adapter (MockAppApi)'],
   ['demo-mnemonic-v1', 'demo fixtures'],
   ['GalleryScreen', 'debug gallery'],
+  ['DiagnosticsScreen', 'native diagnostics screen'],
+  ['probe_secret_store', 'native diagnostics commands'],
 ]
 
 function walk(dir) {

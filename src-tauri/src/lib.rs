@@ -1,5 +1,8 @@
 //! Tauri composition root. Desktop (`main.rs`) and mobile (`mobile_entry_point`) both call `run()`.
 
+mod diagnostics;
+
+use diagnostics::SecretService;
 use langualinker_contracts::{API_VERSION, AppInfoDto};
 use langualinker_infrastructure::logging;
 use tauri::{AppHandle, Builder, Emitter, Manager, Runtime};
@@ -62,10 +65,14 @@ fn configure<R: Runtime>(builder: Builder<R>, diagnostics: bool) -> Builder<R> {
             if diagnostics {
                 start_diagnostics(app);
             }
+            app.manage(SecretService(app.config().identifier.clone()));
             announce_ready(app.handle())?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_app_info])
+        .invoke_handler(tauri::generate_handler![
+            get_app_info,
+            diagnostics::probe_secret_store
+        ])
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -225,5 +232,33 @@ mod tests {
             .collect();
         assert_eq!(permissions, ["core:event:default", "allow-get-app-info"]);
         assert_eq!(capability["windows"], serde_json::json!(["main"]));
+    }
+
+    #[test]
+    fn diagnostics_capability_is_enabled_only_in_dev() {
+        let enabled = |json: &str| config(json)["app"]["security"]["capabilities"].clone();
+        let release = enabled(include_str!("../tauri.conf.json"));
+        assert_eq!(release, serde_json::json!(["default"]));
+        // Beta inherits the release list; only the dev overlay adds diagnostics.
+        assert!(enabled(include_str!("../tauri.beta.conf.json")).is_null());
+        assert_eq!(
+            enabled(include_str!("../tauri.dev.conf.json")),
+            serde_json::json!(["default", "diagnostics"])
+        );
+        let diagnostics = config(include_str!("../capabilities/diagnostics.json"));
+        assert_eq!(
+            diagnostics["permissions"],
+            serde_json::json!(["allow-probe-secret-store"])
+        );
+    }
+
+    #[test]
+    fn diagnostics_commands_are_denied_without_the_dev_capability() {
+        // The test context is the release configuration, which enables `default` only.
+        let app = app();
+        let window = main_window(&app);
+        let denied = invoke(&window, "probe_secret_store", serde_json::json!({}));
+        let message = denied.expect_err("probe must be denied").to_string();
+        assert!(message.contains("not allowed"), "{message}");
     }
 }

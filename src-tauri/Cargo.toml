@@ -23,5 +23,6 @@ serde.workspace = true
 tauri = { version = "=2.12.2", features = [] }
 
 [dev-dependencies]
+keyring-core = "=1.0.1"
 serde_json.workspace = true
 tauri = { version = "=2.12.2", features = ["test"] }

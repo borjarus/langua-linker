@@ -18,7 +18,7 @@
   import { screenKey } from './routes'
 
   const { router } = useServices()
-  /** Statically false in beta/release builds, so the gallery chunk is not emitted. */
+  /** Statically false in beta/release builds, so the gallery and diagnostics chunks are not emitted. */
   const GALLERY_ENABLED = import.meta.env.VITE_APP_PROFILE !== 'release' && import.meta.env.VITE_APP_PROFILE !== 'beta'
   const route = $derived(router.current)
   // Each navigation to another screen remounts it, so per-screen state and subscriptions start clean.
@@ -57,6 +57,12 @@
       <Skeleton lines={8} />
     {:then gallery}
       <gallery.default />
+    {/await}
+  {:else if route.name === 'diagnostics' && GALLERY_ENABLED}
+    {#await import('../features/diagnostics/DiagnosticsScreen.svelte')}
+      <Skeleton lines={4} />
+    {:then diagnostics}
+      <diagnostics.default />
     {/await}
   {:else}
     <NotFoundScreen path={route.path} />

@@ -36,7 +36,10 @@ export default ts.config(
         'error',
         {
           patterns: [
-            { group: ['@tauri-apps/*'], message: 'Use AppApi from context; only src/api/tauriAppApi.ts may import Tauri.' },
+            {
+              group: ['@tauri-apps/*'],
+              message: 'Use AppApi from context; only src/api/tauriAppApi.ts (and the dev-only src/api/nativeDiagnostics.ts) may import Tauri.',
+            },
             { group: ['react', 'react-dom', 'react-router*', 'react-i18next'], message: 'The frontend is Svelte 5; React is not a dependency.' },
           ],
         },
@@ -44,7 +47,7 @@ export default ts.config(
     },
   },
   {
-    files: ['src/api/tauriAppApi.ts'],
+    files: ['src/api/tauriAppApi.ts', 'src/api/nativeDiagnostics.ts'],
     rules: { 'no-restricted-imports': 'off' },
   },
   {

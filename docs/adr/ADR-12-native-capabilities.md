@@ -1,6 +1,6 @@
 # ADR-12: Native capabilities — WebView, notifications, TTS, files
 
-- Status: Proposed — WebView spike done on the Android emulator (2026-10-12); other spikes not started
+- Status: Proposed — WebView spike done on the Android emulator (2026-10-12) and iOS simulator (2026-10-13); other spikes not started
 - Date: 2026-10-12
 - Plan references: Phase 1 steps 9–10, Phase 15, D-11; SecretStore is ADR-07
 
@@ -12,7 +12,7 @@ The app is a Tauri 2 shell around a Svelte WebView. Phase 1 must show, per targe
 
 | Capability | Android emulator | iOS simulator | Desktop | Outcome / approach |
 |---|---|---|---|---|
-| WebView (shell, focus, keyboard, safe areas, rotation, text scale) | works, with fixes below; keyboard resize and start time open | not run | not re-checked | no plugin; CSS and app-level fixes |
+| WebView (shell, focus, keyboard, safe areas, rotation, text scale) | works, with fixes below; keyboard resize and start time open | works (start ~0.95 s, safe areas 62/34 px, landscape, max text); software keyboard not shown on the simulator; `#/editor` 3 px overflow at 200% in-app scale | not re-checked | no plugin; CSS and app-level fixes |
 | Notifications (permission, send, schedule, tap) | not started | not started | not started | candidate: official `tauri-plugin-notification` |
 | TTS (de-DE, en-US, offline, rate, stop) | not started | not started | not started | try WebView `speechSynthesis` first; otherwise thin own plugin (`TextToSpeech` / `AVSpeechSynthesizer`, desktop `tts` crate) |
 | Files (open CSV/APKG, save backup, share sheet) | not started | not started | not started | candidates: official `tauri-plugin-dialog` + `tauri-plugin-fs`; share via community or own plugin |
@@ -32,5 +32,5 @@ Details and measurements: [device-smoke.md](../release/device-smoke.md).
 ## Consequences
 
 - WebView needs no plugin; the fixes above are in the frontend and covered by tests.
-- Each remaining spike runs as a dev-variant-only diagnostics screen and records its row in the table above before this ADR is accepted.
-- iOS results (simulator, Phase 1) and physical devices (Phase 6) are still required.
+- Each remaining spike runs on the dev-variant-only diagnostics screen (`#/diagnostics`, `src-tauri/src/diagnostics.rs`, `diagnostics` capability — introduced by the SecretStore spike, ADR-07) and records its row in the table above before this ADR is accepted.
+- iOS simulator WebView results: [device-smoke.md](../release/device-smoke.md) (2026-10-13). iOS results for the other spikes and physical devices (Phase 6) are still required.

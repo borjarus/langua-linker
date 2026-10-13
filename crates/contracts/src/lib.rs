@@ -16,6 +16,26 @@ pub struct AppInfoDto {
     pub mode: String,
 }
 
+/// Result of the SecretStore spike (ADR-07). Dev-variant diagnostics only — not part of `AppApi`.
+/// Mirrored by `frontend/src/api/nativeDiagnostics.ts`. Never contains secret values.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SecretStoreProbeDto {
+    /// Store vendor reported by the platform backend, or `none` when it could not be opened.
+    pub backend: String,
+    /// The marker written by the previous probe run was found, i.e. secrets survive a restart.
+    pub persisted_from_previous_run: bool,
+    pub steps: Vec<ProbeStepDto>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProbeStepDto {
+    pub name: String,
+    pub ok: bool,
+    pub error: Option<String>,
+}
+
 /// Error codes from plan §14.3; serialized as SCREAMING_SNAKE_CASE strings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]

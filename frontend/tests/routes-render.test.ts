@@ -33,6 +33,7 @@ describe('every route opens its screen with the correct mock state', () => {
     ['#/settings/attributions', 'Licenses & attributions', 'Svelte'],
     ['#/onboarding', 'Welcome', 'Available decks'],
     ['#/gallery', 'Component gallery', 'Virtual list (50,000 rows)'],
+    ['#/diagnostics', 'Native diagnostics', 'Available only in the native app'],
   ])('%s', async (hash, title, content) => {
     const { stop } = await renderAt(hash)
     await waitFor(() => expect(heading()).toHaveTextContent(title))
