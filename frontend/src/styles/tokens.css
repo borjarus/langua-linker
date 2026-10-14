@@ -82,11 +82,15 @@
   --sidebar-width: 15rem;
   /* Bottom navigation on phones; 0 once the sidebar layout applies (52rem, see Shell.svelte). */
   --bottom-nav-height: 4.5rem;
+  /* Space the bottom navigation actually takes: long labels at large text wrap and make it taller
+     than its minimum, so Shell.svelte publishes the measured height as --bottom-nav-measured. */
+  --bottom-nav-space: var(--bottom-nav-measured, var(--bottom-nav-height));
 }
 
 @media (min-width: 52rem) {
   :root {
     --bottom-nav-height: 0px;
+    --bottom-nav-space: 0px;
   }
 }
 
