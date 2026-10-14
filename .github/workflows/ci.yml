@@ -29,6 +29,33 @@ jobs:
       - run: node --test scripts/tauri-variant.test.mjs
       - run: npm audit --audit-level=high
 
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+      # Pixel snapshots are compared once committed baselines exist (seed them with e2e-baselines.yml).
+      - name: Playwright (gallery matrix, layout at 200%, axe)
+        run: |
+          if [ -d e2e/__snapshots__ ]; then export PW_SNAPSHOTS=1; fi
+          npx playwright test
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+
   rust:
     runs-on: ubuntu-latest
     steps:

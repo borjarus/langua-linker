@@ -10,6 +10,11 @@ export interface NavigationGuard {
   confirmLeave(to: Route): Promise<boolean>
 }
 
+/** An open overlay (dialog, sheet) that the Back gesture/button closes before it navigates. */
+export interface DismissibleLayer {
+  dismiss(): void
+}
+
 interface HistoryState {
   llIndex?: number
 }
@@ -25,6 +30,7 @@ export class Router {
 
   readonly #win: Window
   readonly #guards = new Set<NavigationGuard>()
+  readonly #layers: DismissibleLayer[] = []
   readonly #scroll = new Map<string, number>()
   #hash = ''
   #index = 0
@@ -58,6 +64,18 @@ export class Router {
   addGuard(guard: NavigationGuard): () => void {
     this.#guards.add(guard)
     return () => this.#guards.delete(guard)
+  }
+
+  /**
+   * Registers an open overlay. A history-back move (Android Back, browser Back) while a layer is
+   * open is undone and dismisses the topmost layer instead. Programmatic navigation is unaffected.
+   */
+  addLayer(layer: DismissibleLayer): () => void {
+    this.#layers.push(layer)
+    return () => {
+      const index = this.#layers.lastIndexOf(layer)
+      if (index >= 0) this.#layers.splice(index, 1)
+    }
   }
 
   /** Resolves `false` when a guard kept the user on the current screen. */
@@ -106,10 +124,14 @@ export class Router {
     const state = this.#win.history.state as HistoryState | null
     const targetIndex = typeof state?.llIndex === 'number' ? state.llIndex : null
 
+    const layer = this.#layers.at(-1)
+    if (layer && targetIndex !== null && targetIndex < this.#index) {
+      this.#undo(targetIndex)
+      layer.dismiss()
+      return
+    }
     if (!(await this.#canLeave(to))) {
-      // Undo the browser-driven move; the resulting hashchange matches #hash and is ignored.
-      if (targetIndex !== null) this.#win.history.go(this.#index - targetIndex)
-      else this.#win.history.back()
+      this.#undo(targetIndex)
       return
     }
     this.#rememberScroll()
@@ -121,6 +143,12 @@ export class Router {
       this.#index = targetIndex
       this.#commit(to, hash, 'pop')
     }
+  }
+
+  /** Undoes a browser-driven move; the resulting hashchange matches #hash and is ignored. */
+  #undo(targetIndex: number | null): void {
+    if (targetIndex !== null) this.#win.history.go(this.#index - targetIndex)
+    else this.#win.history.back()
   }
 
   async #canLeave(to: Route): Promise<boolean> {

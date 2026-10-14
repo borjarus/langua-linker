@@ -119,6 +119,11 @@
     font-size: var(--text-xs);
     text-align: center;
     text-decoration: none;
+    /* At 200% text a label is wider than its fifth of a phone screen: break at a syllable with a
+       hyphen (dictionary of the `lang` language) before falling back to an arbitrary break.
+       Needs OS hyphenation data (Android, iOS); desktop Windows engines fall back. */
+    -webkit-hyphens: auto;
+    hyphens: auto;
   }
 
   .nav-link[aria-current='page'] {

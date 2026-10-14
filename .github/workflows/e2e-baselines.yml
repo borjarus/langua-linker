@@ -1,0 +1,29 @@
+name: E2E baselines
+
+# Regenerates the gallery pixel baselines on the Linux CI image (ui-test-matrix diff rule 6).
+# Download the artifact, review the images and commit them to frontend/e2e/__snapshots__/.
+on:
+  workflow_dispatch:
+
+jobs:
+  baselines:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit
+      - run: npx playwright test -g "visual baseline" --update-snapshots=all
+        env:
+          PW_SNAPSHOTS: '1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-snapshots
+          path: frontend/e2e/__snapshots__

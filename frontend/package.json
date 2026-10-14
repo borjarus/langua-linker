@@ -14,6 +14,7 @@
     "lint:i18n": "node scripts/check-ui-strings.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "verify:beta": "npm run build:beta && node scripts/verify-release-bundle.mjs dist-beta",
     "verify:release": "npm run build:release && node scripts/verify-release-bundle.mjs dist-release",
     "tauri": "cross-env TAURI_APP_PATH=../src-tauri tauri",
@@ -30,7 +31,9 @@
     "svelte": "5.57.2"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@eslint/js": "9.39.5",
+    "@playwright/test": "1.64.0",
     "@sveltejs/vite-plugin-svelte": "5.0.3",
     "@tauri-apps/cli": "2.12.2",
     "@testing-library/jest-dom": "6.10.0",

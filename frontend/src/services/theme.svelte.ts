@@ -21,8 +21,14 @@ export class ThemeController {
     this.#root = root
   }
 
+  /** Applies the stored preference before the first render, so dark mode does not flash light. */
+  prime(): void {
+    this.systemDark = this.#media()?.matches ?? false
+    this.#apply()
+  }
+
   start(): () => void {
-    const media = typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(prefers-color-scheme: dark)') : null
+    const media = this.#media()
     this.systemDark = media?.matches ?? false
     const onChange = (event: MediaQueryListEvent) => {
       this.systemDark = event.matches
@@ -41,6 +47,10 @@ export class ThemeController {
   setTextScale(scale: TextScale): void {
     this.textScale = scale
     this.#apply()
+  }
+
+  #media(): MediaQueryList | null {
+    return typeof window !== 'undefined' && 'matchMedia' in window ? window.matchMedia('(prefers-color-scheme: dark)') : null
   }
 
   #apply(): void {
