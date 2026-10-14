@@ -19,6 +19,17 @@
   ]
   const activeName = $derived(router.current.name)
 
+  // The bottom nav grows when labels wrap (200% text, long Polish words); content padding and
+  // toasts read its real height. The nav's own safe-area padding is excluded — consumers add it;
+  // +1 is its border-top.
+  // The sidebar layout ignores the value (tokens.css sets --bottom-nav-space to 0 there).
+  let navListHeight = $state(0)
+  $effect(() => {
+    const root = document.documentElement.style
+    if (navListHeight > 0) root.setProperty('--bottom-nav-measured', `${navListHeight + 1}px`)
+    return () => root.removeProperty('--bottom-nav-measured')
+  })
+
   // Focus and scroll are restored after each navigation so keyboard and screen-reader users land
   // on the new screen's heading instead of the previous position. A navigation that keeps the
   // screen (see `screenKey`, e.g. search text) must not steal focus — on mobile that closes the keyboard.
@@ -46,7 +57,7 @@
 
 <div class="layout">
   <nav class="nav" aria-label={i18n.t('nav.primary')}>
-    <ul>
+    <ul bind:offsetHeight={navListHeight}>
       {#each NAV as item (item.route)}
         {@const current = item.matches.includes(activeName as RouteName)}
         <li>
@@ -86,7 +97,7 @@
     width: min(100%, var(--content-width));
     margin-inline: auto;
     padding: var(--space-4);
-    padding-bottom: calc(var(--bottom-nav-height) + var(--space-6) + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--bottom-nav-space) + var(--space-6) + env(safe-area-inset-bottom));
     padding-inline: max(var(--space-4), env(safe-area-inset-left)) max(var(--space-4), env(safe-area-inset-right));
   }
 

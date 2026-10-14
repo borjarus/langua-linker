@@ -35,7 +35,7 @@
   .toasts {
     position: fixed;
     inset-inline: var(--space-4);
-    bottom: calc(var(--space-4) + var(--bottom-nav-height, 0px) + env(safe-area-inset-bottom));
+    bottom: calc(var(--space-4) + var(--bottom-nav-space, 0px) + env(safe-area-inset-bottom));
     z-index: 60;
     display: grid;
     justify-items: center;
