@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from '@testing-library/svelte'
+import { fireEvent, screen, waitFor, within } from '@testing-library/svelte'
 import userEvent from '@testing-library/user-event'
 import { flushSync } from 'svelte'
 import { describe, expect, it, vi } from 'vitest'
@@ -66,6 +66,23 @@ describe('Dialog', () => {
     await user.keyboard('{Escape}')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(document.activeElement).toBe(opener)
+  })
+
+  it('closes on history Back instead of leaving the screen', async () => {
+    window.history.replaceState(null, '', '#/home')
+    const services = await createTestServices({ language: 'en' })
+    const stop = services.router.start()
+    await services.router.navigate({ name: 'gallery' })
+    const user = userEvent.setup()
+    renderWith(DialogHarness, services)
+    await user.click(screen.getByRole('button', { name: 'open' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    window.history.back()
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await waitFor(() => expect(window.location.hash).toBe('#/gallery'))
+    expect(services.router.current.name).toBe('gallery')
+    stop()
   })
 })
 

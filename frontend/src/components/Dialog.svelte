@@ -17,8 +17,18 @@
   }
 
   let { open, title, onclose, variant = 'dialog', dismissible = true, children, actions }: Props = $props()
-  const { i18n } = useServices()
+  const { i18n, router } = useServices()
   const titleId = $props.id()
+
+  // Back (Android Back, browser Back) closes the dialog like Escape instead of leaving the screen.
+  $effect(() => {
+    if (!open) return
+    return router.addLayer({
+      dismiss: () => {
+        if (dismissible) onclose()
+      },
+    })
+  })
 
   function onBackdrop(event: MouseEvent) {
     if (dismissible && event.target === event.currentTarget) onclose()
@@ -62,12 +72,15 @@
     background: var(--color-surface-overlay);
   }
 
+  /* Only the content scrolls, so the title and the actions stay reachable at 200% text. */
   .panel {
     display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-auto-rows: auto;
     gap: var(--space-4);
     width: min(100%, 32rem);
     max-height: calc(100dvh - 2 * var(--space-4));
-    overflow: auto;
+    overflow: hidden;
     padding: var(--space-5);
     border-radius: var(--radius-lg);
     background: var(--color-surface);
@@ -85,6 +98,11 @@
   .header h2 {
     font-size: var(--text-lg);
     padding-top: var(--space-2);
+  }
+
+  .content {
+    min-height: 0;
+    overflow: auto;
   }
 
   .actions {

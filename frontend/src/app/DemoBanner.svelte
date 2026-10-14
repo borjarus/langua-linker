@@ -49,6 +49,12 @@
     font-size: var(--text-sm);
   }
 
+  /* A flex item defaults to its min-content width, which is the select's longest option; at 200%
+     text that is wider than a phone, so let the row shrink and the select cap at its width. */
+  .row {
+    min-width: 0;
+  }
+
   label {
     font-weight: var(--weight-medium);
   }

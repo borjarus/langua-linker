@@ -78,6 +78,39 @@ describe('Router', () => {
     expect(router.current.name).toBe('editor')
   })
 
+  it('dismisses the topmost open layer on Back instead of navigating', async () => {
+    await router.navigate({ name: 'gallery' })
+    const dismissed: string[] = []
+    const removeLower = router.addLayer({ dismiss: () => dismissed.push('lower') })
+    const removeUpper = router.addLayer({ dismiss: () => dismissed.push('upper') })
+
+    window.history.back()
+    await waitForHash('#/home')
+    await waitForHash('#/gallery')
+    await flush()
+    expect(router.current.name).toBe('gallery')
+    expect(window.location.hash).toBe('#/gallery')
+    expect(dismissed).toEqual(['upper'])
+
+    removeUpper()
+    removeLower()
+    window.history.back()
+    await waitForHash('#/home')
+    await flush()
+    expect(router.current.name).toBe('home')
+    expect(router.kind).toBe('pop')
+    expect(dismissed).toEqual(['upper'])
+  })
+
+  it('lets programmatic navigation pass while a layer is open', async () => {
+    let dismissed = false
+    const remove = router.addLayer({ dismiss: () => (dismissed = true) })
+    expect(await router.navigate({ name: 'stats' })).toBe(true)
+    expect(router.current.name).toBe('stats')
+    expect(dismissed).toBe(false)
+    remove()
+  })
+
   it('does not consult non-blocking guards', async () => {
     let asked = false
     router.addGuard({

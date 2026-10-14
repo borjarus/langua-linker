@@ -66,6 +66,7 @@ export async function createServices(profile: AppProfile = APP_PROFILE): Promise
   const theme = new ThemeController()
   theme.preference = preferences.theme
   theme.textScale = preferences.textScale
+  theme.prime()
   const services: AppServices = {
     profile,
     api,

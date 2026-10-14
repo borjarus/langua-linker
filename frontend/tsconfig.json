@@ -15,5 +15,5 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true
   },
-  "include": ["src/**/*.ts", "src/**/*.svelte", "tests/**/*.ts", "tests/**/*.svelte", "vite.config.ts"]
+  "include": ["src/**/*.ts", "src/**/*.svelte", "tests/**/*.ts", "tests/**/*.svelte", "e2e/**/*.ts", "vite.config.ts", "playwright.config.ts"]
 }
