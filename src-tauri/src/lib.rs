@@ -71,13 +71,22 @@ fn configure<R: Runtime>(builder: Builder<R>, diagnostics: bool) -> Builder<R> {
         })
         .invoke_handler(tauri::generate_handler![
             get_app_info,
-            diagnostics::probe_secret_store
+            diagnostics::probe_secret_store,
+            diagnostics::probe_file_open,
+            diagnostics::probe_file_save
         ])
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    configure(Builder::default(), true)
+    // Plugins are registered in every variant, but their commands are reachable only through
+    // capabilities: today just the dev-only `diagnostics` one (ADR-12 spikes). Rust code may call
+    // them directly (the file probes do). Not part of `configure`, so mock-runtime tests stay lean.
+    let builder = Builder::default()
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init());
+    configure(builder, true)
         .run(tauri::generate_context!())
         .expect("error while running LanguaLinker");
 }
@@ -248,7 +257,18 @@ mod tests {
         let diagnostics = config(include_str!("../capabilities/diagnostics.json"));
         assert_eq!(
             diagnostics["permissions"],
-            serde_json::json!(["allow-probe-secret-store"])
+            serde_json::json!([
+                "allow-probe-secret-store",
+                "allow-probe-file-open",
+                "allow-probe-file-save",
+                "notification:allow-is-permission-granted",
+                "notification:allow-request-permission",
+                "notification:allow-notify",
+                "notification:allow-get-pending",
+                "notification:allow-cancel",
+                "notification:allow-register-listener",
+                "notification:allow-remove-listener"
+            ])
         );
     }
 
@@ -257,8 +277,18 @@ mod tests {
         // The test context is the release configuration, which enables `default` only.
         let app = app();
         let window = main_window(&app);
-        let denied = invoke(&window, "probe_secret_store", serde_json::json!({}));
-        let message = denied.expect_err("probe must be denied").to_string();
-        assert!(message.contains("not allowed"), "{message}");
+        for (command, body) in [
+            ("probe_secret_store", serde_json::json!({})),
+            ("probe_file_open", serde_json::json!({ "filtered": true })),
+            ("probe_file_save", serde_json::json!({})),
+            (
+                "plugin:notification|notify",
+                serde_json::json!({ "options": { "title": "x" } }),
+            ),
+        ] {
+            let denied = invoke(&window, command, body);
+            let message = denied.expect_err(command).to_string();
+            assert!(message.contains("not allowed"), "{command}: {message}");
+        }
     }
 }

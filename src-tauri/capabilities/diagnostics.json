@@ -1,7 +1,18 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "diagnostics",
-  "description": "Phase 1 native spikes (ADR-07, ADR-12). Enabled only by tauri.dev.conf.json; beta/release list just `default`.",
+  "description": "Phase 1 native spikes (ADR-07, ADR-12). Enabled only by tauri.dev.conf.json; beta/release list just `default`. Files go through Rust commands, so no dialog/fs plugin permissions are granted to the WebView; notifications are probed with the plugin's JS API.",
   "windows": ["main"],
-  "permissions": ["allow-probe-secret-store"]
+  "permissions": [
+    "allow-probe-secret-store",
+    "allow-probe-file-open",
+    "allow-probe-file-save",
+    "notification:allow-is-permission-granted",
+    "notification:allow-request-permission",
+    "notification:allow-notify",
+    "notification:allow-get-pending",
+    "notification:allow-cancel",
+    "notification:allow-register-listener",
+    "notification:allow-remove-listener"
+  ]
 }

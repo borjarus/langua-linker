@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@tauri-apps/api": "2.12.2",
+    "@tauri-apps/plugin-notification": "2.5.1",
     "i18next": "26.4.4",
     "svelte": "5.57.2"
   },

@@ -11,6 +11,8 @@ const FORBIDDEN = [
   ['GalleryScreen', 'debug gallery'],
   ['DiagnosticsScreen', 'native diagnostics screen'],
   ['probe_secret_store', 'native diagnostics commands'],
+  ['probe_file_open', 'native diagnostics commands'],
+  ['plugin:notification|', 'notification spike'],
 ]
 
 function walk(dir) {

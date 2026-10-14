@@ -1,6 +1,6 @@
 # ADR-12: Native capabilities — WebView, notifications, TTS, files
 
-- Status: Proposed — WebView spike done on the Android emulator (2026-10-12) and iOS simulator (2026-10-13); other spikes not started
+- Status: Proposed — WebView spike done on the Android emulator (2026-10-12) and iOS simulator (2026-10-13); notification, TTS, file and share probes implemented on `#/diagnostics` (2026-10-14), not yet run on the emulator/simulator
 - Date: 2026-10-12
 - Plan references: Phase 1 steps 9–10, Phase 15, D-11; SecretStore is ADR-07
 
@@ -13,9 +13,23 @@ The app is a Tauri 2 shell around a Svelte WebView. Phase 1 must show, per targe
 | Capability | Android emulator | iOS simulator | Desktop | Outcome / approach |
 |---|---|---|---|---|
 | WebView (shell, focus, keyboard, safe areas, rotation, text scale) | works, with fixes below; keyboard resize and start time open | works (start ~0.95 s, safe areas 62/34 px, landscape, max text); software keyboard not shown on the simulator; `#/editor` 3 px overflow at 200% in-app scale | not re-checked | no plugin; CSS and app-level fixes |
-| Notifications (permission, send, schedule, tap) | not started | not started | not started | candidate: official `tauri-plugin-notification` |
-| TTS (de-DE, en-US, offline, rate, stop) | not started | not started | not started | try WebView `speechSynthesis` first; otherwise thin own plugin (`TextToSpeech` / `AVSpeechSynthesizer`, desktop `tts` crate) |
-| Files (open CSV/APKG, save backup, share sheet) | not started | not started | not started | candidates: official `tauri-plugin-dialog` + `tauri-plugin-fs`; share via community or own plugin |
+| Notifications (permission, send, schedule, tap) | probe ready, not run | probe ready, not run | probe ready, not run | official `tauri-plugin-notification` =2.5.1 |
+| TTS (de-DE, en-US, offline, rate, stop) | probe ready, not run | probe ready, not run | probe ready, not run | WebView `speechSynthesis` first; otherwise a plugin (community `tauri-plugin-tts` or own `TextToSpeech` / `AVSpeechSynthesizer`) |
+| Files (open CSV/APKG, save backup) | probe ready, not run | probe ready, not run | probe ready, not run | official `tauri-plugin-dialog` =2.8.1 + `tauri-plugin-fs` =2.6.0, used from Rust |
+| Share sheet | probe ready, not run | probe ready, not run | probe ready, not run | Web Share API first; otherwise a plugin (community `tauri-plugin-sharekit` or own) |
+
+## Probes (2026-10-14)
+
+All run from the dev-variant `#/diagnostics` screen. Every plugin is registered in every variant, but the WebView reaches it only through the `diagnostics` capability (dev only). Beta/release bundles are checked to contain none of the probe code (`verify-release-bundle.mjs`).
+
+- **Notifications** — JS calls the plugin commands directly (`is_permission_granted`, `request_permission`, `notify`, `cancel`, `get_pending`). The plugin's `sendNotification` drops errors, so it is not used. Steps: check and request permission, send now (id 7001), schedule in 10 s (id 7002, `allowWhileIdle`) and confirm it is pending. While the screen is open, deliveries and taps are logged with their `extra` through `onNotificationReceived` and `onAction`. Run it with the app in the foreground, in the background, and once killed. A tap on a cold start reaches only listeners registered after start-up, so record whether it is lost.
+- **Files** — Rust commands `probe_file_open { filtered }` and `probe_file_save` use the dialog plugin's blocking picker on a worker thread and `FsExt::fs().open()`. That is the path the Phase 8 importer and Phase 12 backup will take: a `content://` URI on Android, a security-scoped `file://` URL on iOS (released after use). The open probe streams the whole file and reports the location scheme, size and sniffed type (`text`/`zip`), never the name or contents. The save probe writes a non-ASCII sample and reads it back. Two risks are visible in the plugin source and must be confirmed:
+  - Android maps filter extensions to MIME types through `MimeTypeMap`. `apkg` has no MIME type, so the filtered picker may grey out APKG files. "Open any file" is the control.
+  - iOS implements save as "export an empty placeholder, return the destination URL". Record whether writing to that URL afterwards works.
+- **TTS** — WebView `speechSynthesis`: availability, voices for `de-DE`/`en-US` with `localService` (offline), speak at rate 0.5–1.5, Stop (expect `error:interrupted`/`canceled` or `end`). Repeat in airplane mode.
+- **Share** — `navigator.share` / `canShare({ files })` with text and a small CSV file. `AbortError` means the sheet opened and was closed.
+
+Test files for the open probe: a CSV and an `.apkg` (any zip renamed to `.apkg` is enough to check the picker and the sniffing), pushed to the device's Downloads (`adb push deck.csv deck.apkg /sdcard/Download/`) or added to the simulator via Files/drag and drop.
 
 ## WebView findings (Android 16 emulator, WebView 134)
 
@@ -32,5 +46,6 @@ Details and measurements: [device-smoke.md](../release/device-smoke.md).
 ## Consequences
 
 - WebView needs no plugin; the fixes above are in the frontend and covered by tests.
+- Registering the notification plugin adds `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED` and `WAKE_LOCK` to the Android manifest of every variant. Phase 15 needs them anyway; the store privacy declarations must list them.
 - Each remaining spike runs on the dev-variant-only diagnostics screen (`#/diagnostics`, `src-tauri/src/diagnostics.rs`, `diagnostics` capability — introduced by the SecretStore spike, ADR-07) and records its row in the table above before this ADR is accepted.
 - iOS simulator WebView results: [device-smoke.md](../release/device-smoke.md) (2026-10-13). iOS results for the other spikes and physical devices (Phase 6) are still required.
