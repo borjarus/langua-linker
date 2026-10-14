@@ -28,6 +28,22 @@ pub struct SecretStoreProbeDto {
     pub steps: Vec<ProbeStepDto>,
 }
 
+/// Result of the file open/save spike (ADR-12). Dev-variant diagnostics only — not part of
+/// `AppApi`. Mirrored by `frontend/src/api/nativeDiagnostics.ts`. Carries no file contents.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileProbeDto {
+    /// The user closed the picker without choosing a file; `steps` is then empty.
+    pub cancelled: bool,
+    /// How the picker returned the file: a URL scheme (`content`, `file`) or `path`.
+    pub location: Option<String>,
+    /// Bytes read from the picked file, or written and read back by the save probe.
+    pub bytes: Option<u64>,
+    /// Content sniffed from the first bytes: `zip` (APKG), `text` or `binary`.
+    pub kind: Option<String>,
+    pub steps: Vec<ProbeStepDto>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProbeStepDto {

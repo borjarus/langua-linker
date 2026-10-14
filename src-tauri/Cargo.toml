@@ -21,6 +21,9 @@ langualinker-infrastructure = { path = "../crates/infrastructure" }
 tracing.workspace = true
 serde.workspace = true
 tauri = { version = "=2.12.2", features = [] }
+tauri-plugin-dialog = "=2.8.1"
+tauri-plugin-fs = "=2.6.0"
+tauri-plugin-notification = "=2.5.1"
 
 [dev-dependencies]
 keyring-core = "=1.0.1"
