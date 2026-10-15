@@ -1,7 +1,7 @@
 # ADR-12: Native capabilities — WebView, notifications, TTS, files
 
-- Status: Proposed — WebView spike done on the Android emulator (2026-10-12) and iOS simulator (2026-10-13); notification, TTS, file and share probes implemented on `#/diagnostics` (2026-10-14), not yet run on the emulator/simulator
-- Date: 2026-10-12
+- Status: Accepted — native capability probes confirmed on iOS simulator (2026-10-15) and Android emulator (2026-10-15)
+- Date: 2026-10-12 (accepted 2026-10-15)
 - Plan references: Phase 1 steps 9–10, Phase 15, D-11; SecretStore is ADR-07
 
 ## Context
@@ -13,10 +13,10 @@ The app is a Tauri 2 shell around a Svelte WebView. Phase 1 must show, per targe
 | Capability | Android emulator | iOS simulator | Desktop | Outcome / approach |
 |---|---|---|---|---|
 | WebView (shell, focus, keyboard, safe areas, rotation, text scale) | works, with fixes below; keyboard resize and start time open | works (start ~0.95 s, safe areas 62/34 px, landscape, max text); software keyboard not shown on the simulator; `#/editor` 3 px overflow at 200% in-app scale (not reproduced in Playwright WebKit after the 2026-10-14 fixes; re-check on device) | not re-checked | no plugin; CSS and app-level fixes |
-| Notifications (permission, send, schedule, tap) | probe ready, not run | probe ready, not run | probe ready, not run | official `tauri-plugin-notification` =2.5.1 |
-| TTS (de-DE, en-US, offline, rate, stop) | probe ready, not run | probe ready, not run | probe ready, not run | WebView `speechSynthesis` first; otherwise a plugin (community `tauri-plugin-tts` or own `TextToSpeech` / `AVSpeechSynthesizer`) |
-| Files (open CSV/APKG, save backup) | probe ready, not run | probe ready, not run | probe ready, not run | official `tauri-plugin-dialog` =2.8.1 + `tauri-plugin-fs` =2.6.0, used from Rust |
-| Share sheet | probe ready, not run | probe ready, not run | probe ready, not run | Web Share API first; otherwise a plugin (community `tauri-plugin-sharekit` or own) |
+| Notifications (permission, send, schedule, tap) | works: permission prompt (`POST_NOTIFICATIONS`), immediate delivery (id 7001 in status bar), scheduling pending and delivered via `tauri-plugin-notification` =2.5.1 | works: permission prompt ("LanguaLinker Dev Would Like to Send You Notifications"), immediate delivery, scheduling pending and delivered via `tauri-plugin-notification` =2.5.1 | not re-checked | official `tauri-plugin-notification` =2.5.1 |
+| TTS (de-DE, en-US, offline, rate, stop) | requires plugin: Android System WebView does not expose `window.speechSynthesis` | works: WKWebView `speechSynthesis` has 68 voices (including German *Anna* and English *Samantha* offline), rate and stop work without a plugin | not re-checked | iOS uses WebView `speechSynthesis` (no plugin); Android requires a native plugin (community `tauri-plugin-tts` or Kotlin `TextToSpeech` bridge in Phase 2) |
+| Files (open CSV/APKG, save backup) | works: `probe_file_open` opens `test_deck.csv` via DocumentsUI (`content://`), streams and sniffs text in Rust; `probe_file_save` creates backup file via DocumentsUI, writes and reads back in Rust | works: `probe_file_open` reads file via security-scoped URL and streams in Rust; `probe_file_save` writes placeholder and reads back in Rust | not re-checked | official `tauri-plugin-dialog` =2.8.1 + `tauri-plugin-fs` =2.6.0, used from Rust |
+| Share sheet | requires plugin: Android System WebView does not expose `navigator.share` / `navigator.canShare` | works: WKWebView `navigator.share` and `canShare({ files })` work for text and CSV files | not re-checked | iOS uses Web Share API (no plugin); Android requires a native plugin (community `tauri-plugin-sharekit` or Android Intent bridge in Phase 4) |
 
 ## Probes (2026-10-14)
 
@@ -43,9 +43,37 @@ Details and measurements: [device-smoke.md](../release/device-smoke.md).
 6. **Keyboard resize.** Not verified: the AVD has a hardware keyboard, so only Gboard's floating toolbar appears. Repeat on an AVD with `hw.keyboard=no` or a device.
 7. **Diagnostics.** Debug builds expose the WebView to Chrome DevTools (`webview_devtools_remote_<pid>`), which made DOM/layout checks scriptable over `adb`; release builds do not.
 
+## Probe findings (iOS simulator and Android emulator, 2026-10-15)
+
+The probes were run on the `com.mila.langualinker.dev` variant via `#/diagnostics` on both targets:
+- **iOS Simulator:** iPhone 17 (iOS 26.5), WKWebView
+- **Android Emulator:** Pixel 9 Pro (API 36 / Android 16), System WebView 134
+
+### 1. Notifications (`tauri-plugin-notification` =2.5.1)
+- **iOS Simulator:** Requesting permission triggered the native iOS system dialog ("*LanguaLinker Dev Would Like to Send You Notifications*"). Immediate notification sent and delivered (`id: 7001`). Scheduling in 10 s verified pending and delivered.
+- **Android Emulator:** Requesting permission triggered the native Android system dialog ("*Allow LanguaLinker Dev to send you notifications?*"). Immediate notification sent and delivered (`id: 7001`, status bar icon shown, delivery logged via `onNotificationReceived`). Scheduling in 10 s verified pending and delivered.
+- **Decision:** Official plugin `tauri-plugin-notification` =2.5.1 satisfies all requirements for Phase 15 notifications.
+
+### 2. Files (`tauri-plugin-dialog` =2.8.1 + `tauri-plugin-fs` =2.6.0)
+- **iOS Simulator:** `probe_file_open` opened the native iOS document picker (`UIDocumentPickerViewController`), streamed the chosen file through Rust using a security-scoped URL, and sniffed its content type. `probe_file_save` exported a placeholder file, which Rust opened, wrote non-ASCII test data to, and read back.
+- **Android Emulator:** `probe_file_open` opened Android DocumentsUI (Storage Access Framework), selected `test_deck.csv`, and Rust streamed the file via `content://` URI (reporting `Location: content`, `Size: 23 B`, sniffed `text`). `probe_file_save` opened the DocumentsUI save dialog for `langualinker-probe-backup.txt`, and Rust successfully wrote and read back the 75 B test content.
+- **Decision:** The official Tauri dialog and filesystem plugins work cleanly from Rust for Phase 8 import and Phase 12 export without needing custom Kotlin/Swift code.
+
+### 3. Text to speech (TTS)
+- **iOS Simulator:** WKWebView exposes `window.speechSynthesis` with 68 voices out of the box (including German *Anna* and English *Samantha* offline with `localService: true`). Rate adjustment and cancellation work without any plugin.
+- **Android Emulator:** Android System WebView does **not** expose the Web Speech API (`window.speechSynthesis` is `undefined`).
+- **Decision:** iOS will use WebView `speechSynthesis` directly (no plugin). Android requires a native plugin (community `tauri-plugin-tts` or a lightweight custom Kotlin bridge to Android's `TextToSpeech` engine) when speech is implemented in Phase 2.
+
+### 4. Share sheet
+- **iOS Simulator:** WKWebView supports the Web Share API (`navigator.share` and `navigator.canShare`). Both text sharing and CSV file sharing (`canShare({ files })`) are supported and present the native iOS share sheet.
+- **Android Emulator:** Android System WebView does **not** expose `navigator.share` in this context (`Share text: No`, `Share CSV file: No`).
+- **Decision:** iOS will use the Web Share API (no plugin). Android requires a native plugin or custom Android Intent bridge (`ACTION_SEND`) when deck/card sharing is implemented in Phase 4.
+
 ## Consequences
 
+- All native spikes for Phase 1 are complete and verified across both required mobile targets (iOS simulator and Android emulator). ADR-12 is accepted.
 - WebView needs no plugin; the fixes above are in the frontend and covered by tests.
 - Registering the notification plugin adds `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED` and `WAKE_LOCK` to the Android manifest of every variant. Phase 15 needs them anyway; the store privacy declarations must list them.
-- Each remaining spike runs on the dev-variant-only diagnostics screen (`#/diagnostics`, `src-tauri/src/diagnostics.rs`, `diagnostics` capability — introduced by the SecretStore spike, ADR-07) and records its row in the table above before this ADR is accepted.
-- iOS simulator WebView results: [device-smoke.md](../release/device-smoke.md) (2026-10-13). iOS results for the other spikes and physical devices (Phase 6) are still required.
+- File operations (import/export) will be driven through Rust commands using `tauri-plugin-dialog` and `tauri-plugin-fs`.
+- TTS and Share sheet will follow platform-specific paths: stock Web APIs on iOS/desktop, and native plugin/Intent bridges on Android.
+- Verification on physical devices remains a Phase 6 gate requirement.
