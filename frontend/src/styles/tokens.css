@@ -38,6 +38,15 @@
   --color-rating-good: var(--color-success);
   --color-rating-easy: var(--color-info);
 
+  /* Card flags: decorative swatches, always paired with the flag name. */
+  --color-flag-red: #d32f2f;
+  --color-flag-orange: #ef6c00;
+  --color-flag-green: #2e7d32;
+  --color-flag-blue: #1565c0;
+  --color-flag-pink: #d81b60;
+  --color-flag-turquoise: #00897b;
+  --color-flag-purple: #6a1b9a;
+
   --color-focus: #0b57d0;
   --color-demo: #6b3fa0;
   --color-on-demo: #ffffff;

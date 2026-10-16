@@ -8,12 +8,22 @@ import { MockAppApi, type MockAppApiOptions } from '../../src/demo/mockAppApi'
 import { DEMO_SCENARIOS } from '../../src/demo/scenarios'
 import { I18n } from '../../src/services/i18n.svelte'
 import { QueryClient } from '../../src/services/queryClient'
+import type { SpeechService } from '../../src/services/speech'
 import { ThemeController } from '../../src/services/theme.svelte'
 import { ToastController } from '../../src/services/toasts.svelte'
 
 export interface TestServicesOptions extends MockAppApiOptions {
   language?: UiLanguage
   api?: AppApi
+  speech?: SpeechService
+}
+
+/** jsdom has no speech engine; tests that need voices pass their own fake. */
+export const unsupportedSpeech: SpeechService = {
+  availability: () => 'unsupported',
+  speak: () => {},
+  stop: () => {},
+  onChange: () => () => {},
 }
 
 /** A fresh, isolated service graph per test — the same shape the real root builds. */
@@ -29,6 +39,7 @@ export async function createTestServices(options: TestServicesOptions = {}): Pro
     queries: new QueryClient(),
     theme: new ThemeController(document.documentElement),
     toasts: new ToastController(),
+    speech: options.speech ?? unsupportedSpeech,
     demo: {
       get scenario() {
         return mock.scenario

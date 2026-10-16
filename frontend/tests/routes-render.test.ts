@@ -66,7 +66,8 @@ describe('every route opens its screen with the correct mock state', () => {
     const stop = services.router.start()
     renderWith(Shell, services)
     await waitFor(() => expect(heading()).toHaveTextContent('Session summary'))
-    await waitFor(() => expect(screen.getByText('Nothing here yet')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('No cards were rated in this session')).toBeInTheDocument())
+    expect(screen.getByRole('link', { name: 'Resume session' })).toBeInTheDocument()
     stop()
   })
 

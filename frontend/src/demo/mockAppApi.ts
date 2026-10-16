@@ -38,6 +38,7 @@ import {
   type JobDto,
   type JobEventDto,
   type JobKind,
+  type NoteContentDto,
   type NoteDetailsDto,
   type OnboardingStateDto,
   type PickFileInput,
@@ -49,9 +50,11 @@ import {
   type ResolveWordLinkInput,
   type RestoreInput,
   type RestorePreviewDto,
+  type ResumableSessionDto,
   type ReviewResultDto,
   type SaveNoteInput,
   type SearchInput,
+  type SessionCardDto,
   type SessionSummaryDto,
   type SetFavoriteAssociationInput,
   type SettingsDto,
@@ -64,6 +67,7 @@ import {
   type Unsubscribe,
   type UpdateDeckInput,
   type UpdateSettingsInput,
+  type UpdateStudySessionInput,
   type ValidateRestoreInput,
   type WordLinkDto,
 } from '../api/types'
@@ -120,6 +124,9 @@ interface SessionRecord {
   undo: UndoEntry[]
 }
 
+/** Outcomes cycled by the `aiErrors` scenario: provider error, unusable output, moderation. */
+const AI_FAILURES = ['PROVIDER_ERROR', 'INVALID_PROVIDER_OUTPUT', 'MODERATION_BLOCKED'] as const
+
 const SHELL_OPERATIONS: ReadonlySet<AppApiOperation> = new Set(['getAppInfo', 'getSettings', 'getOnboardingState', 'getAttributions'])
 const MAX_FIELD_LENGTH = 2000
 const PRESET_VERSION = 1
@@ -146,6 +153,10 @@ export class MockAppApi implements AppApi {
   #jobListeners = new Set<(event: JobEventDto) => void>()
   #collectionListeners = new Set<(event: CollectionChangedEventDto) => void>()
   #filterSnapshots = new Map<string, string[]>()
+  /** Decks whose bundled content is still being prepared (`preparing` scenario). */
+  #preparing = new Set<string>()
+  #firstCompletedSessionId: string | null = null
+  #generations = 0
   #settings!: SettingsDto
   #onboardingCompleted = true
   #backups: BackupDto[] = []
@@ -184,6 +195,9 @@ export class MockAppApi implements AppApi {
     this.#sequence = 1
     this.#importPreviewToken = null
     this.#restorePreviewToken = null
+    this.#preparing = new Set()
+    this.#firstCompletedSessionId = null
+    this.#generations = 0
 
     const full = createCollection({ seed: this.#options.seed, nowMs: this.#nowMs, ambiguousLinks: scenario === 'ambiguous' })
     this.#onboardingCompleted = scenario !== 'newUser'
@@ -194,6 +208,28 @@ export class MockAppApi implements AppApi {
         association.status = 'offlineQueued'
         association.favorite = false
       }
+    }
+    if (scenario === 'noCards') {
+      // Decks exist but hold no cards yet: distinct from "no decks" and from "nothing due today".
+      this.#collection = { ...EMPTY_COLLECTION(), decks: full.decks }
+    }
+    if (scenario === 'caughtUp') {
+      // Every card is scheduled after today: "no reviews due today", not "no cards".
+      for (const card of this.#collection.cards) {
+        if (card.state !== 'Review') {
+          Object.assign(card, { state: 'Review', queue: 'Review', intervalSeconds: 3 * 86_400, stability: card.stability ?? 3, difficulty: card.difficulty ?? 5, reps: Math.max(card.reps, 1) })
+        }
+        card.dueAtMs = this.#nowMs + (2 + (Number(card.id) % 9)) * DAY_MS
+      }
+    }
+    if (scenario === 'aiErrors') {
+      this.#collection.notes.forEach((note, index) => {
+        const errorCode = AI_FAILURES[index % AI_FAILURES.length] ?? 'PROVIDER_ERROR'
+        this.#collection.associations.push({
+          id: this.#nextId(), noteId: note.id, text: '', provenance: 'generated', favorite: false,
+          status: errorCode === 'MODERATION_BLOCKED' ? 'blocked' : 'error', errorCode,
+        })
+      })
     }
     this.#settings = {
       uiLanguage: 'pl',
@@ -219,6 +255,11 @@ export class MockAppApi implements AppApi {
           cardCount: this.#collection.cards.length,
           location: index === 0 ? 'external' : 'app',
         }))
+    if (scenario === 'preparing') {
+      // The English deck finishes preparing in the background and announces it via collection_changed.
+      this.#preparing.add('3')
+      this.#startJob('prepareContent', 6, () => this.#preparing.clear(), ['decks'])
+    }
   }
 
   failNext(operation: AppApiOperation, code: ErrorCode): void {
@@ -283,7 +324,8 @@ export class MockAppApi implements AppApi {
     for (const listener of this.#jobListeners) listener(clone(event))
   }
 
-  #startJob(kind: JobKind, steps: number, onSuccess?: () => void, scopes: CollectionScope[] = []): JobDto {
+  /** `failWith` ends the job as `failed` (after `onDone` ran), e.g. a provider error in `aiErrors`. */
+  #startJob(kind: JobKind, steps: number, onDone?: () => void, scopes: CollectionScope[] = [], failWith?: ErrorCode): JobDto {
     const job: JobDto = {
       jobId: this.#nextId('job-'),
       kind,
@@ -302,15 +344,16 @@ export class MockAppApi implements AppApi {
       const finished = done >= steps
       const next: JobDto = {
         ...current,
-        status: finished ? 'succeeded' : 'running',
+        status: finished ? (failWith ? 'failed' : 'succeeded') : 'running',
         sequence: current.sequence + 1,
         progress: { done: Math.min(done, steps), total: steps },
         finishedAt: finished ? iso(this.#nowMs) : null,
+        error: finished && failWith ? AppError.of(failWith).dto : null,
       }
       this.#jobs.set(job.jobId, next)
       if (finished) {
         this.#jobTimers.delete(job.jobId)
-        onSuccess?.()
+        onDone?.()
         this.#revision += 1
         if (scopes.length > 0) this.#emitCollectionChanged(scopes)
       } else {
@@ -352,6 +395,7 @@ export class MockAppApi implements AppApi {
   }
 
   #isStudyable(card: CardRecord): boolean {
+    if (this.#preparing.has(card.deckId)) return false
     if (card.deleted || card.queue === 'Suspended' || card.queue === 'UserBuried' || card.queue === 'SchedBuried') return false
     if (card.state === 'New') return true
     return (card.dueAtMs ?? 0) <= this.#studyDayStart() + DAY_MS
@@ -395,7 +439,7 @@ export class MockAppApi implements AppApi {
       counts,
       progress: Math.round(progress * 100) / 100,
       bundled: deck.bundled,
-      contentState: 'ready',
+      contentState: this.#preparing.has(deck.id) ? 'preparing' : 'ready',
       version: deck.version,
     }
   }
@@ -413,10 +457,13 @@ export class MockAppApi implements AppApi {
   #associations(noteId: Id): AssociationDto[] {
     return this.#collection.associations
       .filter((association) => association.noteId === noteId)
-      .map((association) => ({
+      .map(({ errorCode, ...association }) => ({
         ...association,
         model: association.provenance === 'generated' ? this.#settings.ai.model : null,
-        error: association.status === 'error' ? AppError.of('PROVIDER_ERROR').dto : null,
+        error:
+          association.status === 'error' || association.status === 'blocked'
+            ? AppError.of(errorCode ?? (association.status === 'blocked' ? 'MODERATION_BLOCKED' : 'PROVIDER_ERROR')).dto
+            : null,
       }))
   }
 
@@ -474,6 +521,21 @@ export class MockAppApi implements AppApi {
     return this.#sessions.get(sessionId) ?? fail('NOT_FOUND', { entity: 'session', id: sessionId })
   }
 
+  #deckName(deckId: Id | null): string | null {
+    return deckId === null ? null : (this.#collection.decks.find((deck) => deck.id === deckId)?.name ?? null)
+  }
+
+  #validRatings(session: SessionRecord): SessionRating[] {
+    return session.ratings.filter((rating) => !rating.undone)
+  }
+
+  #finish(session: SessionRecord): void {
+    if (session.status === 'finished') return
+    session.status = 'finished'
+    session.finishedAtMs = this.#nowMs
+    if (this.#firstCompletedSessionId === null && this.#validRatings(session).length > 0) this.#firstCompletedSessionId = session.id
+  }
+
   /** Advances past cards that were suspended/buried/deleted after the queue was built. */
   #currentCard(session: SessionRecord): CardRecord | null {
     while (session.cursor < session.queue.length) {
@@ -482,10 +544,7 @@ export class MockAppApi implements AppApi {
       if (card && !card.deleted && card.queue !== 'Suspended' && card.queue !== 'UserBuried') return card
       session.cursor += 1
     }
-    if (session.status !== 'finished') {
-      session.status = 'finished'
-      session.finishedAtMs = this.#nowMs
-    }
+    this.#finish(session)
     return null
   }
 
@@ -504,10 +563,12 @@ export class MockAppApi implements AppApi {
   }
 
   #sessionDto(session: SessionRecord): StudySessionDto {
-    const current = this.#currentCard(session)
+    const card = this.#currentCard(session)
+    const current = session.status === 'finished' ? null : card
     return {
       sessionId: session.id,
       deckId: session.deckId,
+      deckName: this.#deckName(session.deckId),
       status: session.status,
       current: current ? this.#studyCard(current) : null,
       counts: this.#sessionCounts(session),
@@ -620,15 +681,30 @@ export class MockAppApi implements AppApi {
     return this.#query('getDashboard', (): DashboardDto => {
       const decks = this.#collection.decks.map((deck) => this.#deckSummary(deck))
       const roots = decks.filter((deck) => deck.parentId === null)
-      const resumable = [...this.#sessions.values()].find((session) => session.status !== 'finished')
+      for (const session of this.#sessions.values()) this.#currentCard(session)
+      const open = [...this.#sessions.values()].filter((session) => session.status !== 'finished').at(-1)
+      const resumable: ResumableSessionDto | null = open
+        ? {
+            sessionId: open.id,
+            deckId: open.deckId,
+            deckName: this.#deckName(open.deckId),
+            status: open.status === 'paused' ? 'paused' : 'active',
+            reviewedCount: this.#validRatings(open).length,
+            remaining: this.#sessionCounts(open).total,
+          }
+        : null
       const dayStart = this.#studyDayStart()
+      const futureDues = this.#liveCards()
+        .filter((card) => card.queue !== 'Suspended' && card.dueAtMs !== null && card.dueAtMs > dayStart + DAY_MS)
+        .map((card) => card.dueAtMs as number)
       return {
         decks,
         streakDays: this.#collection.logs.length > 0 ? 6 : 0,
         studiedToday: this.#collection.logs.filter((log) => log.reviewedAtMs >= dayStart).length,
         dueToday: roots.reduce((sum, deck) => sum + deck.counts.review + deck.counts.learning, 0),
         dailyGoal: this.#settings.dailyGoal,
-        resumableSessionId: resumable?.id ?? null,
+        resumable,
+        nextDueAt: futureDues.length > 0 ? iso(Math.min(...futureDues)) : null,
         generatedAt: iso(this.#nowMs),
       }
     })
@@ -724,11 +800,19 @@ export class MockAppApi implements AppApi {
     return this.#mutate('startStudy', input.operationId, [], (): StudySessionDto => {
       const deckIds = input.deckId === null ? new Set(this.#collection.decks.map((deck) => deck.id)) : this.#subtree(this.#deck(input.deckId).id)
       const order = (card: CardRecord) => (card.state === 'Learning' || card.state === 'Relearning' ? 0 : card.state === 'Review' ? 1 : 2)
-      const queue = this.#liveCards()
-        .filter((card) => deckIds.has(card.deckId) && this.#isStudyable(card))
-        .sort((a, b) => order(a) - order(b) || (a.dueAtMs ?? 0) - (b.dueAtMs ?? 0) || Number(a.id) - Number(b.id))
-        .slice(0, 50)
-        .map((card) => card.id)
+      // A custom session (e.g. the Again cards from a summary) ignores due dates but not suspension.
+      const queue = input.cardIds
+        ? input.cardIds.filter((id) => {
+            const card = this.#collection.cards.find((candidate) => candidate.id === id)
+            return card !== undefined && !card.deleted && card.queue !== 'Suspended' && card.queue !== 'UserBuried'
+          })
+        : this.#liveCards()
+            .filter((card) => deckIds.has(card.deckId) && this.#isStudyable(card))
+            .sort((a, b) => order(a) - order(b) || (a.dueAtMs ?? 0) - (b.dueAtMs ?? 0) || Number(a.id) - Number(b.id))
+            .slice(0, 50)
+            .map((card) => card.id)
+      // One durable session at a time: a new session closes the previous unfinished one.
+      for (const previous of this.#sessions.values()) this.#finish(previous)
       const session: SessionRecord = {
         id: this.#nextId('session-'),
         deckId: input.deckId,
@@ -749,6 +833,29 @@ export class MockAppApi implements AppApi {
     return this.#query('resumeStudy', () => this.#sessionDto(this.#session(sessionId)))
   }
 
+  updateStudySession(input: UpdateStudySessionInput) {
+    return this.#mutate('updateStudySession', input.operationId, input.action === 'end' ? ['stats'] : [], (): StudySessionDto => {
+      const session = this.#session(input.sessionId)
+      this.#currentCard(session)
+      if (session.status === 'finished') {
+        if (input.action === 'end') return this.#sessionDto(session)
+        fail('VALIDATION_FAILED', { reason: 'sessionFinished' })
+      }
+      switch (input.action) {
+        case 'pause':
+          session.status = 'paused'
+          break
+        case 'resume':
+          session.status = 'active'
+          break
+        case 'end':
+          this.#finish(session)
+          break
+      }
+      return this.#sessionDto(session)
+    })
+  }
+
   getRatingPreview(input: PreviewInput) {
     return this.#query('getRatingPreview', (): RatingPreviewDto => {
       const card = this.#card(input.cardId)
@@ -767,6 +874,7 @@ export class MockAppApi implements AppApi {
     return this.#mutate('rateCard', input.operationId, ['cards', 'stats'], (): ReviewResultDto => {
       const session = this.#session(input.sessionId)
       if (session.status === 'finished') fail('VALIDATION_FAILED', { reason: 'sessionFinished' })
+      if (session.status === 'paused') fail('VALIDATION_FAILED', { reason: 'sessionPaused' })
       const card = this.#currentCard(session)
       if (!card || card.id !== input.cardId) fail('VERSION_CONFLICT', { reason: 'notCurrentCard' })
       const current = card as CardRecord
@@ -861,21 +969,52 @@ export class MockAppApi implements AppApi {
   getSessionSummary(sessionId: Id) {
     return this.#query('getSessionSummary', (): SessionSummaryDto => {
       const session = this.#session(sessionId)
-      const valid = session.ratings.filter((rating) => !rating.undone)
+      this.#currentCard(session)
+      const valid = this.#validRatings(session)
       const ratings = Object.fromEntries(RATINGS.map((rating) => [rating, valid.filter((item) => item.rating === rating).length])) as Record<Rating, number>
       const reviewedIds = new Set(valid.map((item) => item.cardId))
       const dues = [...reviewedIds].flatMap((id) => {
         const due = this.#collection.cards.find((card) => card.id === id)?.dueAtMs
         return due ? [due] : []
       })
+      const againIds = [...new Set(valid.filter((item) => item.rating === 'Again').map((item) => item.cardId))]
+      const againCards = againIds.flatMap((id): SessionCardDto[] => {
+        const card = this.#collection.cards.find((candidate) => candidate.id === id && !candidate.deleted)
+        const note = card && this.#collection.notes.find((candidate) => candidate.id === card.noteId)
+        const deck = card && this.#collection.decks.find((candidate) => candidate.id === card.deckId)
+        if (!card || !note || !deck) return []
+        const reverse = card.ordinal === 1
+        return [{
+          cardId: card.id, front: reverse ? note.back : note.front, back: reverse ? note.front : note.back,
+          targetLanguage: deck.targetLanguage, direction: reverse ? 'reverse' : 'forward',
+        }]
+      })
+      const scope = session.deckId === null ? null : this.#subtree(session.deckId)
+      const remainingDue = this.#liveCards().filter((card) => (scope === null || scope.has(card.deckId)) && this.#isStudyable(card)).length
+      // Another root deck (outside this session's scope and not its ancestor) with cards due today.
+      const nextDeck = scope === null
+        ? null
+        : (this.#collection.decks
+            .filter((deck) => deck.parentId === null && !scope.has(deck.id) && !this.#subtree(deck.id).has(session.deckId ?? ''))
+            .map((deck) => {
+              const counts = this.#counts(this.#subtree(deck.id))
+              return { id: deck.id, name: deck.name, due: counts.new + counts.learning + counts.review }
+            })
+            .filter((deck) => deck.due > 0)
+            .sort((a, b) => b.due - a.due || Number(a.id) - Number(b.id))[0] ?? null)
       return {
         sessionId: session.id,
         deckId: session.deckId,
+        deckName: this.#deckName(session.deckId),
+        status: session.status,
         ratings,
         reviewedCount: valid.length,
         activeMs: valid.reduce((sum, item) => sum + item.answerMs, 0),
-        againCardIds: [...new Set(valid.filter((item) => item.rating === 'Again').map((item) => item.cardId))],
+        againCards,
         nextDueAt: dues.length > 0 ? iso(Math.min(...dues)) : null,
+        remainingDue,
+        nextDeck,
+        firstCompleted: this.#firstCompletedSessionId === session.id,
         startedAt: iso(session.startedAtMs),
         finishedAt: session.finishedAtMs === null ? null : iso(session.finishedAtMs),
       }
@@ -886,6 +1025,23 @@ export class MockAppApi implements AppApi {
 
   getNoteDetails(cardId: Id) {
     return this.#query('getNoteDetails', () => this.#noteDetails(this.#note(this.#card(cardId).noteId)))
+  }
+
+  getNoteContent(noteId: Id) {
+    return this.#query('getNoteContent', (): NoteContentDto => {
+      const note = this.#note(noteId)
+      const deck = this.#deck(note.deckId)
+      return {
+        noteId: note.id,
+        deckId: deck.id,
+        front: note.front,
+        back: note.back,
+        targetLanguage: deck.targetLanguage,
+        capabilities: capabilitiesFor(deck.deckType),
+        associations: this.#associations(note.id),
+        grammarTips: this.#tips(note.id),
+      }
+    })
   }
 
   getEditorData() {
@@ -995,6 +1151,15 @@ export class MockAppApi implements AppApi {
       const pendingIds = Array.from({ length: variants }, () => this.#nextId())
       for (const id of pendingIds) {
         this.#collection.associations.push({ id, noteId: note.id, text: '', provenance: 'generated', favorite: false, status: 'pending' })
+      }
+      if (this.#scenario === 'aiErrors') {
+        const errorCode = AI_FAILURES[this.#generations++ % AI_FAILURES.length] ?? 'PROVIDER_ERROR'
+        return this.#startJob('llm', 3, () => {
+          for (const association of this.#collection.associations.filter((item) => pendingIds.includes(item.id))) {
+            association.status = errorCode === 'MODERATION_BLOCKED' ? 'blocked' : 'error'
+            association.errorCode = errorCode
+          }
+        }, ['notes'], errorCode)
       }
       return this.#startJob('llm', 3, () => {
         pendingIds.forEach((id, index) => {

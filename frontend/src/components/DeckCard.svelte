@@ -52,6 +52,11 @@
       <button type="button" class="btn btn-primary" aria-label={i18n.t('deck.studyDeck', { name: deck.name })} onclick={() => onstudy(deck)}>
         {i18n.t('deck.study')}
       </button>
+    {:else if !preparing && deck.counts.total === 0}
+      <!-- "No cards" is not "nothing due": offer the action that fixes it. -->
+      <a class="btn" href={href({ name: 'editor', query: { deckId: deck.id } })} aria-label={i18n.t('deck.addCardsTo', { name: deck.name })}>
+        {i18n.t('deck.addCards')}
+      </a>
     {:else if !preparing}
       <span class="muted">{i18n.t('deck.noDue')}</span>
     {/if}

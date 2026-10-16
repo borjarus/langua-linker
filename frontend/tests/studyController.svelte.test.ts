@@ -56,6 +56,17 @@ describe('StudyController (reference controller)', () => {
     expect(operationIds[0]).toBe(operationIds[1])
   })
 
+  it('a rating right after reveal waits for the preview instead of sending a stale token', async () => {
+    const api = new MockAppApi({ latencyMs: 15 })
+    const controller = new StudyController({ api })
+    await controller.resume((await StudyController.start(api, '1', 'start')).sessionId)
+    const revealing = controller.reveal()
+    await controller.rate('Good')
+    await revealing
+    expect(controller.error).toBeNull()
+    expect(controller.reviewedCount).toBe(1)
+  })
+
   it('does not rate before the answer is revealed', async () => {
     const { controller, rateSpy } = await setup()
     await controller.rate('Good')
@@ -94,5 +105,92 @@ describe('StudyController (reference controller)', () => {
     expect(renders).toBeGreaterThan(2)
     expect(rateSpy).toHaveBeenCalledTimes(1)
     dispose()
+  })
+})
+
+describe('StudyController session lifecycle (Phase 3)', () => {
+  async function single(clock: { now: number }) {
+    const api = new MockAppApi()
+    const session = await api.startStudy({ operationId: 'all', deckId: '1' })
+    const cardId = session.current?.cardId ?? ''
+    // A one-card session makes "no next card" deterministic.
+    const one = await StudyController.start(api, '1', 'one', [cardId])
+    let ids = 0
+    const controller = new StudyController({ api, now: () => clock.now, operationId: () => `op-${++ids}` })
+    await controller.resume(one.sessionId)
+    return { api, controller }
+  }
+
+  it('reaches finished when no next card exists and stops blocking navigation', async () => {
+    const { controller } = await single({ now: 0 })
+    expect(controller.inSession).toBe(true)
+    await controller.reveal()
+    await controller.rate('Good')
+    expect(controller.phase).toBe('finished')
+    expect(controller.card).toBeNull()
+    expect(controller.inSession).toBe(false)
+    await controller.rate('Good')
+    expect(controller.reviewedCount).toBe(1)
+  })
+
+  it('pauses: no reveal or rating while paused, and paused time is not answer time', async () => {
+    const clock = { now: 0 }
+    const { api, controller } = await single(clock)
+    const rateSpy = vi.spyOn(api, 'rateCard')
+    clock.now = 2_000
+    expect(await controller.pause()).toBeNull()
+    expect(controller.paused).toBe(true)
+    await controller.reveal()
+    expect(controller.phase).toBe('question')
+
+    clock.now = 600_000
+    await controller.continue()
+    expect(controller.paused).toBe(false)
+    clock.now = 603_000
+    await controller.reveal()
+    await controller.rate('Good')
+    expect(rateSpy.mock.calls[0]?.[0].answerMs).toBe(5_000)
+  })
+
+  it('ends early and keeps committed ratings', async () => {
+    const { api, controller } = await setup()
+    await controller.reveal()
+    await controller.rate('Good')
+    expect(await controller.end()).toBeNull()
+    expect(controller.phase).toBe('finished')
+    const summary = await api.getSessionSummary(controller.sessionId ?? '')
+    expect(summary).toMatchObject({ status: 'finished', reviewedCount: 1 })
+  })
+
+  it('treats a missing session as lost (recovery), not as a generic error', async () => {
+    const controller = new StudyController({ api: new MockAppApi() })
+    await controller.resume('session-404')
+    expect(controller.phase).toBe('lost')
+  })
+
+  it('suspending moves to the next card; flagging keeps the card with a new version and fresh preview', async () => {
+    const { controller } = await setup()
+    const first = controller.card
+    await controller.reveal()
+    expect(await controller.applyAction('flag', 'red')).toBeNull()
+    expect(controller.card?.cardId).toBe(first?.cardId)
+    expect(controller.card?.flag).toBe('red')
+    expect(controller.preview?.cardVersion).toBe(controller.card?.version)
+    await controller.rate('Good')
+    expect(controller.error).toBeNull()
+
+    const second = controller.card?.cardId
+    expect(await controller.applyAction('suspend')).toBeNull()
+    expect(controller.card?.cardId).not.toBe(second)
+    expect(controller.phase).toBe('question')
+  })
+
+  it('reports a stale card action without changing the card', async () => {
+    const { api, controller } = await setup()
+    const card = controller.card
+    api.failNext('applyCardAction', 'VERSION_CONFLICT')
+    expect((await controller.applyAction('bury'))?.code).toBe('VERSION_CONFLICT')
+    expect(controller.card).toEqual(card)
+    expect(controller.acting).toBe(false)
   })
 })

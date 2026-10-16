@@ -33,12 +33,19 @@ Status: accepted (2026-10-12) together with ADR-01, ADR-02 and ADR-05.
 - Called from explicit event handlers with an `operationId` from `newOperationId()`.
 - Retrying the same intent reuses its `operationId`; a different intent gets a new one.
 - Pending state disables the trigger (e.g. rating buttons while `saving`).
-- Reference implementation: `src/features/study/studyController.svelte.ts` (plan §4.3 state machine), tested in `tests/studyController.svelte.test.ts`, including "reactive reads never repeat a mutation".
+- Reference implementation: `src/features/study/studyController.svelte.ts` (plan §4.3 state machine plus pause/end/lost), tested in `tests/studyController.svelte.test.ts`, including "reactive reads never repeat a mutation".
+- A rating commit waits for the in-flight preview of the shown card; it never sends an empty or foreign `previewToken`.
+- Background jobs that a screen starts (association generation) live in a small controller (`associationGenerator.svelte.ts`); the component owns the `onJobEvent` subscription in `$effect` and forwards events. Events are signals: the controller refetches through `AppApi`.
+- Leaving a screen with unfinished work uses a router guard plus a dialog (`EditorScreen` draft guard, `StudyScreen` leave guard). Explicit exits the user already chose (edit card, add word, summary) skip the guard.
 
 ## Screen state
 
 - Reads use `useQuery` and render through `QueryView` (loading → `Skeleton`, error → `ErrorState` with retry if `retryable`, empty → screen-specific `EmptyState` with a CTA, ready).
 - Each route change remounts the screen (`{#key}` in `RouteOutlet`) so subscriptions start clean.
+
+## Platform ports outside `AppApi`
+
+- Text-to-speech is `SpeechService` (`src/services/speech.ts`) in `AppServices`: `available` / `noVoice` / `unsupported`. The demo and the WebView use the Web Speech engine where present; the mock never simulates audio; the native plugin replaces it in Phase 15 (ADR-12).
 
 ## Accessibility baseline
 
@@ -46,3 +53,4 @@ Status: accepted (2026-10-12) together with ADR-01, ADR-02 and ADR-05.
 - Visible `:focus-visible` ring, touch targets ≥ `--touch-target` (3rem = 48 CSS px), rem-based sizes for 200% text, `prefers-reduced-motion` honoured by tokens.
 - Status is never colour/emoji only: icons are `aria-hidden` and paired with text.
 - Dialogs: `role="dialog"`, `aria-modal`, labelled by title, focus trap, Escape, focus restore.
+- Study moves focus after user input only: to the answer after reveal, to the next question after a rating. Keyboard shortcuts (Space, 1–4) ignore inputs, dialogs, modifier keys and auto-repeat; Space on a focused button keeps its native meaning.
