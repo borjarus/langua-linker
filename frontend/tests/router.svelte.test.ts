@@ -111,6 +111,20 @@ describe('Router', () => {
     remove()
   })
 
+  it('asks before unloading only for guards over unsaved work', () => {
+    const unload = () => {
+      const event = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(event)
+      return event.defaultPrevented
+    }
+    const removeSession = router.addGuard({ isBlocking: () => true, confirmLeave: async () => true, blocksUnload: false })
+    expect(unload()).toBe(false)
+    const removeDraft = router.addGuard({ isBlocking: () => true, confirmLeave: async () => true })
+    expect(unload()).toBe(true)
+    removeDraft()
+    removeSession()
+  })
+
   it('does not consult non-blocking guards', async () => {
     let asked = false
     router.addGuard({

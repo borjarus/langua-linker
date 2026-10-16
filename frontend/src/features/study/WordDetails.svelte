@@ -21,9 +21,9 @@
     <div class="stack">
       <p class="translation"><strong lang={note.targetLanguage}>{note.front}</strong> — <span lang="pl">{note.back}</span></p>
       {#if lemma && lemma !== note.front}<p class="muted">{i18n.t('wordSheet.baseForm', { lemma })}</p>{/if}
-      <!-- In the sheet the user asked for the details, so sections start expanded. -->
-      {#if note.capabilities.grammarTips}<GrammarTipList tips={note.grammarTips} expanded />{/if}
-      {#if note.capabilities.associations}<AssociationPanel associations={note.associations} expanded />{/if}
+      <!-- In the sheet the user asked for the details, so sections start expanded; empty ones are left out. -->
+      {#if note.capabilities.grammarTips && note.grammarTips.length > 0}<GrammarTipList tips={note.grammarTips} expanded />{/if}
+      {#if note.capabilities.associations && note.associations.length > 0}<AssociationPanel associations={note.associations} expanded />{/if}
     </div>
   {/snippet}
 </QueryView>

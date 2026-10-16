@@ -71,6 +71,8 @@
     const removeGuard = router.addGuard({
       isBlocking: () => !leaving && study.inSession,
       confirmLeave: (_to: Route) => new Promise<boolean>((resolve) => (pendingLeave = resolve)),
+      // Ratings are committed as they happen; a reload loses nothing, so no browser "unsaved changes" prompt.
+      blocksUnload: false,
     })
     return () => {
       removeGuard()
@@ -346,6 +348,13 @@
   .hint {
     font-size: var(--text-sm);
     text-align: center;
+  }
+
+  /* Touch-only phones: the shortcuts do not apply (a hardware keyboard usually comes with a fine pointer). */
+  @media (hover: none) and (pointer: coarse) {
+    .hint {
+      display: none;
+    }
   }
 
   .paused {
