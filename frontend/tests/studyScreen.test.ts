@@ -291,6 +291,8 @@ describe('associations and word links', () => {
     await fireEvent.click(linked)
     const sheet = await screen.findByRole('dialog', { name: linked.textContent?.trim() ?? '' })
     await waitFor(() => expect(sheet.querySelector('.translation')).not.toBeNull())
+    // Empty sections are left out of the sheet instead of showing "(0)".
+    expect([...sheet.querySelectorAll('.disclosure .count')].map((count) => count.textContent?.trim())).not.toContain('0')
     stop()
   })
 

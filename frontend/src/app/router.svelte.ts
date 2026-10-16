@@ -8,6 +8,11 @@ export interface NavigationGuard {
   isBlocking(): boolean
   /** Asks the user; resolve `true` to leave. */
   confirmLeave(to: Route): Promise<boolean>
+  /**
+   * Whether reloading/closing the page loses work (`beforeunload`). Default `true` (drafts).
+   * `false` for guards over durable state, e.g. a study session whose ratings are already saved.
+   */
+  blocksUnload?: boolean
 }
 
 /** An open overlay (dialog, sheet) that the Back gesture/button closes before it navigates. */
@@ -51,7 +56,7 @@ export class Router {
 
     const onHashChange = () => void this.#onExternalChange()
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
-      if ([...this.#guards].some((guard) => guard.isBlocking())) event.preventDefault()
+      if ([...this.#guards].some((guard) => guard.blocksUnload !== false && guard.isBlocking())) event.preventDefault()
     }
     this.#win.addEventListener('hashchange', onHashChange)
     this.#win.addEventListener('beforeunload', onBeforeUnload)
