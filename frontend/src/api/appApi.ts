@@ -26,6 +26,7 @@ import type {
   ImportPreviewDto,
   JobDto,
   JobEventDto,
+  NoteContentDto,
   NoteDetailsDto,
   OnboardingStateDto,
   PickFileInput,
@@ -49,6 +50,7 @@ import type {
   Unsubscribe,
   UpdateDeckInput,
   UpdateSettingsInput,
+  UpdateStudySessionInput,
   AssociationDto,
   WordLinkDto,
   ValidateRestoreInput,
@@ -73,6 +75,8 @@ export interface AppApi {
   // study
   startStudy(input: StartStudyInput): Promise<StudySessionDto>
   resumeStudy(sessionId: Id): Promise<StudySessionDto>
+  /** Pause, resume or end a session; ending early keeps every committed rating. */
+  updateStudySession(input: UpdateStudySessionInput): Promise<StudySessionDto>
   getRatingPreview(input: PreviewInput): Promise<RatingPreviewDto>
   rateCard(input: RateCardInput): Promise<ReviewResultDto>
   undoReview(input: UndoInput): Promise<ReviewResultDto>
@@ -81,6 +85,7 @@ export interface AppApi {
 
   // details / editor
   getNoteDetails(cardId: Id): Promise<NoteDetailsDto>
+  getNoteContent(noteId: Id): Promise<NoteContentDto>
   getEditorData(): Promise<EditorDataDto>
   checkDuplicate(input: DuplicateCheckInput): Promise<DuplicateCheckDto>
   saveNote(input: SaveNoteInput): Promise<NoteDetailsDto>

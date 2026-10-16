@@ -79,6 +79,8 @@ export interface AssociationRecord {
   provenance: 'bundled' | 'generated' | 'manual'
   favorite: boolean
   status: 'ready' | 'pending' | 'offlineQueued' | 'error' | 'blocked'
+  /** Why a generated association failed: provider error, unusable output or moderation. */
+  errorCode?: 'PROVIDER_ERROR' | 'INVALID_PROVIDER_OUTPUT' | 'MODERATION_BLOCKED'
 }
 
 export interface TipRecord {

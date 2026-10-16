@@ -29,9 +29,14 @@
           {#if association.status === 'ready'}
             <p class="text">{association.text}</p>
           {:else}
-            <p class="state row">
+            <p class="state row" aria-busy={association.status === 'pending'}>
               <Icon name={association.status === 'offlineQueued' ? 'offline' : association.status === 'pending' ? 'clock' : 'alert'} />
-              {i18n.t(`association.status.${association.status}`)}
+              {#if association.error}
+                <!-- Provider error, unusable output and moderation are different outcomes for the user. -->
+                {i18n.tDynamic(association.error.messageKey, `association.status.${association.status}`)}
+              {:else}
+                {i18n.t(`association.status.${association.status}`)}
+              {/if}
             </p>
           {/if}
           <div class="row meta">

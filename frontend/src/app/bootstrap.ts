@@ -4,6 +4,7 @@ import type { ThemePreference, UiLanguage } from '../api/types'
 import type { DemoControls } from '../demo/scenarios'
 import { I18n, UI_LANGUAGES } from '../services/i18n.svelte'
 import { QueryClient } from '../services/queryClient'
+import { createWebSpeechService } from '../services/speech'
 import { ThemeController, type TextScale } from '../services/theme.svelte'
 import { ToastController } from '../services/toasts.svelte'
 import type { AppServices } from './context'
@@ -75,6 +76,7 @@ export async function createServices(profile: AppProfile = APP_PROFILE): Promise
     queries: new QueryClient(),
     theme,
     toasts: new ToastController(),
+    speech: createWebSpeechService(),
     demo,
   }
 

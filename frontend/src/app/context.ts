@@ -3,6 +3,7 @@ import type { AppApi } from '../api/appApi'
 import type { DemoControls } from '../demo/scenarios'
 import type { I18n } from '../services/i18n.svelte'
 import type { QueryClient } from '../services/queryClient'
+import type { SpeechService } from '../services/speech'
 import type { ThemeController } from '../services/theme.svelte'
 import type { ToastController } from '../services/toasts.svelte'
 import type { AppProfile } from './profile'
@@ -20,6 +21,8 @@ export interface AppServices {
   queries: QueryClient
   theme: ThemeController
   toasts: ToastController
+  /** Text-to-speech port (platform adapter, never simulated by the mock). */
+  speech: SpeechService
   /** Present only in the demo profile; drives the banner and scenario switcher. */
   demo: DemoControls | null
 }

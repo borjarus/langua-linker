@@ -18,6 +18,12 @@ Legend: ☑ pass · ◐ partly verified (see notes) · ☒ fail · ☐ not run. 
 | 8 | System font size at maximum: text scales, no horizontal page scroll | ☑ | ☑ |
 | 9 | TalkBack / VoiceOver: navigation items and the "Study" button are announced with labels | ◐ | ◐ |
 | 10 | App log file exists in the app log directory and contains no card text (`adb shell "run-as com.mila.langualinker.dev ls logs"` / Xcode container) | ☑ | ☑ |
+| 11 | Phase 3 · Study: "Show answer" moves TalkBack/VoiceOver focus to the answer; rating buttons are announced with their interval; after a rating focus lands on the next question | ☐ | ☐ |
+| 12 | Phase 3 · Study and summary at maximum system font: card, rating row, toolbar and rating distribution are not clipped; no horizontal page scroll | ☐ | ☐ |
+| 13 | Phase 3 · Word sheet and card-actions sheet dock to the bottom above the home indicator; hardware/gesture Back closes the sheet, not the screen | ☐ | ☐ |
+| 14 | Phase 3 · Back during an open session asks "Leave the session?"; Keep studying stays, Leave returns to the decks with "Resume session" | ☐ | ☐ |
+| 15 | Phase 3 · TTS button: iOS speaks with an installed voice; Android WebView shows "Speech is not available on this device" (ADR-12) | ☐ | ☐ |
+| 16 | Phase 3 · Onboarding (demo scenario "New user") → study → End session → summary → decks completes with touch only | ☐ | ☐ |
 
 ## How the checks were performed
 

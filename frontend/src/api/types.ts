@@ -1,5 +1,5 @@
 /**
- * Transport contract v0.2 between the Svelte frontend and the Rust backend.
+ * Transport contract v0.3 between the Svelte frontend and the Rust backend.
  *
  * Rules (plan §4.1):
  * - SQLite i64 identifiers and GUIDs travel as strings (`Id`).
@@ -11,7 +11,7 @@
  * Rust becomes the DTO source in Phase 7 (generated into `src/generated/`).
  */
 
-export const API_VERSION = '0.2'
+export const API_VERSION = '0.3'
 
 export type Id = string
 export type IsoDateTime = string
@@ -154,13 +154,26 @@ export interface DeckSummaryDto {
   version: number
 }
 
+/** An unfinished session the dashboard offers to resume (durable in Rust from Phase 10). */
+export interface ResumableSessionDto {
+  sessionId: Id
+  /** `null` = a session over all decks. */
+  deckId: Id | null
+  deckName: string | null
+  status: Exclude<StudySessionStatus, 'finished'>
+  reviewedCount: number
+  remaining: number
+}
+
 export interface DashboardDto {
   decks: DeckSummaryDto[]
   streakDays: number
   studiedToday: number
   dueToday: number
   dailyGoal: number
-  resumableSessionId: Id | null
+  resumable: ResumableSessionDto | null
+  /** Earliest future due date over all decks; lets "nothing due today" say when the next review is. */
+  nextDueAt: IsoDateTime | null
   generatedAt: IsoDateTime
 }
 
@@ -215,6 +228,18 @@ export interface DeleteDeckResultDto {
 
 export type AssociationProvenance = 'bundled' | 'generated' | 'manual'
 export type AssociationStatus = 'ready' | 'pending' | 'offlineQueued' | 'error' | 'blocked'
+
+/** Read-only content of a note, used by the word sheet in study. */
+export interface NoteContentDto {
+  noteId: Id
+  deckId: Id
+  front: string
+  back: string
+  targetLanguage: TargetLanguage
+  capabilities: DeckCapabilitiesDto
+  associations: AssociationDto[]
+  grammarTips: GrammarTipDto[]
+}
 
 export interface AssociationDto {
   id: Id
@@ -281,6 +306,7 @@ export type StudySessionStatus = 'active' | 'paused' | 'finished'
 export interface StudySessionDto {
   sessionId: Id
   deckId: Id | null
+  deckName: string | null
   status: StudySessionStatus
   current: StudyCardDto | null
   counts: DeckCountsDto
@@ -293,6 +319,16 @@ export interface StartStudyInput {
   operationId: OperationId
   /** `null` studies all decks. */
   deckId: Id | null
+  /** Restricts the session to these cards (e.g. "study the Again cards again"); omitted = the normal queue. */
+  cardIds?: Id[]
+}
+
+export type StudySessionAction = 'pause' | 'resume' | 'end'
+
+export interface UpdateStudySessionInput {
+  operationId: OperationId
+  sessionId: Id
+  action: StudySessionAction
 }
 
 export interface PreviewInput {
@@ -366,14 +402,37 @@ export interface CardActionResultDto {
   deleted: boolean
 }
 
+export interface SessionCardDto {
+  cardId: Id
+  front: string
+  back: string
+  targetLanguage: TargetLanguage
+  direction: CardDirection
+}
+
+export interface NextDeckDto {
+  id: Id
+  name: string
+  due: number
+}
+
 export interface SessionSummaryDto {
   sessionId: Id
   deckId: Id | null
+  deckName: string | null
+  status: StudySessionStatus
   ratings: Record<Rating, number>
   reviewedCount: number
   activeMs: number
-  againCardIds: Id[]
+  /** Cards rated Again at least once; the summary offers to study them again. */
+  againCards: SessionCardDto[]
   nextDueAt: IsoDateTime | null
+  /** Cards of the session's deck scope still due today. */
+  remainingDue: number
+  /** Another deck with due cards, if any. */
+  nextDeck: NextDeckDto | null
+  /** First finished session of this profile: the summary offers a daily reminder. */
+  firstCompleted: boolean
   startedAt: IsoDateTime
   finishedAt: IsoDateTime | null
 }

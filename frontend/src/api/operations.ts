@@ -50,8 +50,9 @@ export const OPERATIONS = {
   updateDeck: op({ kind: 'mutation', command: 'update_deck', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['deck'], backendPhase: 11 }),
   deleteDeck: op({ kind: 'mutation', command: 'delete_deck', errors: ['VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['deck'], backendPhase: 11 }),
 
-  startStudy: op({ kind: 'mutation', command: 'start_study', errors: ['NOT_FOUND', 'DB_BUSY'], emits: [], permission: 'none', screens: ['home', 'deck', 'study'], backendPhase: 10 }),
+  startStudy: op({ kind: 'mutation', command: 'start_study', errors: ['NOT_FOUND', 'DB_BUSY'], emits: [], permission: 'none', screens: ['home', 'deck', 'study', 'summary'], backendPhase: 10 }),
   resumeStudy: op({ kind: 'query', command: 'resume_study', errors: ['NOT_FOUND', 'DB_BUSY'], emits: [], permission: 'none', screens: ['home', 'study'], backendPhase: 10 }),
+  updateStudySession: op({ kind: 'mutation', command: 'update_study_session', errors: ['VALIDATION_FAILED', 'NOT_FOUND', 'DB_BUSY'], emits: [], permission: 'none', screens: ['study'], backendPhase: 10 }),
   getRatingPreview: op({ kind: 'query', command: 'get_rating_preview', errors: ['NOT_FOUND', 'VERSION_CONFLICT'], emits: [], permission: 'none', screens: ['study'], backendPhase: 10 }),
   rateCard: op({ kind: 'mutation', command: 'rate_card', errors: ['PREVIEW_STALE', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY', 'STORAGE_FULL'], emits: ['collection_changed'], permission: 'none', screens: ['study'], backendPhase: 10 }),
   undoReview: op({ kind: 'mutation', command: 'undo_review', errors: ['VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['study'], backendPhase: 10 }),
@@ -59,6 +60,7 @@ export const OPERATIONS = {
   getSessionSummary: op({ kind: 'query', command: 'get_session_summary', errors: ['NOT_FOUND'], emits: [], permission: 'none', screens: ['summary'], backendPhase: 10 }),
 
   getNoteDetails: op({ kind: 'query', command: 'get_note_details', errors: ['NOT_FOUND', 'DELETED'], emits: [], permission: 'none', screens: ['card', 'editor'], backendPhase: 11 }),
+  getNoteContent: op({ kind: 'query', command: 'get_note_content', errors: ['NOT_FOUND', 'DELETED'], emits: [], permission: 'none', screens: ['study'], backendPhase: 11 }),
   getEditorData: op({ kind: 'query', command: 'get_editor_data', errors: ['DB_BUSY'], emits: [], permission: 'none', screens: ['editor'], backendPhase: 11 }),
   checkDuplicate: op({ kind: 'query', command: 'check_duplicate', errors: ['VALIDATION_FAILED'], emits: [], permission: 'none', screens: ['editor'], backendPhase: 11 }),
   saveNote: op({ kind: 'mutation', command: 'save_note', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY', 'STORAGE_FULL'], emits: ['collection_changed'], permission: 'none', screens: ['editor'], backendPhase: 11 }),
@@ -70,8 +72,8 @@ export const OPERATIONS = {
   applyBulkAction: op({ kind: 'mutation', command: 'apply_bulk_action', errors: ['VALIDATION_FAILED', 'PREVIEW_STALE', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['browser'], backendPhase: 11 }),
 
   getStats: op({ kind: 'query', command: 'get_stats', errors: ['DB_BUSY'], emits: [], permission: 'none', screens: ['stats'], backendPhase: 12 }),
-  getSettings: op({ kind: 'query', command: 'get_settings', errors: [], emits: [], permission: 'none', screens: ['settings', 'shell'], backendPhase: 12 }),
-  updateSettings: op({ kind: 'mutation', command: 'update_settings', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT'], emits: ['collection_changed'], permission: 'none', screens: ['settings', 'onboarding'], backendPhase: 12 }),
+  getSettings: op({ kind: 'query', command: 'get_settings', errors: [], emits: [], permission: 'none', screens: ['settings', 'shell', 'summary'], backendPhase: 12 }),
+  updateSettings: op({ kind: 'mutation', command: 'update_settings', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT'], emits: ['collection_changed'], permission: 'none', screens: ['settings', 'onboarding', 'summary'], backendPhase: 12 }),
   getOnboardingState: op({ kind: 'query', command: 'get_onboarding_state', errors: [], emits: [], permission: 'none', screens: ['onboarding', 'shell'], backendPhase: 10 }),
   completeOnboarding: op({ kind: 'job', command: 'complete_onboarding', errors: ['VALIDATION_FAILED', 'STORAGE_FULL'], emits: ['job_progress', 'collection_changed'], permission: 'none', screens: ['onboarding'], backendPhase: 10 }),
 

@@ -8,7 +8,7 @@
 | Components & screens | Vitest + `@testing-library/svelte` (jsdom) | every PR | roles/names, keyboard (Tab trap, Escape), disabled states, every route renders with mock data |
 | Static | svelte-check (`--fail-on-warnings`), ESLint + eslint-plugin-svelte, `lint:i18n` | every PR | types, Svelte a11y warnings, no Tauri imports in UI, no literal UI strings |
 | Release guard | `verify:release` | every PR | no demo adapter, fixtures or gallery in release bundles |
-| Browser E2E & visual | Playwright + axe-core (`npm run test:e2e`, CI job `e2e`) | every PR since Phase 2 | real layout (rule 4) for the gallery matrix and every route at 200%/360 px, dialog/sheet/toast/Back behaviour, axe; gallery pixel snapshots once baselines are committed |
+| Browser E2E & visual | Playwright + axe-core (`npm run test:e2e`, CI job `e2e`) | every PR since Phase 2 | real layout (rule 4) for the gallery matrix and every route at 200%/360 px, dialog/sheet/toast/Back behaviour, axe; Phase 3 learning flow ([e2e/learning.spec.ts](../../frontend/e2e/learning.spec.ts): onboarding → 20 ratings → summary → dashboard, keyboard, undo, card actions, leave guard, dashboard/study/summary at 200% in PL/EN with axe); gallery pixel snapshots once baselines are committed |
 | Native smoke | physical Android/iOS WebView | milestones | keyboard resize, safe areas, TalkBack/VoiceOver, 200% system text |
 
 jsdom does not lay out pages: layout, contrast, overflow at 200% and real scrolling are **not** proven by Vitest and remain open until Playwright/devices run.
