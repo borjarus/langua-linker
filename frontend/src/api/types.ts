@@ -1,5 +1,5 @@
 /**
- * Transport contract v0.4 between the Svelte frontend and the Rust backend.
+ * Transport contract v0.5 between the Svelte frontend and the Rust backend.
  *
  * Rules (plan §4.1):
  * - SQLite i64 identifiers and GUIDs travel as strings (`Id`).
@@ -11,7 +11,7 @@
  * Rust becomes the DTO source in Phase 7 (generated into `src/generated/`).
  */
 
-export const API_VERSION = '0.4'
+export const API_VERSION = '0.5'
 
 export type Id = string
 export type IsoDateTime = string
@@ -87,7 +87,7 @@ export interface AppInfoDto {
   mode: 'demo' | 'dev' | 'beta' | 'release'
 }
 
-export type JobKind = 'prepareContent' | 'import' | 'export' | 'backup' | 'restore' | 'llm'
+export type JobKind = 'prepareContent' | 'import' | 'export' | 'backup' | 'restore' | 'reset' | 'llm'
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
 
 export interface JobProgressDto {
@@ -105,6 +105,8 @@ export interface JobDto {
   startedAt: IsoDateTime
   finishedAt: IsoDateTime | null
   error: ErrorDto | null
+  /** Set once the job finished (also on some failures, e.g. the safety copy of a failed restore). */
+  result: JobResultDto | null
 }
 
 export interface JobEventDto {
@@ -766,9 +768,11 @@ export interface BulkResultDto {
 
 // ---------------------------------------------------------------- statistics
 
-export type StatsRange = '1m' | '3m' | '1y' | 'all'
+export const STATS_RANGES = ['1m', '3m', '1y', 'all'] as const
+export type StatsRange = (typeof STATS_RANGES)[number]
 
 export interface StatsInput {
+  /** `null` = the whole collection; a deck includes its subdecks. */
   deckId: Id | null
   range: StatsRange
 }
@@ -778,20 +782,87 @@ export interface RatioDto {
   total: number
 }
 
+export interface ReviewDayDto {
+  day: StudyDay
+  count: number
+  activeMs: number
+}
+
+/** One study day of the due forecast. */
+export interface ForecastDayDto {
+  day: StudyDay
+  /** Cards whose stored due date falls on this day (day 0 also holds the overdue ones). */
+  stored: number
+  /** Reviews expected on this day once the deck limits carry the backlog forward. */
+  projected: number
+}
+
+/** What the projected forecast assumes; shown next to the chart. */
+export interface ForecastAssumptionsDto {
+  reviewsPerDay: number
+  newPerDay: number
+  /** New cards are not part of the forecast: they are introduced by the user's daily limit. */
+  includesNew: boolean
+}
+
+/** Stability histogram bucket in days, `[minDays, maxDays)`; `maxDays: null` is open-ended. */
+export interface StabilityBucketDto {
+  minDays: number
+  maxDays: number | null
+  count: number
+}
+
+export interface DifficultyStabilityPointDto {
+  cardId: Id
+  /** Days. */
+  stability: number
+  /** FSRS difficulty, 1–10. */
+  difficulty: number
+}
+
 export interface StatsDto {
   range: StatsRange
-  reviewsByDay: { day: StudyDay; count: number; activeMs: number }[]
-  forecast: { day: StudyDay; due: number }[]
+  deckId: Id | null
+  /** Every study day of the range, oldest first, including days without reviews. */
+  reviewsByDay: ReviewDayDto[]
+  forecast: ForecastDayDto[]
+  forecastAssumptions: ForecastAssumptionsDto
+  /** Cards already past their due day; part of `forecast[0].stored`. */
+  overdue: number
   cardStates: Record<CardState | 'Suspended', number>
+  /** Review cards split by interval: young below `matureThresholdDays`, mature from it. */
+  maturity: { young: number; mature: number }
+  matureThresholdDays: number
   /** `null` = not enough data; never rendered as 0%. */
   trueRetention: { young: RatioDto | null; mature: RatioDto | null }
+  stability: StabilityBucketDto[]
+  /** Studied cards only; the advanced D-vs-S view. */
+  difficultyStability: DifficultyStabilityPointDto[]
   streakDays: number
+  longestStreakDays: number
+  generatedAt: IsoDateTime
 }
 
 // ---------------------------------------------------------------- settings / onboarding / privacy
 
 export type PermissionState = 'granted' | 'denied' | 'prompt' | 'unsupported'
 export type ConsentState = 'unset' | 'granted' | 'declined'
+
+export interface AiProviderOptionDto {
+  id: string
+  name: string
+  requiresKey: boolean
+  /** Suggested models; empty = the user types the model name. */
+  models: string[]
+  /** The user supplies an HTTPS endpoint (OpenAI-compatible servers). */
+  customEndpoint: boolean
+}
+
+export interface AiQuotaDto {
+  used: number
+  limit: number
+  resetsAt: IsoDateTime
+}
 
 export interface AiSettingsDto {
   consent: ConsentState
@@ -800,29 +871,74 @@ export interface AiSettingsDto {
   endpoint: string | null
   /** Secrets never cross into JavaScript; only their presence does. */
   hasApiKey: boolean
+  providers: AiProviderOptionDto[]
+  /** `null` = the provider reports no limit. */
+  quota: AiQuotaDto | null
+}
+
+export type BackupLocation = 'app' | 'external'
+
+export interface BackupSettingsDto {
+  /** A backup is made automatically once a day after studying. */
+  automatic: boolean
+  /** Newest backups kept; older ones are removed (safety copies are kept separately). */
+  retention: number
+  target: BackupLocation
+  /** Display name of the chosen external folder; never a raw path. */
+  externalFolder: string | null
 }
 
 export interface SettingsDto {
   uiLanguage: UiLanguage
   nativeLanguage: NativeLanguage
+  /** Suggested target language for new decks; each deck keeps its own. */
+  defaultTargetLanguage: TargetLanguage
   theme: ThemePreference
   dailyGoal: number
+  /** IANA zone used to compute the study day. */
   timeZone: string
+  /** Hour (0–23) at which a new study day starts. */
   dayCutoffHour: number
+  /** Preset given to new decks. */
+  defaultPresetId: Id
   notifications: PermissionState
   reminderTime: string | null
   ttsEnabled: boolean
+  /** Speech rate, 0.5–1.5. */
+  ttsRate: number
   ai: AiSettingsDto
   telemetryOptIn: boolean
+  backup: BackupSettingsDto
   version: number
 }
 
 export type SettingsPatch = Partial<
   Pick<
     SettingsDto,
-    'uiLanguage' | 'theme' | 'dailyGoal' | 'timeZone' | 'dayCutoffHour' | 'reminderTime' | 'ttsEnabled' | 'telemetryOptIn'
+    | 'uiLanguage'
+    | 'defaultTargetLanguage'
+    | 'theme'
+    | 'dailyGoal'
+    | 'timeZone'
+    | 'dayCutoffHour'
+    | 'defaultPresetId'
+    | 'reminderTime'
+    | 'ttsEnabled'
+    | 'ttsRate'
+    | 'telemetryOptIn'
   >
-> & { aiConsent?: ConsentState }
+> & {
+  aiConsent?: ConsentState
+  aiProvider?: string
+  aiModel?: string | null
+  /** HTTPS only; `null` clears it. */
+  aiEndpoint?: string | null
+  backupAutomatic?: boolean
+  backupRetention?: number
+  backupTarget?: BackupLocation
+  /** File token of a folder chosen with `pickFile({ purpose: 'backupFolder' })`. */
+  backupFolderToken?: string
+}
 
 export interface UpdateSettingsInput {
   operationId: OperationId
@@ -830,9 +946,20 @@ export interface UpdateSettingsInput {
   patch: SettingsPatch
 }
 
+export interface SetAiApiKeyInput {
+  operationId: OperationId
+  /** Written to the platform SecretStore; `null` removes the key. Never read back. */
+  apiKey: string | null
+}
+
+export interface RequestPermissionInput {
+  operationId: OperationId
+}
+
 export interface BundledDeckDto {
   guid: Id
   name: string
+  description: string
   targetLanguage: TargetLanguage
   deckType: DeckType
   noteCount: number
@@ -840,19 +967,78 @@ export interface BundledDeckDto {
   level: string
 }
 
-export type OnboardingStep = 'nativeLanguage' | 'targetLanguage' | 'goal' | 'decks' | 'ready'
+export const ONBOARDING_STEPS = ['nativeLanguage', 'targetLanguage', 'goal', 'decks', 'ready'] as const
+export type OnboardingStep = (typeof ONBOARDING_STEPS)[number]
 
 export interface OnboardingStateDto {
   completed: boolean
   step: OnboardingStep
   availableDecks: BundledDeckDto[]
+  /** Bundled decks already in the collection; onboarding again only adds the missing ones. */
+  installedDeckGuids: Id[]
+  nativeLanguage: NativeLanguage
+  targetLanguages: TargetLanguage[]
+  dailyGoal: number
 }
 
 export interface CompleteOnboardingInput {
   operationId: OperationId
+  nativeLanguage: NativeLanguage
   targetLanguages: TargetLanguage[]
   dailyGoal: number
+  /** May be empty: the user can start without bundled decks. */
   deckGuids: Id[]
+}
+
+export type ResetScope = 'progress' | 'everything'
+
+export interface ResetPreviewInput {
+  scope: ResetScope
+}
+
+/** What a reset would remove; the user confirms it with a fresh backup or the phrase. */
+export interface ResetPreviewDto {
+  scope: ResetScope
+  counts: { decks: number; notes: number; cards: number; reviews: number }
+  /** Typed by the user when no safety backup is made. */
+  confirmationPhrase: string
+  latestBackupAt: IsoDateTime | null
+  previewToken: string
+}
+
+export interface ResetInput {
+  operationId: OperationId
+  previewToken: string
+  /** A backup created for this reset (job result); either it or the phrase is required. */
+  safetyBackupId: Id | null
+  confirmationPhrase: string | null
+}
+
+export interface AboutDto {
+  appVersion: string
+  apiVersion: string
+  /** `null` until the database exists (Phase 7). */
+  schemaVersion: number | null
+  fsrsVersion: string
+  contentVersion: string
+  platform: string
+}
+
+export type LogLevel = 'error' | 'warn' | 'info' | 'debug'
+
+export interface LogLineDto {
+  at: IsoDateTime
+  level: LogLevel
+  target: string
+  /** Already redacted by the backend: no card content, prompts or secrets. */
+  message: string
+}
+
+export interface DiagnosticsReportDto {
+  generatedAt: IsoDateTime
+  lines: LogLineDto[]
+  /** Number of values the backend replaced with `[redacted]`. */
+  redactions: number
 }
 
 export interface AttributionDto {
@@ -864,7 +1050,7 @@ export interface AttributionDto {
 
 // ---------------------------------------------------------------- transfer / backup
 
-export type FilePurpose = 'import' | 'restore'
+export type FilePurpose = 'import' | 'restore' | 'backupFolder'
 
 export interface PickFileInput {
   purpose: FilePurpose
@@ -877,29 +1063,55 @@ export interface FileHandleDto {
   sizeBytes: number
 }
 
-export type CsvDelimiter = ',' | ';' | '\t'
-export type DuplicatePolicy = 'update' | 'skip' | 'duplicate'
-export type CsvColumnTarget = 'front' | 'back' | 'deck' | 'tags' | 'due' | 'ignore'
+export const CSV_DELIMITERS = [',', ';', '\t'] as const
+export type CsvDelimiter = (typeof CSV_DELIMITERS)[number]
+export const DUPLICATE_POLICIES = ['skip', 'update', 'duplicate'] as const
+export type DuplicatePolicy = (typeof DUPLICATE_POLICIES)[number]
+export const CSV_COLUMN_TARGETS = ['front', 'back', 'tags', 'ignore'] as const
+export type CsvColumnTarget = (typeof CSV_COLUMN_TARGETS)[number]
 
 export interface ImportInput {
   fileToken: string
+  /** `null` = detect. */
   delimiter: CsvDelimiter | null
   hasHeader: boolean
+  /** `null` = suggested mapping. */
   mapping: CsvColumnTarget[] | null
   duplicatePolicy: DuplicatePolicy
+  /** `null` = a new deck named after the file. */
   targetDeckId: Id | null
 }
 
+export interface ImportRowErrorDto {
+  /** 1-based line in the file. */
+  row: number
+  error: ErrorDto
+}
+
+export interface ImportCountsDto {
+  create: number
+  update: number
+  skip: number
+  duplicate: number
+  error: number
+}
+
+/** Dry run: nothing is written until `commitImport` with the same `previewToken`. */
 export interface ImportPreviewDto {
   fileName: string
   detectedDelimiter: CsvDelimiter | null
+  delimiter: CsvDelimiter
   encoding: string
   hasBom: boolean
+  hasHeader: boolean
   columns: string[]
   sampleRows: string[][]
   mapping: CsvColumnTarget[]
-  counts: { create: number; update: number; skip: number; duplicate: number; error: number }
-  rowErrors: { row: number; error: ErrorDto }[]
+  totalRows: number
+  counts: ImportCountsDto
+  rowErrors: ImportRowErrorDto[]
+  targetDeckId: Id | null
+  targetDeckName: string
   previewToken: string
 }
 
@@ -908,21 +1120,46 @@ export interface CommitImportInput {
   previewToken: string
 }
 
+export interface ExportDeckInput {
+  operationId: OperationId
+  deckId: Id
+  format: 'csv'
+  /** Adds due date, interval and reps columns. */
+  includeScheduling: boolean
+}
+
+export type BackupKind = 'manual' | 'automatic' | 'safety'
+
 export interface BackupDto {
   id: Id
   createdAt: IsoDateTime
   sizeBytes: number
   schemaVersion: number
   cardCount: number
-  location: 'app' | 'external'
+  location: BackupLocation
+  kind: BackupKind
 }
 
 export interface BackupInput {
   operationId: OperationId
 }
 
+export type ShareTarget = { kind: 'backup'; backupId: Id } | { kind: 'export'; jobId: Id }
+
+export interface ShareFileInput {
+  operationId: OperationId
+  target: ShareTarget
+}
+
+export interface ShareResultDto {
+  /** `false` when the user closed the share sheet; not an error. */
+  shared: boolean
+}
+
+export type RestoreSource = { kind: 'file'; fileToken: string } | { kind: 'backup'; backupId: Id }
+
 export interface ValidateRestoreInput {
-  fileToken: string
+  source: RestoreSource
 }
 
 export interface RestorePreviewDto {
@@ -930,6 +1167,8 @@ export interface RestorePreviewDto {
   createdAt: IsoDateTime
   schemaVersion: number
   counts: { decks: number; notes: number; cards: number; reviews: number }
+  /** What the restore replaces. */
+  current: { decks: number; notes: number; cards: number; reviews: number }
   compatible: boolean
   issues: ErrorDto[]
   previewToken: string
@@ -939,3 +1178,13 @@ export interface RestoreInput {
   operationId: OperationId
   previewToken: string
 }
+
+/** Outcome of a finished job, read with `getJobStatus`; job events never carry it. */
+export type JobResultDto =
+  | ({ type: 'import'; deckId: Id; rowErrors: ImportRowErrorDto[] } & ImportCountsDto)
+  | { type: 'export'; fileName: string; cardCount: number }
+  | { type: 'backup'; backupId: Id }
+  /** Present also on a failed restore: the safety copy made before anything changed. */
+  | { type: 'restore'; safetyBackupId: Id }
+  | { type: 'reset'; safetyBackupId: Id | null }
+  | { type: 'prepareContent'; deckIds: Id[] }

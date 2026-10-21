@@ -5,7 +5,7 @@ use serde::Serialize;
 use serde_json::{Map, Value};
 
 /// Contract version; must equal `API_VERSION` in `frontend/src/api/types.ts`.
-pub const API_VERSION: &str = "0.4";
+pub const API_VERSION: &str = "0.5";
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

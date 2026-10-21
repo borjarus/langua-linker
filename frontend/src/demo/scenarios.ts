@@ -1,5 +1,5 @@
 import type { AppApiOperation } from '../api/appApi'
-import type { ErrorCode } from '../api/types'
+import type { ErrorCode, FilePurpose } from '../api/types'
 
 export const DEMO_SCENARIOS = [
   'happy',
@@ -30,4 +30,9 @@ export interface DemoControls {
   /** Resets demo memory to the scenario and remembers the choice for the next start. */
   setScenario(scenario: DemoScenario): void
   failNext(operation: AppApiOperation, code: ErrorCode): void
+  /** Files the demo picker offers per purpose (the mock never opens a real picker). */
+  readonly demoFiles: Readonly<Record<FilePurpose, readonly { token: string; name: string }[]>>
+  pickedFile(purpose: FilePurpose): string | null
+  /** `null` simulates the user closing the picker. */
+  setPickedFile(purpose: FilePurpose, token: string | null): void
 }

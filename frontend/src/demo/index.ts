@@ -1,3 +1,4 @@
+import { DEMO_FILES } from './fixtures'
 import { MockAppApi } from './mockAppApi'
 import { DEMO_SCENARIOS, isDemoScenario, type DemoControls, type DemoScenario } from './scenarios'
 
@@ -38,6 +39,9 @@ export function createDemoApi(): { api: MockAppApi; controls: DemoControls; mark
       storeScenario(scenario)
     },
     failNext: (operation, code) => api.failNext(operation, code),
+    demoFiles: DEMO_FILES,
+    pickedFile: (purpose) => api.pickedFile(purpose),
+    setPickedFile: (purpose, token) => api.setPickedFile(purpose, token),
   }
   return { api, controls, marker: DEMO_BUILD_MARKER }
 }

@@ -141,6 +141,12 @@ describe('mock payloads follow transport rules', () => {
       await api.listBackups(),
       await api.getAttributions(),
       await api.getAppInfo(),
+      await api.getAboutInfo(),
+      await api.getDiagnosticsReport(),
+      await api.previewReset({ scope: 'progress' }),
+      await api.previewImport({ fileToken: 'demo-import-csv', delimiter: null, hasHeader: true, mapping: null, duplicatePolicy: 'skip', targetDeckId: deck.id }),
+      await api.validateRestore({ source: { kind: 'file', fileToken: 'demo-restore-ok' } }),
+      await api.createBackup({ operationId: 'op-4' }),
     ]
     for (const payload of payloads) {
       assertTransportRules(payload)

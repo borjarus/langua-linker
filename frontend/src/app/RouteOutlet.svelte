@@ -6,8 +6,11 @@
   import HomeScreen from '../features/home/HomeScreen.svelte'
   import NotFoundScreen from '../features/NotFoundScreen.svelte'
   import OnboardingScreen from '../features/onboarding/OnboardingScreen.svelte'
+  import AboutScreen from '../features/settings/AboutScreen.svelte'
+  import AiSettingsScreen from '../features/settings/AiSettingsScreen.svelte'
   import AttributionsScreen from '../features/settings/AttributionsScreen.svelte'
   import BackupScreen from '../features/settings/BackupScreen.svelte'
+  import PrivacyScreen from '../features/settings/PrivacyScreen.svelte'
   import SettingsScreen from '../features/settings/SettingsScreen.svelte'
   import TransferScreen from '../features/settings/TransferScreen.svelte'
   import Skeleton from '../components/Skeleton.svelte'
@@ -44,6 +47,12 @@
     <StatsScreen />
   {:else if route.name === 'settings'}
     <SettingsScreen />
+  {:else if route.name === 'settingsAi'}
+    <AiSettingsScreen />
+  {:else if route.name === 'settingsPrivacy'}
+    <PrivacyScreen />
+  {:else if route.name === 'settingsAbout'}
+    <AboutScreen />
   {:else if route.name === 'settingsTransfer'}
     <TransferScreen />
   {:else if route.name === 'settingsBackup'}
@@ -51,7 +60,7 @@
   {:else if route.name === 'settingsAttributions'}
     <AttributionsScreen />
   {:else if route.name === 'onboarding'}
-    <OnboardingScreen />
+    <OnboardingScreen from={route.query.from ?? null} />
   {:else if route.name === 'gallery' && GALLERY_ENABLED}
     {#await import('../features/gallery/GalleryScreen.svelte')}
       <Skeleton lines={8} />

@@ -30,6 +30,10 @@ test('onboarding → 20 ratings → summary → dashboard', async ({ page }) => 
   test.setTimeout(120_000)
   await useScenario(page, 'newUser')
   await openWithPreferences(page, '/onboarding', { language: 'en', theme: 'light', textScale: 'normal' })
+  // Native language → target languages (both: all bundled decks, enough cards for 20 ratings) → goal → decks.
+  await page.getByRole('button', { name: t.onboarding.next }).click()
+  await page.getByRole('checkbox', { name: t.deck.targetLanguages.en }).check()
+  for (let step = 0; step < 3; step += 1) await page.getByRole('button', { name: t.onboarding.next }).click()
   await page.getByRole('button', { name: t.onboarding.start }).click()
   await expect(page.getByRole('heading', { level: 1, name: t.dashboard.title })).toBeVisible({ timeout: 15_000 })
 

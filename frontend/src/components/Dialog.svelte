@@ -30,6 +30,21 @@
     })
   })
 
+  // At large text sizes the content scrolls; it then becomes focusable so keyboard users can scroll
+  // it too (axe: scrollable-region-focusable). Without overflow it stays out of the tab order.
+  let content = $state<HTMLDivElement>()
+  let scrollable = $state(false)
+  $effect(() => {
+    const element = content
+    if (!element || typeof ResizeObserver === 'undefined') return
+    const measure = () => (scrollable = element.scrollHeight > element.clientHeight + 1)
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    for (const child of element.children) observer.observe(child)
+    measure()
+    return () => observer.disconnect()
+  })
+
   function onBackdrop(event: MouseEvent) {
     if (dismissible && event.target === event.currentTarget) onclose()
   }
@@ -55,7 +70,10 @@
           <Icon name="close" />
         </button>
       </header>
-      <div class="content">{@render children()}</div>
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+      <div class="content" bind:this={content} tabindex={scrollable ? 0 : undefined} role={scrollable ? 'region' : undefined} aria-labelledby={scrollable ? titleId : undefined}>
+        {@render children()}
+      </div>
       {#if actions}<footer class="row actions">{@render actions()}</footer>{/if}
     </div>
   </div>

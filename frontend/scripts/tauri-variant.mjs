@@ -8,8 +8,10 @@
 // - tauri.conf.json is the release variant; tauri.<variant>.conf.json overlays name, identifier
 //   and the frontend build for dev/beta.
 // - Android/iOS projects are generated for the base identifier (the CLI derives the Kotlin package
-//   from it), so mobile builds re-apply it via tauri.mobile.conf.json; Gradle adds the
-//   `.dev`/`.beta` application id suffix from LL_APP_VARIANT instead.
+//   from it), so mobile builds re-apply it via tauri.mobile.conf.json. The `.dev`/`.beta`
+//   application id suffix comes from `bundle.android.debugApplicationIdSuffix` for debug builds
+//   (the CLI writes it into Gradle and launches that package) and from LL_APP_VARIANT in Gradle
+//   for release builds.
 // - LL_APP_VARIANT is also compiled into the Rust shell (`AppInfoDto.mode`).
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'

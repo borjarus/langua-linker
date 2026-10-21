@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { FilePurpose } from '../api/types'
   import type { DemoScenario } from '../demo/scenarios'
   import { useServices } from './context'
 
@@ -6,6 +7,21 @@
   const { demo, i18n, queries, router } = useServices()
   const selectId = $props.id()
   let scenario = $state<DemoScenario>(demo?.scenario ?? 'happy')
+  // The mock cannot open a real picker: on file screens the banner chooses what the picker returns.
+  const purpose = $derived<FilePurpose | null>(
+    router.current.name === 'settingsTransfer' ? 'import' : router.current.name === 'settingsBackup' ? 'restore' : null,
+  )
+  let pickedVersion = $state(0)
+  const picked = $derived.by(() => {
+    void pickedVersion
+    return purpose && demo ? (demo.pickedFile(purpose) ?? '') : ''
+  })
+
+  function changeFile(token: string) {
+    if (!demo || !purpose) return
+    demo.setPickedFile(purpose, token || null)
+    pickedVersion += 1
+  }
 
   function changeScenario(next: DemoScenario) {
     if (!demo) return
@@ -32,6 +48,17 @@
         {/each}
       </select>
     </div>
+    {#if purpose && demo}
+      <div class="row">
+        <label for="{selectId}-file">{i18n.t('demo.file')}</label>
+        <select id="{selectId}-file" class="input" value={picked} onchange={(event) => changeFile(event.currentTarget.value)}>
+          {#each demo.demoFiles[purpose] as file (file.token)}
+            <option value={file.token}>{file.name}</option>
+          {/each}
+          <option value="">{i18n.t('demo.fileCancel')}</option>
+        </select>
+      </div>
+    {/if}
   </aside>
 {/if}
 

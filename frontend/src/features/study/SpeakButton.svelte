@@ -2,6 +2,7 @@
   import type { TargetLanguage } from '../../api/types'
   import { useServices } from '../../app/context'
   import Icon from '../../components/Icon.svelte'
+  import { useQuery } from '../../services/query.svelte'
 
   interface Props {
     text: string
@@ -9,7 +10,11 @@
   }
 
   let { text, lang }: Props = $props()
-  const { i18n, speech } = useServices()
+  const { api, i18n, queries, speech } = useServices()
+  // Speech can be turned off in the settings; until they load, the button behaves as enabled.
+  const settings = useQuery(queries, () => ({ key: ['settings'], fetch: () => api.getSettings() }))
+  const enabled = $derived(settings.state.status !== 'ready' || settings.state.data.ttsEnabled)
+  const rate = $derived(settings.state.status === 'ready' ? settings.state.data.ttsRate : 1)
 
   // Voices arrive asynchronously; bumping the revision re-reads availability.
   let revision = $state(0)
@@ -31,18 +36,18 @@
 </script>
 
 <!-- Unavailable speech stays visible (aria-disabled, still focusable) so the reason can be read. -->
-<button
+{#if enabled}<button
   type="button"
   class="btn btn-ghost speak"
   aria-disabled={availability !== 'available'}
   data-availability={availability}
   onclick={() => {
-    if (availability === 'available') speech.speak(text, lang)
+    if (availability === 'available') speech.speak(text, lang, rate)
   }}
 >
   <Icon name="volume" />
   <span>{label}</span>
-</button>
+</button>{/if}
 
 <style>
   .speak {

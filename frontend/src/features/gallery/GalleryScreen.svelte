@@ -88,7 +88,7 @@
     </div>
     <dl class="tiles">
       <StatTile label={i18n.t('dashboard.dueToday')} value={i18n.formatNumber(56)} tone="info" />
-      <StatTile label={i18n.t('stats.retentionMature')} value={i18n.formatPercent(0.907)} hint={i18n.t('stats.reviews', { count: 97 })} tone="success" />
+      <StatTile label={i18n.t('stats.retentionMature')} value={i18n.formatPercent(0.907)} hint={i18n.t('stats.reviewsCount', { count: 97 })} tone="success" />
       <StatTile label={i18n.t('stats.retentionYoung')} value={i18n.t('stats.notEnoughData')} />
     </dl>
   </section>
