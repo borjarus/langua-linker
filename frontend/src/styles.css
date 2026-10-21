@@ -126,11 +126,21 @@ textarea {
 
 .field {
   display: grid;
+  /* An auto track would grow to a control's intrinsic width (longest option, input size). */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-1);
 }
 
 .field label {
   font-weight: var(--weight-medium);
+}
+
+/* WebKit sizes a select by its longest option even with max-width: 100%; a relative width lets
+   it shrink to the field at 200% text instead of widening the page. */
+.field > select,
+.field > textarea,
+.field > input:not([type='checkbox'], [type='radio']) {
+  width: 100%;
 }
 
 .input,

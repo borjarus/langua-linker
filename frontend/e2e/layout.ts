@@ -25,9 +25,13 @@ export interface LayoutProblem {
   detail: string
 }
 
-/** Diff rule 4: no clipped control, no overlapping controls, no horizontal page scroll. */
-export async function layoutProblems(page: Page): Promise<LayoutProblem[]> {
-  return page.evaluate(() => {
+/**
+ * Diff rule 4: no clipped control, no overlapping controls, no horizontal page scroll.
+ * `scope` (e.g. `[role="dialog"]`) checks only the controls of an open modal: the page behind it
+ * is inert, so its controls overlapping the dialog is expected.
+ */
+export async function layoutProblems(page: Page, scope?: string): Promise<LayoutProblem[]> {
+  return page.evaluate((scope) => {
     const problems: { kind: 'page-scroll' | 'outside-viewport' | 'clipped-content' | 'overlap'; detail: string }[] = []
     const root = document.documentElement
     const width = root.clientWidth
@@ -43,11 +47,16 @@ export async function layoutProblems(page: Page): Promise<LayoutProblem[]> {
     }
     const CONTROLS = 'button, a[href], input, select, textarea, [role="button"]'
     // The virtual list scrolls its own content (allowed by rule 4); its rows are not page controls.
-    const groups = [
-      [...document.querySelectorAll(`main ${CONTROLS.split(', ').join(', main ')}`)].filter((el) => !el.closest('[role="list"][aria-label]')),
-      [...document.querySelectorAll('nav a[href]')],
-      [...document.querySelectorAll(`.banner ${CONTROLS.split(', ').join(', .banner ')}`)],
-    ].map((group) => group.filter(visible))
+    const within = (root: string) => [...document.querySelectorAll(`${root} ${CONTROLS.split(', ').join(`, ${root} `)}`)]
+    const groups = (
+      scope
+        ? [within(scope)]
+        : [
+            within('main').filter((el) => !el.closest('[role="list"][aria-label]')),
+            [...document.querySelectorAll('nav a[href]')],
+            within('.banner'),
+          ]
+    ).map((group) => group.filter(visible))
 
     for (const group of groups) {
       const rects = group.map((el) => {
@@ -73,5 +82,5 @@ export async function layoutProblems(page: Page): Promise<LayoutProblem[]> {
       }
     }
     return problems
-  })
+  }, scope)
 }

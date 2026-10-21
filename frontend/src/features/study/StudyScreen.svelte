@@ -129,7 +129,7 @@
   function edit() {
     if (!card) return
     leaving = true
-    void router.navigate({ name: 'editor', query: { noteId: card.noteId, deckId: card.deckId } })
+    void router.navigate({ name: 'editor', query: { cardId: card.cardId, deckId: card.deckId } })
   }
 
   async function resolveLink(link: WordLinkDto, wordNoteId: Id): Promise<ErrorDto | null> {

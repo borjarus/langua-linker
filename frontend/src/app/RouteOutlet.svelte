@@ -37,7 +37,7 @@
   {:else if route.name === 'card'}
     <CardScreen id={route.params.id} />
   {:else if route.name === 'editor'}
-    <EditorScreen deckId={route.query.deckId ?? null} noteId={route.query.noteId ?? null} />
+    <EditorScreen deckId={route.query.deckId ?? null} cardId={route.query.cardId ?? null} />
   {:else if route.name === 'browser'}
     <BrowserScreen query={route.query.q ?? ''} deckId={route.query.deck ?? null} />
   {:else if route.name === 'stats'}

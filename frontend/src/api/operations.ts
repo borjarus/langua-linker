@@ -49,6 +49,8 @@ export const OPERATIONS = {
   createDeck: op({ kind: 'mutation', command: 'create_deck', errors: ['VALIDATION_FAILED', 'DB_BUSY', 'STORAGE_FULL'], emits: ['collection_changed'], permission: 'none', screens: ['home', 'deck'], backendPhase: 11 }),
   updateDeck: op({ kind: 'mutation', command: 'update_deck', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['deck'], backendPhase: 11 }),
   deleteDeck: op({ kind: 'mutation', command: 'delete_deck', errors: ['VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['deck'], backendPhase: 11 }),
+  listPresets: op({ kind: 'query', command: 'list_presets', errors: ['DB_BUSY'], emits: [], permission: 'none', screens: ['deck'], backendPhase: 11 }),
+  savePreset: op({ kind: 'mutation', command: 'save_preset', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['deck'], backendPhase: 11 }),
 
   startStudy: op({ kind: 'mutation', command: 'start_study', errors: ['NOT_FOUND', 'DB_BUSY'], emits: [], permission: 'none', screens: ['home', 'deck', 'study', 'summary'], backendPhase: 10 }),
   resumeStudy: op({ kind: 'query', command: 'resume_study', errors: ['NOT_FOUND', 'DB_BUSY'], emits: [], permission: 'none', screens: ['home', 'study'], backendPhase: 10 }),
@@ -56,19 +58,23 @@ export const OPERATIONS = {
   getRatingPreview: op({ kind: 'query', command: 'get_rating_preview', errors: ['NOT_FOUND', 'VERSION_CONFLICT'], emits: [], permission: 'none', screens: ['study'], backendPhase: 10 }),
   rateCard: op({ kind: 'mutation', command: 'rate_card', errors: ['PREVIEW_STALE', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY', 'STORAGE_FULL'], emits: ['collection_changed'], permission: 'none', screens: ['study'], backendPhase: 10 }),
   undoReview: op({ kind: 'mutation', command: 'undo_review', errors: ['VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['study'], backendPhase: 10 }),
-  applyCardAction: op({ kind: 'mutation', command: 'apply_card_action', errors: ['VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['study', 'card'], backendPhase: 10 }),
+  applyCardAction: op({ kind: 'mutation', command: 'apply_card_action', errors: ['VERSION_CONFLICT', 'NOT_FOUND', 'DELETED', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['study', 'card'], backendPhase: 10 }),
   getSessionSummary: op({ kind: 'query', command: 'get_session_summary', errors: ['NOT_FOUND'], emits: [], permission: 'none', screens: ['summary'], backendPhase: 10 }),
 
   getNoteDetails: op({ kind: 'query', command: 'get_note_details', errors: ['NOT_FOUND', 'DELETED'], emits: [], permission: 'none', screens: ['card', 'editor'], backendPhase: 11 }),
-  getNoteContent: op({ kind: 'query', command: 'get_note_content', errors: ['NOT_FOUND', 'DELETED'], emits: [], permission: 'none', screens: ['study'], backendPhase: 11 }),
-  getEditorData: op({ kind: 'query', command: 'get_editor_data', errors: ['DB_BUSY'], emits: [], permission: 'none', screens: ['editor'], backendPhase: 11 }),
+  getNoteContent: op({ kind: 'query', command: 'get_note_content', errors: ['NOT_FOUND', 'DELETED'], emits: [], permission: 'none', screens: ['study', 'card'], backendPhase: 11 }),
+  getEditorData: op({ kind: 'query', command: 'get_editor_data', errors: ['DB_BUSY'], emits: [], permission: 'none', screens: ['editor', 'browser', 'deck'], backendPhase: 11 }),
   checkDuplicate: op({ kind: 'query', command: 'check_duplicate', errors: ['VALIDATION_FAILED'], emits: [], permission: 'none', screens: ['editor'], backendPhase: 11 }),
   saveNote: op({ kind: 'mutation', command: 'save_note', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY', 'STORAGE_FULL'], emits: ['collection_changed'], permission: 'none', screens: ['editor'], backendPhase: 11 }),
+  deleteNote: op({ kind: 'mutation', command: 'delete_note', errors: ['VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['card'], backendPhase: 11 }),
+  updateNoteContent: op({ kind: 'mutation', command: 'update_note_content', errors: ['VALIDATION_FAILED', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['card'], backendPhase: 11 }),
   setFavoriteAssociation: op({ kind: 'mutation', command: 'set_favorite_association', errors: ['NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['study', 'card'], backendPhase: 11 }),
-  resolveWordLink: op({ kind: 'mutation', command: 'resolve_word_link', errors: ['VALIDATION_FAILED', 'NOT_FOUND'], emits: ['collection_changed'], permission: 'none', screens: ['study', 'card', 'editor'], backendPhase: 11 }),
+  resolveWordLink: op({ kind: 'mutation', command: 'resolve_word_link', errors: ['VALIDATION_FAILED', 'NOT_FOUND'], emits: ['collection_changed'], permission: 'none', screens: ['study', 'card'], backendPhase: 11 }),
+  searchWords: op({ kind: 'query', command: 'search_words', errors: ['VALIDATION_FAILED'], emits: [], permission: 'none', screens: ['editor', 'card'], backendPhase: 11 }),
   generateAssociation: op({ kind: 'job', command: 'generate_association', errors: ['NETWORK_UNAVAILABLE', 'PROVIDER_ERROR', 'PROVIDER_TIMEOUT', 'INVALID_PROVIDER_OUTPUT', 'MODERATION_BLOCKED', 'QUOTA_EXCEEDED', 'PERMISSION_DENIED'], emits: ['job_progress', 'collection_changed'], permission: 'network', screens: ['study', 'card', 'editor'], backendPhase: 13 }),
 
   searchCards: op({ kind: 'query', command: 'search_cards', errors: ['VALIDATION_FAILED', 'DB_BUSY'], emits: [], permission: 'none', screens: ['browser'], backendPhase: 11 }),
+  previewBulkAction: op({ kind: 'query', command: 'preview_bulk_action', errors: ['VALIDATION_FAILED', 'PREVIEW_STALE', 'DB_BUSY'], emits: [], permission: 'none', screens: ['browser'], backendPhase: 11 }),
   applyBulkAction: op({ kind: 'mutation', command: 'apply_bulk_action', errors: ['VALIDATION_FAILED', 'PREVIEW_STALE', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['browser'], backendPhase: 11 }),
 
   getStats: op({ kind: 'query', command: 'get_stats', errors: ['DB_BUSY'], emits: [], permission: 'none', screens: ['stats'], backendPhase: 12 }),
@@ -87,7 +93,7 @@ export const OPERATIONS = {
 
   getJobStatus: op({ kind: 'query', command: 'get_job_status', errors: ['NOT_FOUND'], emits: [], permission: 'none', screens: ['onboarding', 'transfer', 'backup', 'study'], backendPhase: 7 }),
   cancelJob: op({ kind: 'mutation', command: 'cancel_job', errors: ['NOT_FOUND'], emits: ['job_progress'], permission: 'none', screens: ['onboarding', 'transfer', 'backup'], backendPhase: 7 }),
-  onJobEvent: op({ kind: 'subscription', command: 'job_progress', errors: [], emits: [], permission: 'none', screens: ['onboarding', 'transfer', 'backup', 'study'], backendPhase: 7 }),
+  onJobEvent: op({ kind: 'subscription', command: 'job_progress', errors: [], emits: [], permission: 'none', screens: ['onboarding', 'transfer', 'backup', 'study', 'card'], backendPhase: 7 }),
   onCollectionChanged: op({ kind: 'subscription', command: 'collection_changed', errors: [], emits: [], permission: 'none', screens: ['shell'], backendPhase: 7 }),
 } as const satisfies Record<AppApiOperation, OperationSpec>
 

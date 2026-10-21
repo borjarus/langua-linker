@@ -4,6 +4,8 @@ import type {
   BackupDto,
   BackupInput,
   BulkActionInput,
+  BulkPreviewDto,
+  BulkPreviewInput,
   BulkResultDto,
   CardActionInput,
   CardActionResultDto,
@@ -16,6 +18,8 @@ import type {
   DeckOverviewDto,
   DeleteDeckInput,
   DeleteDeckResultDto,
+  DeleteNoteInput,
+  DeleteNoteResultDto,
   DuplicateCheckDto,
   DuplicateCheckInput,
   EditorDataDto,
@@ -30,6 +34,7 @@ import type {
   NoteDetailsDto,
   OnboardingStateDto,
   PickFileInput,
+  PresetDto,
   PreviewInput,
   RateCardInput,
   RatingPreviewDto,
@@ -38,7 +43,9 @@ import type {
   RestorePreviewDto,
   ReviewResultDto,
   SaveNoteInput,
+  SavePresetInput,
   SearchInput,
+  SearchWordsInput,
   SessionSummaryDto,
   SetFavoriteAssociationInput,
   SettingsDto,
@@ -49,10 +56,12 @@ import type {
   UndoInput,
   Unsubscribe,
   UpdateDeckInput,
+  UpdateNoteContentInput,
   UpdateSettingsInput,
   UpdateStudySessionInput,
   AssociationDto,
   WordLinkDto,
+  WordMatchDto,
   ValidateRestoreInput,
 } from './types'
 
@@ -71,6 +80,9 @@ export interface AppApi {
   createDeck(input: CreateDeckInput): Promise<DeckOverviewDto>
   updateDeck(input: UpdateDeckInput): Promise<DeckOverviewDto>
   deleteDeck(input: DeleteDeckInput): Promise<DeleteDeckResultDto>
+  listPresets(): Promise<PresetDto[]>
+  /** Creates (also clones) or updates a preset; a change applies to every dependent deck. */
+  savePreset(input: SavePresetInput): Promise<PresetDto>
 
   // study
   startStudy(input: StartStudyInput): Promise<StudySessionDto>
@@ -89,12 +101,18 @@ export interface AppApi {
   getEditorData(): Promise<EditorDataDto>
   checkDuplicate(input: DuplicateCheckInput): Promise<DuplicateCheckDto>
   saveNote(input: SaveNoteInput): Promise<NoteDetailsDto>
+  /** Deletes the note with all its cards and their history. */
+  deleteNote(input: DeleteNoteInput): Promise<DeleteNoteResultDto>
+  updateNoteContent(input: UpdateNoteContentInput): Promise<NoteDetailsDto>
   setFavoriteAssociation(input: SetFavoriteAssociationInput): Promise<AssociationDto[]>
   resolveWordLink(input: ResolveWordLinkInput): Promise<WordLinkDto>
+  /** Word notes matching a selected phrase: exact first, then normalized; empty when nothing matches. */
+  searchWords(input: SearchWordsInput): Promise<WordMatchDto[]>
   generateAssociation(input: GenerateAssociationInput): Promise<JobDto>
 
   // browser
   searchCards(input: SearchInput): Promise<CardPageDto>
+  previewBulkAction(input: BulkPreviewInput): Promise<BulkPreviewDto>
   applyBulkAction(input: BulkActionInput): Promise<BulkResultDto>
 
   // statistics / settings / onboarding
