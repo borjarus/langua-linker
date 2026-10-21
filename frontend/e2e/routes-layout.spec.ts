@@ -5,7 +5,8 @@ import { layoutProblems, openWithPreferences } from './layout'
 // no control may be clipped, overlap another control, or cause horizontal page scrolling.
 const PATHS = [
   '/home', '/deck/1', '/study/1', '/summary/missing', '/card/1', '/editor', '/browser', '/stats', '/settings',
-  '/settings/transfer', '/settings/backup', '/settings/attributions', '/onboarding', '/no-such-screen',
+  '/settings/ai', '/settings/privacy', '/settings/about', '/settings/transfer', '/settings/backup', '/settings/attributions',
+  '/onboarding', '/no-such-screen',
 ]
 
 for (const language of ['pl', 'en'] as const) {

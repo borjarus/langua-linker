@@ -1,4 +1,6 @@
 import type {
+  AboutDto,
+  AiSettingsDto,
   AppInfoDto,
   AttributionDto,
   BackupDto,
@@ -16,6 +18,8 @@ import type {
   CreateDeckInput,
   DashboardDto,
   DeckOverviewDto,
+  DiagnosticsReportDto,
+  ExportDeckInput,
   DeleteDeckInput,
   DeleteDeckResultDto,
   DeleteNoteInput,
@@ -37,6 +41,10 @@ import type {
   PresetDto,
   PreviewInput,
   RateCardInput,
+  RequestPermissionInput,
+  ResetInput,
+  ResetPreviewDto,
+  ResetPreviewInput,
   RatingPreviewDto,
   ResolveWordLinkInput,
   RestoreInput,
@@ -47,7 +55,10 @@ import type {
   SearchInput,
   SearchWordsInput,
   SessionSummaryDto,
+  SetAiApiKeyInput,
   SetFavoriteAssociationInput,
+  ShareFileInput,
+  ShareResultDto,
   SettingsDto,
   StartStudyInput,
   StatsDto,
@@ -73,6 +84,10 @@ export interface AppApi {
   // app
   getAppInfo(): Promise<AppInfoDto>
   getAttributions(): Promise<AttributionDto[]>
+  /** Versions for the About screen: app, contract, schema, FSRS, bundled content. */
+  getAboutInfo(): Promise<AboutDto>
+  /** Recent log lines, redacted by the backend before they cross IPC. */
+  getDiagnosticsReport(): Promise<DiagnosticsReportDto>
 
   // dashboard / decks
   getDashboard(): Promise<DashboardDto>
@@ -119,16 +134,27 @@ export interface AppApi {
   getStats(input: StatsInput): Promise<StatsDto>
   getSettings(): Promise<SettingsDto>
   updateSettings(input: UpdateSettingsInput): Promise<SettingsDto>
+  /** Stores or removes the BYOK key in the SecretStore; only `hasApiKey` comes back. */
+  setAiApiKey(input: SetAiApiKeyInput): Promise<AiSettingsDto>
+  /** Asks the OS for notification permission; a refusal is a state, not a failure. */
+  requestNotificationPermission(input: RequestPermissionInput): Promise<SettingsDto>
   getOnboardingState(): Promise<OnboardingStateDto>
   completeOnboarding(input: CompleteOnboardingInput): Promise<JobDto>
+  previewReset(input: ResetPreviewInput): Promise<ResetPreviewDto>
+  /** Resets progress or deletes everything; requires a fresh safety backup or the confirmation phrase. */
+  resetCollection(input: ResetInput): Promise<JobDto>
 
   // transfer / backup
   pickFile(input: PickFileInput): Promise<FileHandleDto | null>
   previewImport(input: ImportInput): Promise<ImportPreviewDto>
   commitImport(input: CommitImportInput): Promise<JobDto>
+  exportDeck(input: ExportDeckInput): Promise<JobDto>
+  /** Opens the platform share sheet for a backup or a finished export. */
+  shareFile(input: ShareFileInput): Promise<ShareResultDto>
   listBackups(): Promise<BackupDto[]>
   createBackup(input: BackupInput): Promise<JobDto>
   validateRestore(input: ValidateRestoreInput): Promise<RestorePreviewDto>
+  /** Makes a safety copy of the current collection first; a failed restore leaves it untouched. */
   restoreBackup(input: RestoreInput): Promise<JobDto>
 
   // jobs / events

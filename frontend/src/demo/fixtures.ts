@@ -365,6 +365,7 @@ export const BUNDLED_DECKS = DECK_SEEDS.filter(({ record }) => record.bundled &&
   ({ record, notes }) => ({
     guid: record.guid,
     name: record.name,
+    description: record.description,
     targetLanguage: record.targetLanguage,
     deckType: record.deckType,
     noteCount: notes.length,
@@ -389,4 +390,75 @@ export function largeRow(index: number): { front: string; back: string; state: C
     state: states[index % states.length] ?? 'New',
     dueOffsetDays: (index * 7) % 90,
   }
+}
+
+/** A CSV file the demo picker can "open"; the mock never reads user files. */
+export interface DemoCsvFile {
+  name: string
+  delimiter: ',' | ';' | '	'
+  hasBom: boolean
+  header: string[] | null
+  rows: string[][]
+}
+
+export const DEMO_CSV_FILES: Record<string, DemoCsvFile> = {
+  'demo-import-csv': {
+    name: 'slowka-niemiecki.csv',
+    delimiter: ';',
+    hasBom: true,
+    header: ['Vorderseite', 'Rückseite', 'Tags'],
+    rows: [
+      ['die Größe', 'rozmiar', 'A1'],
+      ['der Fußgängerüberweg', 'przejście dla pieszych', 'A2 złożenia'],
+      ['schön', 'ładny, piękny', 'A1'],
+      ['der Tee', 'herbata (napój)', 'A1 jedzenie'],
+      ['trinken', 'pić', 'A1 czasowniki'],
+      ['das Fenster', 'okno', 'A1 dom'],
+      ['die Tür', 'drzwi', 'A1 dom'],
+      ['', 'pusty przód', ''],
+      ['der Bahnhof', 'dworzec', 'A1 miasto'],
+      ['die Haltestelle', 'przystanek', 'A1 miasto'],
+      ['das Brot', 'chleb', 'A1 jedzenie'],
+      ['die Milch', 'mleko', 'A1 jedzenie'],
+      ['laufen', 'biegać', 'A1 czasowniki'],
+      ['die Rechnung', 'rachunek', 'A2'],
+      ['bezahlen', 'płacić', 'A2 czasowniki'],
+    ],
+  },
+  'demo-import-comma': {
+    name: 'english-phrases.csv',
+    delimiter: ',',
+    hasBom: false,
+    header: null,
+    rows: [
+      ['how are you?', 'jak się masz?'],
+      ['thank you', 'dziękuję'],
+      ['nice to meet you', 'miło cię poznać'],
+      ['good luck', 'powodzenia'],
+      ['see you soon', 'do zobaczenia wkrótce'],
+      ['what time is it?', 'która godzina?'],
+    ],
+  },
+}
+
+export interface DemoFile {
+  token: string
+  name: string
+  sizeBytes: number
+}
+
+/** Files the demo picker offers per purpose (chosen in the demo banner); `null` = the user closes the picker. */
+export const DEMO_FILES: Record<'import' | 'restore' | 'backupFolder', DemoFile[]> = {
+  import: [
+    { token: 'demo-import-csv', name: 'slowka-niemiecki.csv', sizeBytes: 1_284 },
+    { token: 'demo-import-comma', name: 'english-phrases.csv', sizeBytes: 214 },
+    { token: 'demo-import-apkg', name: 'Deutsch_A1.apkg', sizeBytes: 2_406_118 },
+  ],
+  restore: [
+    { token: 'demo-restore-ok', name: 'langualinker-2026-02-27.llbackup', sizeBytes: 182_000 },
+    { token: 'demo-restore-corrupt', name: 'langualinker-uszkodzona.llbackup', sizeBytes: 4_096 },
+    { token: 'demo-restore-newer', name: 'langualinker-v9.llbackup', sizeBytes: 190_000 },
+    { token: 'demo-restore-fails', name: 'langualinker-przerwana.llbackup', sizeBytes: 181_000 },
+  ],
+  backupFolder: [{ token: 'demo-folder-documents', name: 'Dokumenty/LanguaLinker', sizeBytes: 0 }],
 }

@@ -164,7 +164,7 @@ describe('MockAppApi scenarios', () => {
     api.onJobEvent((event) => events.push(event))
     const state = await api.getOnboardingState()
     const german = state.availableDecks.filter((deck) => deck.targetLanguage === 'de').map((deck) => deck.guid)
-    await api.completeOnboarding({ operationId: 'o', targetLanguages: ['de'], dailyGoal: 15, deckGuids: german })
+    await api.completeOnboarding({ operationId: 'o', nativeLanguage: 'pl', targetLanguages: ['de'], dailyGoal: 15, deckGuids: german })
     await vi.waitFor(() => expect(events.at(-1)?.status).toBe('succeeded'))
     const sequences = events.map((event) => event.sequence)
     expect(sequences).toEqual([...sequences].sort((a, b) => a - b))

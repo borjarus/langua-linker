@@ -15,6 +15,9 @@ export type ScreenId =
   | 'browser'
   | 'stats'
   | 'settings'
+  | 'settingsAi'
+  | 'privacy'
+  | 'about'
   | 'onboarding'
   | 'transfer'
   | 'backup'
@@ -41,15 +44,17 @@ const op = (spec: OperationSpec): OperationSpec => spec
  * `satisfies Record<AppApiOperation, …>` makes a missing or extra operation a compile error.
  */
 export const OPERATIONS = {
-  getAppInfo: op({ kind: 'query', command: 'get_app_info', errors: [], emits: [], permission: 'none', screens: ['shell', 'attributions'], backendPhase: 1 }),
+  getAppInfo: op({ kind: 'query', command: 'get_app_info', errors: [], emits: [], permission: 'none', screens: ['shell', 'about'], backendPhase: 1 }),
   getAttributions: op({ kind: 'query', command: 'get_attributions', errors: [], emits: [], permission: 'none', screens: ['attributions'], backendPhase: 8 }),
+  getAboutInfo: op({ kind: 'query', command: 'get_about_info', errors: [], emits: [], permission: 'none', screens: ['about'], backendPhase: 7 }),
+  getDiagnosticsReport: op({ kind: 'query', command: 'get_diagnostics_report', errors: [], emits: [], permission: 'none', screens: ['about'], backendPhase: 7 }),
 
   getDashboard: op({ kind: 'query', command: 'get_dashboard', errors: ['DB_BUSY'], emits: [], permission: 'none', screens: ['home'], backendPhase: 10 }),
   getDeck: op({ kind: 'query', command: 'get_deck', errors: ['NOT_FOUND', 'DELETED', 'DB_BUSY'], emits: [], permission: 'none', screens: ['deck'], backendPhase: 11 }),
   createDeck: op({ kind: 'mutation', command: 'create_deck', errors: ['VALIDATION_FAILED', 'DB_BUSY', 'STORAGE_FULL'], emits: ['collection_changed'], permission: 'none', screens: ['home', 'deck'], backendPhase: 11 }),
   updateDeck: op({ kind: 'mutation', command: 'update_deck', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['deck'], backendPhase: 11 }),
   deleteDeck: op({ kind: 'mutation', command: 'delete_deck', errors: ['VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['deck'], backendPhase: 11 }),
-  listPresets: op({ kind: 'query', command: 'list_presets', errors: ['DB_BUSY'], emits: [], permission: 'none', screens: ['deck'], backendPhase: 11 }),
+  listPresets: op({ kind: 'query', command: 'list_presets', errors: ['DB_BUSY'], emits: [], permission: 'none', screens: ['deck', 'settings'], backendPhase: 11 }),
   savePreset: op({ kind: 'mutation', command: 'save_preset', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['deck'], backendPhase: 11 }),
 
   startStudy: op({ kind: 'mutation', command: 'start_study', errors: ['NOT_FOUND', 'DB_BUSY'], emits: [], permission: 'none', screens: ['home', 'deck', 'study', 'summary'], backendPhase: 10 }),
@@ -63,7 +68,7 @@ export const OPERATIONS = {
 
   getNoteDetails: op({ kind: 'query', command: 'get_note_details', errors: ['NOT_FOUND', 'DELETED'], emits: [], permission: 'none', screens: ['card', 'editor'], backendPhase: 11 }),
   getNoteContent: op({ kind: 'query', command: 'get_note_content', errors: ['NOT_FOUND', 'DELETED'], emits: [], permission: 'none', screens: ['study', 'card'], backendPhase: 11 }),
-  getEditorData: op({ kind: 'query', command: 'get_editor_data', errors: ['DB_BUSY'], emits: [], permission: 'none', screens: ['editor', 'browser', 'deck'], backendPhase: 11 }),
+  getEditorData: op({ kind: 'query', command: 'get_editor_data', errors: ['DB_BUSY'], emits: [], permission: 'none', screens: ['editor', 'browser', 'deck', 'stats', 'transfer'], backendPhase: 11 }),
   checkDuplicate: op({ kind: 'query', command: 'check_duplicate', errors: ['VALIDATION_FAILED'], emits: [], permission: 'none', screens: ['editor'], backendPhase: 11 }),
   saveNote: op({ kind: 'mutation', command: 'save_note', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY', 'STORAGE_FULL'], emits: ['collection_changed'], permission: 'none', screens: ['editor'], backendPhase: 11 }),
   deleteNote: op({ kind: 'mutation', command: 'delete_note', errors: ['VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['card'], backendPhase: 11 }),
@@ -77,23 +82,29 @@ export const OPERATIONS = {
   previewBulkAction: op({ kind: 'query', command: 'preview_bulk_action', errors: ['VALIDATION_FAILED', 'PREVIEW_STALE', 'DB_BUSY'], emits: [], permission: 'none', screens: ['browser'], backendPhase: 11 }),
   applyBulkAction: op({ kind: 'mutation', command: 'apply_bulk_action', errors: ['VALIDATION_FAILED', 'PREVIEW_STALE', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['browser'], backendPhase: 11 }),
 
-  getStats: op({ kind: 'query', command: 'get_stats', errors: ['DB_BUSY'], emits: [], permission: 'none', screens: ['stats'], backendPhase: 12 }),
-  getSettings: op({ kind: 'query', command: 'get_settings', errors: [], emits: [], permission: 'none', screens: ['settings', 'shell', 'summary'], backendPhase: 12 }),
-  updateSettings: op({ kind: 'mutation', command: 'update_settings', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT'], emits: ['collection_changed'], permission: 'none', screens: ['settings', 'onboarding', 'summary'], backendPhase: 12 }),
+  getStats: op({ kind: 'query', command: 'get_stats', errors: ['NOT_FOUND', 'DB_BUSY'], emits: [], permission: 'none', screens: ['stats'], backendPhase: 12 }),
+  getSettings: op({ kind: 'query', command: 'get_settings', errors: [], emits: [], permission: 'none', screens: ['settings', 'settingsAi', 'privacy', 'backup', 'shell', 'summary', 'study', 'card'], backendPhase: 12 }),
+  updateSettings: op({ kind: 'mutation', command: 'update_settings', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT'], emits: ['collection_changed'], permission: 'none', screens: ['settings', 'settingsAi', 'privacy', 'backup', 'onboarding', 'summary'], backendPhase: 12 }),
+  setAiApiKey: op({ kind: 'mutation', command: 'set_ai_api_key', errors: ['VALIDATION_FAILED', 'PERMISSION_DENIED'], emits: ['collection_changed'], permission: 'secret', screens: ['settingsAi'], backendPhase: 13 }),
+  requestNotificationPermission: op({ kind: 'mutation', command: 'request_notification_permission', errors: [], emits: ['collection_changed'], permission: 'notifications', screens: ['settings'], backendPhase: 15 }),
   getOnboardingState: op({ kind: 'query', command: 'get_onboarding_state', errors: [], emits: [], permission: 'none', screens: ['onboarding', 'shell'], backendPhase: 10 }),
   completeOnboarding: op({ kind: 'job', command: 'complete_onboarding', errors: ['VALIDATION_FAILED', 'STORAGE_FULL'], emits: ['job_progress', 'collection_changed'], permission: 'none', screens: ['onboarding'], backendPhase: 10 }),
+  previewReset: op({ kind: 'query', command: 'preview_reset', errors: ['DB_BUSY'], emits: [], permission: 'none', screens: ['privacy'], backendPhase: 12 }),
+  resetCollection: op({ kind: 'job', command: 'reset_collection', errors: ['PREVIEW_STALE', 'VALIDATION_FAILED', 'DB_BUSY'], emits: ['job_progress', 'collection_changed'], permission: 'none', screens: ['privacy'], backendPhase: 12 }),
 
   pickFile: op({ kind: 'query', command: 'pick_file', errors: ['PERMISSION_DENIED', 'CANCELLED'], emits: [], permission: 'file', screens: ['transfer', 'backup'], backendPhase: 14 }),
-  previewImport: op({ kind: 'query', command: 'preview_import', errors: ['UNSUPPORTED_FORMAT', 'VALIDATION_FAILED'], emits: [], permission: 'file', screens: ['transfer'], backendPhase: 14 }),
+  previewImport: op({ kind: 'query', command: 'preview_import', errors: ['UNSUPPORTED_FORMAT', 'VALIDATION_FAILED', 'NOT_FOUND'], emits: [], permission: 'file', screens: ['transfer'], backendPhase: 14 }),
   commitImport: op({ kind: 'job', command: 'commit_import', errors: ['PREVIEW_STALE', 'STORAGE_FULL', 'CANCELLED'], emits: ['job_progress', 'collection_changed'], permission: 'file', screens: ['transfer'], backendPhase: 14 }),
-  listBackups: op({ kind: 'query', command: 'list_backups', errors: ['PERMISSION_DENIED'], emits: [], permission: 'none', screens: ['backup'], backendPhase: 12 }),
-  createBackup: op({ kind: 'job', command: 'create_backup', errors: ['STORAGE_FULL', 'PERMISSION_DENIED', 'CANCELLED'], emits: ['job_progress', 'collection_changed'], permission: 'file', screens: ['backup'], backendPhase: 12 }),
-  validateRestore: op({ kind: 'query', command: 'validate_restore', errors: ['BACKUP_CORRUPT', 'SCHEMA_TOO_NEW', 'UNSUPPORTED_FORMAT'], emits: [], permission: 'file', screens: ['backup'], backendPhase: 12 }),
+  exportDeck: op({ kind: 'job', command: 'export_deck', errors: ['NOT_FOUND', 'STORAGE_FULL', 'CANCELLED'], emits: ['job_progress'], permission: 'file', screens: ['transfer'], backendPhase: 14 }),
+  shareFile: op({ kind: 'mutation', command: 'share_file', errors: ['NOT_FOUND', 'PERMISSION_DENIED'], emits: [], permission: 'file', screens: ['transfer', 'backup'], backendPhase: 15 }),
+  listBackups: op({ kind: 'query', command: 'list_backups', errors: ['PERMISSION_DENIED'], emits: [], permission: 'none', screens: ['backup', 'privacy'], backendPhase: 12 }),
+  createBackup: op({ kind: 'job', command: 'create_backup', errors: ['STORAGE_FULL', 'PERMISSION_DENIED', 'CANCELLED'], emits: ['job_progress', 'collection_changed'], permission: 'file', screens: ['backup', 'privacy'], backendPhase: 12 }),
+  validateRestore: op({ kind: 'query', command: 'validate_restore', errors: ['BACKUP_CORRUPT', 'SCHEMA_TOO_NEW', 'UNSUPPORTED_FORMAT', 'NOT_FOUND'], emits: [], permission: 'file', screens: ['backup'], backendPhase: 12 }),
   restoreBackup: op({ kind: 'job', command: 'restore_backup', errors: ['PREVIEW_STALE', 'BACKUP_CORRUPT', 'STORAGE_FULL'], emits: ['job_progress', 'collection_changed'], permission: 'file', screens: ['backup'], backendPhase: 12 }),
 
-  getJobStatus: op({ kind: 'query', command: 'get_job_status', errors: ['NOT_FOUND'], emits: [], permission: 'none', screens: ['onboarding', 'transfer', 'backup', 'study'], backendPhase: 7 }),
-  cancelJob: op({ kind: 'mutation', command: 'cancel_job', errors: ['NOT_FOUND'], emits: ['job_progress'], permission: 'none', screens: ['onboarding', 'transfer', 'backup'], backendPhase: 7 }),
-  onJobEvent: op({ kind: 'subscription', command: 'job_progress', errors: [], emits: [], permission: 'none', screens: ['onboarding', 'transfer', 'backup', 'study', 'card'], backendPhase: 7 }),
+  getJobStatus: op({ kind: 'query', command: 'get_job_status', errors: ['NOT_FOUND'], emits: [], permission: 'none', screens: ['onboarding', 'transfer', 'backup', 'privacy', 'study'], backendPhase: 7 }),
+  cancelJob: op({ kind: 'mutation', command: 'cancel_job', errors: ['NOT_FOUND'], emits: ['job_progress'], permission: 'none', screens: ['onboarding', 'transfer', 'backup', 'privacy'], backendPhase: 7 }),
+  onJobEvent: op({ kind: 'subscription', command: 'job_progress', errors: [], emits: [], permission: 'none', screens: ['onboarding', 'transfer', 'backup', 'privacy', 'study', 'card'], backendPhase: 7 }),
   onCollectionChanged: op({ kind: 'subscription', command: 'collection_changed', errors: [], emits: [], permission: 'none', screens: ['shell'], backendPhase: 7 }),
 } as const satisfies Record<AppApiOperation, OperationSpec>
 

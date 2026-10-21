@@ -4,6 +4,7 @@ import type { AppApi } from '../../src/api/appApi'
 import type { UiLanguage } from '../../src/api/types'
 import { APP_SERVICES, type AppServices } from '../../src/app/context'
 import { Router } from '../../src/app/router.svelte'
+import { DEMO_FILES } from '../../src/demo/fixtures'
 import { MockAppApi, type MockAppApiOptions } from '../../src/demo/mockAppApi'
 import { DEMO_SCENARIOS } from '../../src/demo/scenarios'
 import { I18n } from '../../src/services/i18n.svelte'
@@ -47,6 +48,9 @@ export async function createTestServices(options: TestServicesOptions = {}): Pro
       scenarios: DEMO_SCENARIOS,
       setScenario: (scenario) => mock.setScenario(scenario),
       failNext: (operation, code) => mock.failNext(operation, code),
+      demoFiles: DEMO_FILES,
+      pickedFile: (purpose) => mock.pickedFile(purpose),
+      setPickedFile: (purpose, token) => mock.setPickedFile(purpose, token),
     },
   }
 }

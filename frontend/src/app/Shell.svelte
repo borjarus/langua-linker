@@ -15,7 +15,7 @@
     { route: 'browser', icon: 'search', label: 'nav.browser', matches: ['browser', 'card'] },
     { route: 'editor', icon: 'plus', label: 'nav.add', matches: ['editor'] },
     { route: 'stats', icon: 'chart', label: 'nav.stats', matches: ['stats'] },
-    { route: 'settings', icon: 'settings', label: 'nav.settings', matches: ['settings', 'settingsTransfer', 'settingsBackup', 'settingsAttributions', 'gallery', 'diagnostics'] },
+    { route: 'settings', icon: 'settings', label: 'nav.settings', matches: ['settings', 'settingsAi', 'settingsPrivacy', 'settingsAbout', 'settingsTransfer', 'settingsBackup', 'settingsAttributions', 'onboarding', 'gallery', 'diagnostics'] },
   ]
   const activeName = $derived(router.current.name)
 

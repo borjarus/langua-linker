@@ -244,7 +244,7 @@ describe('text to speech', () => {
     const fake = speech({ de: true })
     const { stop } = await openStudy('1', { speech: fake })
     await fireEvent.click(screen.getByRole('button', { name: 'Listen (German)' }))
-    expect(fake.speak).toHaveBeenCalledWith(front(), 'de')
+    expect(fake.speak).toHaveBeenCalledWith(front(), 'de', 1)
     stop()
   })
 

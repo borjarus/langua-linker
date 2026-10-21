@@ -10,7 +10,8 @@ export type SpeechAvailability = 'available' | 'noVoice' | 'unsupported'
  */
 export interface SpeechService {
   availability(lang: string): SpeechAvailability
-  speak(text: string, lang: string): void
+  /** `rate`: 0.5–1.5, from the settings. */
+  speak(text: string, lang: string, rate?: number): void
   stop(): void
   /** Voices load asynchronously; availability may change after this fires. */
   onChange(listener: () => void): Unsubscribe
@@ -31,7 +32,7 @@ export function createWebSpeechService(
       if (!synthesis || !Utterance) return 'unsupported'
       return voiceFor(lang) ? 'available' : 'noVoice'
     },
-    speak(text, lang) {
+    speak(text, lang, rate = 1) {
       if (!synthesis || !Utterance) return
       const voice = voiceFor(lang)
       if (!voice) return
@@ -39,6 +40,7 @@ export function createWebSpeechService(
       const utterance = new Utterance(text)
       utterance.lang = voice.lang
       utterance.voice = voice
+      utterance.rate = rate
       synthesis.speak(utterance)
     },
     stop() {

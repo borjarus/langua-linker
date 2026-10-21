@@ -2,6 +2,8 @@
 
 Phase 1: Android emulator and iOS simulator (owner decision 2026-10-12). Phase 6 gate: the same checklist on physical Android and iOS devices; emulator results do not count there.
 
+Step-by-step guide for a run (setup, adb commands, Phase 5 scenarios, cleanup): [emulator-testing.md](emulator-testing.md).
+
 Run with the dev variant, which bundles the demo frontend (`npm --prefix frontend run android:dev` / `android:apk`, `variant -- dev ios dev`); package `com.mila.langualinker.dev`. Record date, device, OS version, build commit and result for each row; attach screenshots in the PR.
 
 Legend: ☑ pass · ◐ partly verified (see notes) · ☒ fail · ☐ not run. Android column = emulator run of 2026-10-12 (rows 1–10) and 2026-10-16 (rows 11–16) below.
@@ -24,6 +26,16 @@ Legend: ☑ pass · ◐ partly verified (see notes) · ☒ fail · ☐ not run. 
 | 14 | Phase 3 · Back during an open session asks "Leave the session?"; Keep studying stays, Leave returns to the decks with "Resume session" | ☑ | ☐ |
 | 15 | Phase 3 · TTS button: iOS speaks with an installed voice; Android WebView shows "Speech is not available on this device" (ADR-12) | ☑ | ☐ |
 | 16 | Phase 3 · Onboarding (demo scenario "New user") → study → End session → summary → decks completes with touch only | ☑ | ☐ |
+| 17 | Phase 5 · Onboarding wizard (native → target → goal → decks → ready): focus/TalkBack on each step title; decks prepared; from Settings it returns there ([guide 4.1](emulator-testing.md#41-onboarding-scenario-nowy-użytkownik), [4.10](emulator-testing.md#410-re-onboarding-from-settings)) | ☐ | ☐ |
+| 18 | Phase 5 · Statistics: filters, every chart with tooltip by touch and a table view, empty and error states; no horizontal scroll at maximum font ([4.2](emulator-testing.md#42-statistics)) | ☐ | ☐ |
+| 19 | Phase 5 · Settings: each change shows "Saved"; language switch reaches navigation and banner; TTS off hides the listen button ([4.3](emulator-testing.md#43-settings)) | ☐ | ☐ |
+| 20 | Phase 5 · AI: consent can be declined and study still works; HTTPS-only endpoint; API key field clears and the key is never shown ([4.4](emulator-testing.md#44-ai-and-associations)) | ☐ | ☐ |
+| 21 | Phase 5 · Privacy: reset needs the phrase or a fresh safety backup; delete everything leads to onboarding; Back does not dismiss the dialog mid-way ([4.5](emulator-testing.md#45-privacy-reset-and-deletion)) | ☐ | ☐ |
+| 22 | Phase 5 · About and licences: versions, redacted diagnostic log; record whether "Copy log" works in the WebView ([4.6](emulator-testing.md#46-about-and-licenses)) | ☐ | ☐ |
+| 23 | Phase 5 · Import & export: dry run counts and row errors, delimiter/mapping/duplicates, import result, APKG instructions, closed picker, export + share ([4.7](emulator-testing.md#47-import-and-export)) | ☐ | ☐ |
+| 24 | Phase 5 · Backup & restore: create, retention, folder, corrupt/newer file rejected, restore with reopen, failed restore offers the safety copy; dialog scrolls at 200% ([4.8](emulator-testing.md#48-backup-and-restore)) | ☐ | ☐ |
+| 25 | Phase 5 · Declined AI, telemetry and notifications do not block a study rating ([4.9](emulator-testing.md#49-declining-ai-telemetry-and-notifications-does-not-block-study)) | ☐ | ☐ |
+| 26 | Phase 5 · All Phase 5 screens in light and dark, at 200% system and in-app text, landscape, with TalkBack/VoiceOver and Back ([section 5](emulator-testing.md#5-criteria-for-each-screen)) | ☐ | ☐ |
 
 ## How the checks were performed
 

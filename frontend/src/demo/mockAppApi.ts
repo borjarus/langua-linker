@@ -5,9 +5,13 @@ import {
   DECK_TYPES,
   FSRS_WEIGHT_COUNT,
   RATINGS,
+  type AboutDto,
+  type AiProviderOptionDto,
+  type AiSettingsDto,
   type AssociationDto,
   type AttributionDto,
   type BackupDto,
+  type BackupInput,
   type BulkAction,
   type BulkActionInput,
   type BulkPreviewDto,
@@ -25,6 +29,7 @@ import {
   type CommitImportInput,
   type CompleteOnboardingInput,
   type CreateDeckInput,
+  type CsvColumnTarget,
   type DashboardDto,
   type DeckCountsDto,
   type DeckOverviewDto,
@@ -34,11 +39,14 @@ import {
   type DeleteDeckResultDto,
   type DeleteNoteInput,
   type DeleteNoteResultDto,
+  type DiagnosticsReportDto,
   type DuplicateCheckDto,
   type DuplicateCheckInput,
   type EditorDataDto,
   type ErrorCode,
+  type ExportDeckInput,
   type FileHandleDto,
+  type FilePurpose,
   type GenerateAssociationInput,
   type GrammarTipDto,
   type Id,
@@ -47,6 +55,7 @@ import {
   type JobDto,
   type JobEventDto,
   type JobKind,
+  type JobResultDto,
   type NoteContentDto,
   type NoteDetailsDto,
   type NoteTypeDto,
@@ -57,6 +66,12 @@ import {
   type PreviewInput,
   type QueueState,
   type RateCardInput,
+  type RatioDto,
+  type RequestPermissionInput,
+  type ResetInput,
+  type ResetPreviewDto,
+  type ResetPreviewInput,
+  type ResetScope,
   type Rating,
   type RatingPreviewDto,
   type ResolveWordLinkInput,
@@ -70,8 +85,11 @@ import {
   type SearchWordsInput,
   type SessionCardDto,
   type SessionSummaryDto,
+  type SetAiApiKeyInput,
   type SetFavoriteAssociationInput,
   type SettingsDto,
+  type ShareFileInput,
+  type ShareResultDto,
   type StartStudyInput,
   type StatsDto,
   type StatsInput,
@@ -90,7 +108,9 @@ import {
 } from '../api/types'
 import {
   BUNDLED_DECKS,
+  DEMO_CSV_FILES,
   DEMO_EPOCH_MS,
+  DEMO_FILES,
   LARGE_COLLECTION_SIZE,
   capabilitiesFor,
   createCollection,
@@ -142,6 +162,57 @@ interface SessionRecord {
   ratings: SessionRating[]
   undo: UndoEntry[]
 }
+
+interface ImportOperation {
+  kind: 'create' | 'update'
+  noteId?: string
+  front: string
+  back: string
+  tags: string[]
+}
+
+interface ImportPlan {
+  token: string
+  revision: number
+  ops: ImportOperation[]
+  deckId: string | null
+  deckName: string
+  counts: ImportPreviewDto['counts']
+  rowErrors: ImportPreviewDto['rowErrors']
+}
+
+interface RestorePlan {
+  token: string
+  revision: number
+  snapshot: Collection
+  /** `demo-restore-fails`: validates, then fails while restoring. */
+  failing: boolean
+}
+
+interface ResetPlan {
+  token: string
+  scope: ResetScope
+  phrase: string
+  /** Backups that existed at preview time; only a newer one counts as a safety copy. */
+  backupsBefore: Set<string>
+}
+
+/** What a finished job reports; `error` fails it while keeping the result (e.g. a restore's safety copy). */
+interface JobOutcome {
+  result: JobResultDto | null
+  error?: ErrorCode
+}
+
+/** Interval from which a review card counts as mature (Anki convention). */
+const MATURE_DAYS = 21
+/** Fewer reviews than this give "not enough data", never a misleading percentage. */
+const MIN_RETENTION_SAMPLE = 10
+const STABILITY_BUCKETS: [number, number | null][] = [[0, 1], [1, 3], [3, 7], [7, 14], [14, 30], [30, 90], [90, null]]
+const AI_PROVIDERS: AiProviderOptionDto[] = [
+  { id: 'demo', name: 'Demo', requiresKey: false, models: ['demo-mnemonic-v1'], customEndpoint: false },
+  { id: 'anthropic', name: 'Anthropic', requiresKey: true, models: ['claude-haiku-5-5', 'claude-sonnet-5-5'], customEndpoint: false },
+  { id: 'openaiCompatible', name: 'OpenAI-compatible', requiresKey: true, models: [], customEndpoint: true },
+]
 
 /** Outcomes cycled by the `aiErrors` scenario: provider error, unusable output, moderation. */
 const AI_FAILURES = ['PROVIDER_ERROR', 'INVALID_PROVIDER_OUTPUT', 'MODERATION_BLOCKED'] as const
@@ -195,8 +266,16 @@ export class MockAppApi implements AppApi {
   #settings!: SettingsDto
   #onboardingCompleted = true
   #backups: BackupDto[] = []
-  #importPreviewToken: string | null = null
-  #restorePreviewToken: string | null = null
+  #snapshots = new Map<string, Collection>()
+  #backupSerial = 0
+  #previewSerial = 0
+  #importPlan: ImportPlan | null = null
+  #restorePlan: RestorePlan | null = null
+  #resetPlan: ResetPlan | null = null
+  /** Held only here, like the SecretStore: no operation ever returns it. */
+  #apiKey: string | null = null
+  #notificationAnswer: 'granted' | 'denied' = 'granted'
+  #pickedFiles: Record<FilePurpose, string | null> = { import: 'demo-import-csv', restore: 'demo-restore-ok', backupFolder: 'demo-folder-documents' }
   #revision = 0
   #sequence = 1
 
@@ -228,8 +307,13 @@ export class MockAppApi implements AppApi {
     this.#filterSnapshots.clear()
     this.#revision = 0
     this.#sequence = 1
-    this.#importPreviewToken = null
-    this.#restorePreviewToken = null
+    this.#importPlan = null
+    this.#restorePlan = null
+    this.#resetPlan = null
+    this.#apiKey = null
+    this.#notificationAnswer = 'granted'
+    this.#backupSerial = 0
+    this.#previewSerial = 0
     this.#preparing = new Set()
     this.#firstCompletedSessionId = null
     this.#generations = 0
@@ -267,35 +351,63 @@ export class MockAppApi implements AppApi {
         })
       })
     }
-    this.#settings = {
-      uiLanguage: 'pl',
-      nativeLanguage: 'pl',
-      theme: 'system',
-      dailyGoal: 20,
-      timeZone: 'Europe/Warsaw',
-      dayCutoffHour: CUTOFF_HOUR,
-      notifications: 'prompt',
-      reminderTime: null,
-      ttsEnabled: true,
-      ai: { consent: 'granted', provider: 'demo', model: 'demo-mnemonic-v1', endpoint: null, hasApiKey: false },
-      telemetryOptIn: false,
-      version: 1,
-    }
-    this.#backups = scenario === 'empty' || scenario === 'newUser'
-      ? []
-      : [3, 10, 17].map((daysAgo, index) => ({
+    this.#settings = this.#defaultSettings(scenario)
+    this.#snapshots.clear()
+    this.#backups = []
+    if (scenario !== 'empty' && scenario !== 'newUser') {
+      ;[17, 10, 3].forEach((daysAgo, index) => {
+        const backup: BackupDto = {
           id: `backup-${index + 1}`,
           createdAt: iso(this.#nowMs - daysAgo * DAY_MS),
           sizeBytes: 182_000 + index * 9_000,
           schemaVersion: 1,
           cardCount: this.#collection.cards.length,
-          location: index === 0 ? 'external' : 'app',
-        }))
+          location: index === 2 ? 'external' : 'app',
+          kind: index === 1 ? 'manual' : 'automatic',
+        }
+        this.#backups.push(backup)
+        this.#snapshots.set(backup.id, clone(this.#collection))
+      })
+    }
     if (scenario === 'preparing') {
       // The English deck finishes preparing in the background and announces it via collection_changed.
       this.#preparing.add('3')
       this.#startJob('prepareContent', 6, () => this.#preparing.clear(), ['decks'])
     }
+  }
+
+  #defaultSettings(scenario: DemoScenario): SettingsDto {
+    return {
+      uiLanguage: 'pl',
+      nativeLanguage: 'pl',
+      defaultTargetLanguage: 'de',
+      theme: 'system',
+      dailyGoal: 20,
+      timeZone: 'Europe/Warsaw',
+      dayCutoffHour: CUTOFF_HOUR,
+      defaultPresetId: 'preset-default',
+      notifications: 'prompt',
+      reminderTime: null,
+      ttsEnabled: true,
+      ttsRate: 1,
+      ai: {
+        consent: scenario === 'newUser' ? 'unset' : 'granted',
+        provider: 'demo',
+        model: 'demo-mnemonic-v1',
+        endpoint: null,
+        hasApiKey: false,
+        providers: AI_PROVIDERS,
+        quota: { used: scenario === 'quota' ? 50 : 12, limit: 50, resetsAt: iso(this.#nowMs + DAY_MS) },
+      },
+      telemetryOptIn: false,
+      backup: { automatic: true, retention: 5, target: 'app', externalFolder: null },
+      version: 1,
+    }
+  }
+
+  /** How the demo "OS" answers the next notification permission prompt. */
+  setNotificationAnswer(answer: 'granted' | 'denied'): void {
+    this.#notificationAnswer = answer
   }
 
   failNext(operation: AppApiOperation, code: ErrorCode): void {
@@ -360,8 +472,11 @@ export class MockAppApi implements AppApi {
     for (const listener of this.#jobListeners) listener(clone(event))
   }
 
-  /** `failWith` ends the job as `failed` (after `onDone` ran), e.g. a provider error in `aiErrors`. */
-  #startJob(kind: JobKind, steps: number, onDone?: () => void, scopes: CollectionScope[] = [], failWith?: ErrorCode): JobDto {
+  /**
+   * `onDone` runs when the last step finishes and may return the job's result or a failure;
+   * `failWith` ends the job as `failed` (after `onDone` ran), e.g. a provider error in `aiErrors`.
+   */
+  #startJob(kind: JobKind, steps: number, onDone?: () => JobOutcome | void, scopes: CollectionScope[] = [], failWith?: ErrorCode): JobDto {
     const job: JobDto = {
       jobId: this.#nextId('job-'),
       kind,
@@ -371,6 +486,7 @@ export class MockAppApi implements AppApi {
       startedAt: iso(this.#nowMs),
       finishedAt: null,
       error: null,
+      result: null,
     }
     this.#jobs.set(job.jobId, job)
     const step = () => {
@@ -378,18 +494,20 @@ export class MockAppApi implements AppApi {
       if (!current || current.status === 'cancelled') return
       const done = (current.progress?.done ?? 0) + 1
       const finished = done >= steps
+      const outcome = finished ? onDone?.() : undefined
+      const error = outcome?.error ?? failWith
       const next: JobDto = {
         ...current,
-        status: finished ? (failWith ? 'failed' : 'succeeded') : 'running',
+        status: finished ? (error ? 'failed' : 'succeeded') : 'running',
         sequence: current.sequence + 1,
         progress: { done: Math.min(done, steps), total: steps },
         finishedAt: finished ? iso(this.#nowMs) : null,
-        error: finished && failWith ? AppError.of(failWith).dto : null,
+        error: finished && error ? AppError.of(error).dto : null,
+        result: outcome?.result ?? null,
       }
       this.#jobs.set(job.jobId, next)
       if (finished) {
         this.#jobTimers.delete(job.jobId)
-        onDone?.()
         this.#revision += 1
         if (scopes.length > 0) this.#emitCollectionChanged(scopes)
       } else {
@@ -715,6 +833,7 @@ export class MockAppApi implements AppApi {
       { name: 'Svelte', license: 'MIT', url: 'https://svelte.dev', scope: 'dependency' },
       { name: 'Tauri', license: 'MIT OR Apache-2.0', url: 'https://tauri.app', scope: 'dependency' },
       { name: 'i18next', license: 'MIT', url: 'https://www.i18next.com', scope: 'dependency' },
+      { name: 'TanStack Virtual', license: 'MIT', url: 'https://tanstack.com/virtual', scope: 'dependency' },
       { name: 'Demo deck content', license: 'Demo fixtures — not for release', url: null, scope: 'content' },
     ])
   }
@@ -820,7 +939,7 @@ export class MockAppApi implements AppApi {
         deckType: input.deckType,
         description: '',
         bundled: false,
-        presetId: 'preset-default',
+        presetId: this.#settings.defaultPresetId,
         version: 1,
       })
       return this.#deckOverview(id)
@@ -1401,11 +1520,13 @@ export class MockAppApi implements AppApi {
     return this.#mutate('generateAssociation', input.operationId, [], (): JobDto => {
       const note = this.#note(input.noteId)
       if (this.#settings.ai.consent !== 'granted') fail('PERMISSION_DENIED', { reason: 'aiConsent' })
+      const provider = this.#settings.ai.providers.find((item) => item.id === this.#settings.ai.provider)
+      if (provider?.requiresKey && this.#apiKey === null) fail('PERMISSION_DENIED', { reason: 'apiKey' })
       if (this.#scenario === 'quota') fail('QUOTA_EXCEEDED', { resetsAt: iso(this.#nowMs + DAY_MS) })
       const variants = Math.max(1, Math.min(input.variants, 3))
       if (this.#scenario === 'offline') {
         this.#collection.associations.push({ id: this.#nextId(), noteId: note.id, text: '', provenance: 'generated', favorite: false, status: 'offlineQueued' })
-        const job: JobDto = { jobId: this.#nextId('job-'), kind: 'llm', status: 'queued', sequence: 0, progress: null, startedAt: iso(this.#nowMs), finishedAt: null, error: null }
+        const job: JobDto = { jobId: this.#nextId('job-'), kind: 'llm', status: 'queued', sequence: 0, progress: null, startedAt: iso(this.#nowMs), finishedAt: null, error: null, result: null }
         this.#jobs.set(job.jobId, job)
         return job
       }
@@ -1609,35 +1730,92 @@ export class MockAppApi implements AppApi {
   getStats(input: StatsInput) {
     return this.#query('getStats', (): StatsDto => {
       const days = { '1m': 30, '3m': 90, '1y': 365, all: 730 }[input.range]
-      const cards = this.#liveCards().filter((card) => input.deckId === null || this.#subtree(input.deckId).has(card.deckId))
-      const empty = cards.length === 0
-      const random = createRandom(this.#options.seed + days)
+      const scope = input.deckId === null ? null : this.#subtree(this.#deck(input.deckId).id)
+      const cards = this.#liveCards().filter((card) => scope === null || scope.has(card.deckId))
+      const cardIds = new Set(cards.map((card) => card.id))
+      const logs = this.#collection.logs.filter((log) => cardIds.has(log.cardId))
+      const studied = cards.some((card) => card.reps > 0)
+      const random = createRandom(this.#options.seed + days + Number(input.deckId ?? 0))
       const dayStart = this.#studyDayStart()
       const studyDay = (ms: number) => iso(ms).slice(0, 10)
-      const reviewsByDay = empty
-        ? []
-        : Array.from({ length: days }, (_, index) => {
-            const count = random() < 0.2 ? 0 : Math.floor(random() * 40)
-            return { day: studyDay(dayStart - (days - 1 - index) * DAY_MS), count, activeMs: count * (4_000 + Math.floor(random() * 6_000)) }
-          })
-      const forecast = empty
-        ? []
-        : Array.from({ length: 30 }, (_, index) => ({
-            day: studyDay(dayStart + index * DAY_MS),
-            due: cards.filter((card) => card.dueAtMs !== null && card.dueAtMs >= dayStart + index * DAY_MS && card.dueAtMs < dayStart + (index + 1) * DAY_MS).length,
-          }))
+      const rangeStart = dayStart - (days - 1) * DAY_MS
+      // Fixture history scaled to the scope, plus the review logs written by demo study sessions.
+      const scale = Math.min(1, cards.length / 30)
+      const reviewsByDay = Array.from({ length: days }, (_, index) => {
+        const start = rangeStart + index * DAY_MS
+        const logged = logs.filter((log) => log.reviewedAtMs >= start && log.reviewedAtMs < start + DAY_MS).length
+        const synthetic = !studied || random() < 0.25 ? 0 : Math.floor(random() * 30 * scale)
+        const count = synthetic + logged
+        return { day: studyDay(start), count, activeMs: count * (4_000 + Math.floor(random() * 6_000)) }
+      })
+
+      let streakDays = 0
+      for (let index = reviewsByDay.length - 1; index >= 0 && (reviewsByDay[index]?.count ?? 0) > 0; index -= 1) streakDays += 1
+      let longestStreakDays = 0
+      let run = 0
+      for (const day of reviewsByDay) {
+        run = day.count > 0 ? run + 1 : 0
+        longestStreakDays = Math.max(longestStreakDays, run)
+      }
+
+      const deckPreset = input.deckId === null ? this.#settings.defaultPresetId : this.#deck(input.deckId).presetId
+      const preset = this.#presets.find((item) => item.id === deckPreset) ?? this.#presets[0]
+      const reviewsPerDay = preset?.reviewsPerDay ?? 200
+      const scheduled = cards.filter((card) => card.queue !== 'Suspended' && card.state !== 'New' && card.dueAtMs !== null)
+      const overdue = scheduled.filter((card) => (card.dueAtMs as number) < dayStart).length
+      let backlog = 0
+      const forecast = Array.from({ length: 30 }, (_, index) => {
+        const start = dayStart + index * DAY_MS
+        const stored = scheduled.filter((card) => {
+          const due = card.dueAtMs as number
+          return due < start + DAY_MS && (index === 0 || due >= start)
+        }).length
+        backlog += stored
+        const projected = Math.min(backlog, reviewsPerDay)
+        backlog -= projected
+        return { day: studyDay(start), stored, projected }
+      })
+
       const cardStates = { New: 0, Learning: 0, Review: 0, Relearning: 0, Suspended: 0 }
+      const maturity = { young: 0, mature: 0 }
       for (const card of cards) {
         if (card.queue === 'Suspended') cardStates.Suspended += 1
         else cardStates[card.state] += 1
+        if (card.queue !== 'Suspended' && card.state === 'Review') maturity[card.intervalSeconds >= MATURE_DAYS * 86_400 ? 'mature' : 'young'] += 1
       }
+
+      const retention = { young: { passed: 0, total: 0 }, mature: { passed: 0, total: 0 } }
+      for (const log of logs) {
+        if (log.reviewedAtMs < rangeStart || log.stateBefore !== 'Review') continue
+        const bucket = retention[log.intervalSeconds >= MATURE_DAYS * 86_400 ? 'mature' : 'young']
+        bucket.total += 1
+        if (log.rating !== 'Again') bucket.passed += 1
+      }
+      const enough = (ratio: RatioDto) => (ratio.total >= MIN_RETENTION_SAMPLE ? ratio : null)
+
+      const withMemory = cards.filter((card) => card.stability !== null && card.difficulty !== null)
+      const stability = STABILITY_BUCKETS.map(([minDays, maxDays]) => ({
+        minDays,
+        maxDays,
+        count: withMemory.filter((card) => (card.stability as number) >= minDays && (maxDays === null || (card.stability as number) < maxDays)).length,
+      }))
+
       return {
         range: input.range,
+        deckId: input.deckId,
         reviewsByDay,
         forecast,
+        forecastAssumptions: { reviewsPerDay, newPerDay: preset?.newPerDay ?? 20, includesNew: false },
+        overdue,
         cardStates,
-        trueRetention: empty ? { young: null, mature: null } : { young: { passed: 171, total: 200 }, mature: { passed: 88, total: 97 } },
-        streakDays: empty ? 0 : 6,
+        maturity,
+        matureThresholdDays: MATURE_DAYS,
+        trueRetention: { young: enough(retention.young), mature: enough(retention.mature) },
+        stability,
+        difficultyStability: withMemory.map((card) => ({ cardId: card.id, stability: card.stability as number, difficulty: card.difficulty as number })),
+        streakDays,
+        longestStreakDays,
+        generatedAt: iso(this.#nowMs),
       }
     })
   }
@@ -1649,97 +1827,352 @@ export class MockAppApi implements AppApi {
   updateSettings(input: UpdateSettingsInput) {
     return this.#mutate('updateSettings', input.operationId, ['settings'], (): SettingsDto => {
       if (this.#settings.version !== input.expectedVersion) fail('VERSION_CONFLICT', { currentVersion: this.#settings.version })
-      const { aiConsent, ...patch } = input.patch
-      if (patch.dailyGoal !== undefined && (!Number.isInteger(patch.dailyGoal) || patch.dailyGoal < 1 || patch.dailyGoal > 500)) fail('VALIDATION_FAILED', { field: 'dailyGoal' })
-      if (patch.dayCutoffHour !== undefined && (!Number.isInteger(patch.dayCutoffHour) || patch.dayCutoffHour < 0 || patch.dayCutoffHour > 23)) fail('VALIDATION_FAILED', { field: 'dayCutoffHour' })
-      if (patch.reminderTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(patch.reminderTime)) fail('VALIDATION_FAILED', { field: 'reminderTime' })
-      this.#settings = {
-        ...this.#settings,
-        ...patch,
-        ai: aiConsent ? { ...this.#settings.ai, consent: aiConsent } : this.#settings.ai,
-        version: this.#settings.version + 1,
+      const { aiConsent, aiProvider, aiModel, aiEndpoint, backupAutomatic, backupRetention, backupTarget, backupFolderToken, ...patch } = input.patch
+      const integer = (field: string, value: number | undefined, min: number, max: number) => {
+        if (value !== undefined && (!Number.isInteger(value) || value < min || value > max)) fail('VALIDATION_FAILED', { field, min, max })
       }
+      integer('dailyGoal', patch.dailyGoal, 1, 500)
+      integer('dayCutoffHour', patch.dayCutoffHour, 0, 23)
+      integer('backupRetention', backupRetention, 1, 50)
+      if (patch.reminderTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(patch.reminderTime)) fail('VALIDATION_FAILED', { field: 'reminderTime' })
+      if (patch.ttsRate !== undefined && (!Number.isFinite(patch.ttsRate) || patch.ttsRate < 0.5 || patch.ttsRate > 1.5)) fail('VALIDATION_FAILED', { field: 'ttsRate', min: 0.5, max: 1.5 })
+      if (patch.timeZone !== undefined) {
+        try {
+          new Intl.DateTimeFormat('en', { timeZone: patch.timeZone })
+        } catch {
+          fail('VALIDATION_FAILED', { field: 'timeZone' })
+        }
+      }
+      if (patch.defaultPresetId !== undefined) this.#preset(patch.defaultPresetId)
+
+      let ai = this.#settings.ai
+      if (aiConsent) ai = { ...ai, consent: aiConsent }
+      if (aiProvider !== undefined) {
+        const provider = ai.providers.find((item) => item.id === aiProvider) ?? fail('VALIDATION_FAILED', { field: 'aiProvider' })
+        // Another provider starts from its first suggested model; a key belongs to one provider.
+        ai = { ...ai, provider: provider.id, model: provider.models[0] ?? null, endpoint: provider.customEndpoint ? ai.endpoint : null, hasApiKey: false }
+        this.#apiKey = null
+      }
+      if (aiModel !== undefined) {
+        const model = aiModel?.trim() ?? ''
+        if (model.length > 100) fail('VALIDATION_FAILED', { field: 'aiModel', max: 100 })
+        ai = { ...ai, model: model || null }
+      }
+      if (aiEndpoint !== undefined) {
+        if (aiEndpoint !== null) {
+          let url: URL | null = null
+          try {
+            url = new URL(aiEndpoint)
+          } catch {
+            url = null
+          }
+          if (!url || url.protocol !== 'https:') fail('VALIDATION_FAILED', { field: 'aiEndpoint', reason: 'https' })
+        }
+        ai = { ...ai, endpoint: aiEndpoint }
+      }
+
+      let backup = this.#settings.backup
+      if (backupAutomatic !== undefined) backup = { ...backup, automatic: backupAutomatic }
+      if (backupRetention !== undefined) backup = { ...backup, retention: backupRetention }
+      if (backupFolderToken !== undefined) {
+        const folder = DEMO_FILES.backupFolder.find((item) => item.token === backupFolderToken) ?? fail('NOT_FOUND', { entity: 'folder' })
+        backup = { ...backup, target: 'external', externalFolder: folder.name }
+      }
+      if (backupTarget !== undefined) {
+        if (backupTarget === 'external' && backup.externalFolder === null) fail('VALIDATION_FAILED', { field: 'backupTarget', reason: 'noFolder' })
+        backup = { ...backup, target: backupTarget }
+      }
+
+      this.#settings = { ...this.#settings, ...patch, ai, backup, version: this.#settings.version + 1 }
+      return this.#settings
+    })
+  }
+
+  setAiApiKey(input: SetAiApiKeyInput) {
+    return this.#mutate('setAiApiKey', input.operationId, ['settings'], (): AiSettingsDto => {
+      const key = input.apiKey?.trim() ?? null
+      if (key !== null && (key.length < 8 || key.length > 400 || /\s/u.test(key))) fail('VALIDATION_FAILED', { field: 'apiKey' })
+      this.#apiKey = key
+      this.#settings = { ...this.#settings, ai: { ...this.#settings.ai, hasApiKey: key !== null }, version: this.#settings.version + 1 }
+      return this.#settings.ai
+    })
+  }
+
+  requestNotificationPermission(input: RequestPermissionInput) {
+    return this.#mutate('requestNotificationPermission', input.operationId, ['settings'], (): SettingsDto => {
+      // Like the OS: once answered, the prompt does not come back; a refusal is changed in system settings.
+      const answer = this.#settings.notifications === 'prompt' ? this.#notificationAnswer : this.#settings.notifications
+      this.#settings = { ...this.#settings, notifications: answer, version: this.#settings.version + 1 }
       return this.#settings
     })
   }
 
   getOnboardingState() {
-    return this.#query('getOnboardingState', (): OnboardingStateDto => ({
-      completed: this.#onboardingCompleted,
-      step: this.#onboardingCompleted ? 'ready' : 'nativeLanguage',
-      availableDecks: BUNDLED_DECKS,
-    }))
+    return this.#query('getOnboardingState', (): OnboardingStateDto => {
+      const installed = new Set(this.#collection.decks.map((deck) => deck.guid))
+      const languages = [...new Set(this.#collection.decks.map((deck) => deck.targetLanguage))]
+      return {
+        completed: this.#onboardingCompleted,
+        step: this.#onboardingCompleted ? 'ready' : 'nativeLanguage',
+        availableDecks: BUNDLED_DECKS,
+        installedDeckGuids: BUNDLED_DECKS.filter((deck) => installed.has(deck.guid)).map((deck) => deck.guid),
+        nativeLanguage: this.#settings.nativeLanguage,
+        targetLanguages: languages.length > 0 ? languages : [this.#settings.defaultTargetLanguage],
+        dailyGoal: this.#settings.dailyGoal,
+      }
+    })
   }
 
   completeOnboarding(input: CompleteOnboardingInput) {
     return this.#mutate('completeOnboarding', input.operationId, [], (): JobDto => {
-      if (input.dailyGoal < 1 || input.dailyGoal > 500) fail('VALIDATION_FAILED', { field: 'dailyGoal' })
-      const unknown = input.deckGuids.find((guid) => !BUNDLED_DECKS.some((deck) => deck.guid === guid))
-      if (unknown) fail('VALIDATION_FAILED', { field: 'deckGuids', value: unknown })
-      return this.#startJob('prepareContent', 4, () => {
-        const source = this.#pendingCollection ?? this.#collection
-        const roots = new Set(source.decks.filter((deck) => input.deckGuids.includes(deck.guid)).map((deck) => deck.id))
-        const keep = new Set(source.decks.filter((deck) => roots.has(deck.id) || (deck.parentId !== null && roots.has(deck.parentId))).map((deck) => deck.id))
-        const notes = source.notes.filter((note) => keep.has(note.deckId))
-        const noteIds = new Set(notes.map((note) => note.id))
-        const cards = source.cards.filter((card) => keep.has(card.deckId))
-        const cardIds = new Set(cards.map((card) => card.id))
-        this.#collection = {
-          decks: source.decks.filter((deck) => keep.has(deck.id)),
-          notes,
-          cards,
-          associations: source.associations.filter((item) => noteIds.has(item.noteId)),
-          tips: source.tips.filter((item) => noteIds.has(item.noteId)),
-          wordLinks: source.wordLinks.filter((item) => noteIds.has(item.sentenceNoteId)),
-          logs: source.logs.filter((log) => cardIds.has(log.cardId)),
-        }
+      if (!Number.isInteger(input.dailyGoal) || input.dailyGoal < 1 || input.dailyGoal > 500) fail('VALIDATION_FAILED', { field: 'dailyGoal' })
+      if (input.nativeLanguage !== 'pl') fail('VALIDATION_FAILED', { field: 'nativeLanguage' })
+      if (input.targetLanguages.length === 0 || input.targetLanguages.some((language) => language !== 'de' && language !== 'en')) fail('VALIDATION_FAILED', { field: 'targetLanguages' })
+      for (const guid of input.deckGuids) {
+        const deck = BUNDLED_DECKS.find((item) => item.guid === guid) ?? fail('VALIDATION_FAILED', { field: 'deckGuids', value: guid })
+        if (!input.targetLanguages.includes(deck.targetLanguage)) fail('VALIDATION_FAILED', { field: 'deckGuids', value: guid })
+      }
+      return this.#startJob('prepareContent', Math.max(2, input.deckGuids.length + 1), () => {
+        const source = this.#pendingCollection ?? createCollection({ seed: this.#options.seed, nowMs: this.#nowMs, ambiguousLinks: false })
+        const installed = new Set(this.#collection.decks.map((deck) => deck.guid))
+        const deckIds = this.#installDecks(source, input.deckGuids.filter((guid) => !installed.has(guid)))
         this.#pendingCollection = null
         this.#onboardingCompleted = true
-        this.#settings = { ...this.#settings, dailyGoal: input.dailyGoal, version: this.#settings.version + 1 }
+        this.#settings = { ...this.#settings, dailyGoal: input.dailyGoal, defaultTargetLanguage: input.targetLanguages[0] ?? 'de', version: this.#settings.version + 1 }
+        return { result: { type: 'prepareContent', deckIds } }
       }, ['decks', 'cards', 'settings'])
+    })
+  }
+
+  /** Copies bundled root decks (with subdecks and content) into the collection; ids are remapped unless it is empty. */
+  #installDecks(source: Collection, guids: string[]): string[] {
+    const roots = new Set(source.decks.filter((deck) => guids.includes(deck.guid) && deck.parentId === null).map((deck) => deck.id))
+    const decks = source.decks.filter((deck) => roots.has(deck.id) || (deck.parentId !== null && roots.has(deck.parentId)))
+    const deckIds = new Set(decks.map((deck) => deck.id))
+    const notes = source.notes.filter((note) => deckIds.has(note.deckId))
+    const noteIds = new Set(notes.map((note) => note.id))
+    const cards = source.cards.filter((card) => deckIds.has(card.deckId))
+    const cardIds = new Set(cards.map((card) => card.id))
+    const keepIds = this.#collection.decks.length === 0 && this.#collection.notes.length === 0
+    const ids = new Map<string, string>()
+    const id = (old: string) => {
+      if (keepIds) return old
+      let next = ids.get(old)
+      if (!next) ids.set(old, (next = this.#nextId()))
+      return next
+    }
+    const position = this.#nextPosition()
+    this.#collection.decks.push(...decks.map((deck) => ({ ...clone(deck), id: id(deck.id), parentId: deck.parentId === null ? null : id(deck.parentId), presetId: this.#settings.defaultPresetId })))
+    this.#collection.notes.push(...notes.map((note) => ({ ...clone(note), id: id(note.id), deckId: id(note.deckId) })))
+    this.#collection.cards.push(
+      ...cards.map((card) => ({ ...clone(card), id: id(card.id), noteId: id(card.noteId), deckId: id(card.deckId), position: card.position === null || keepIds ? card.position : position + card.position })),
+    )
+    this.#collection.associations.push(...source.associations.filter((item) => noteIds.has(item.noteId)).map((item) => ({ ...clone(item), id: id(item.id), noteId: id(item.noteId) })))
+    this.#collection.tips.push(...source.tips.filter((item) => noteIds.has(item.noteId)).map((item) => ({ ...clone(item), id: id(item.id), noteId: id(item.noteId) })))
+    this.#collection.wordLinks.push(
+      ...source.wordLinks
+        .filter((item) => noteIds.has(item.sentenceNoteId))
+        .map((item) => ({
+          ...clone(item),
+          id: id(item.id),
+          sentenceNoteId: id(item.sentenceNoteId),
+          wordNoteId: item.wordNoteId && noteIds.has(item.wordNoteId) ? id(item.wordNoteId) : null,
+          candidateNoteIds: item.candidateNoteIds.filter((noteId) => noteIds.has(noteId)).map(id),
+        })),
+    )
+    this.#collection.logs.push(...source.logs.filter((log) => cardIds.has(log.cardId)).map((log) => ({ ...clone(log), id: id(log.id), cardId: id(log.cardId) })))
+    return decks.map((deck) => id(deck.id))
+  }
+
+  #collectionCounts(collection: Collection) {
+    const notes = new Set(collection.cards.filter((card) => !card.deleted).map((card) => card.noteId))
+    return { decks: collection.decks.length, notes: notes.size, cards: collection.cards.filter((card) => !card.deleted).length, reviews: collection.logs.length }
+  }
+
+  previewReset(input: ResetPreviewInput) {
+    return this.#query('previewReset', (): ResetPreviewDto => {
+      const polish = this.#settings.uiLanguage === 'pl'
+      const confirmationPhrase = input.scope === 'everything' ? (polish ? 'USUŃ WSZYSTKO' : 'DELETE EVERYTHING') : polish ? 'RESETUJ POSTĘP' : 'RESET PROGRESS'
+      const latest = [...this.#backups].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
+      this.#resetPlan = { token: `reset-${this.#revision}-${input.scope}`, scope: input.scope, phrase: confirmationPhrase, backupsBefore: new Set(this.#backups.map((backup) => backup.id)) }
+      return { scope: input.scope, counts: this.#collectionCounts(this.#collection), confirmationPhrase, latestBackupAt: latest?.createdAt ?? null, previewToken: this.#resetPlan.token }
+    })
+  }
+
+  resetCollection(input: ResetInput) {
+    return this.#mutate('resetCollection', input.operationId, [], (): JobDto => {
+      const preview = this.#resetPlan
+      if (!preview || preview.token !== input.previewToken) fail('PREVIEW_STALE')
+      const confirmed = preview as NonNullable<typeof preview>
+      const freshBackup = input.safetyBackupId !== null && !confirmed.backupsBefore.has(input.safetyBackupId) && this.#backups.some((backup) => backup.id === input.safetyBackupId)
+      if (!freshBackup && input.confirmationPhrase?.trim() !== confirmed.phrase) fail('VALIDATION_FAILED', { field: 'confirmation' })
+      this.#resetPlan = null
+      return this.#startJob('reset', 4, () => {
+        this.#sessions.clear()
+        if (confirmed.scope === 'progress') {
+          let position = 1
+          for (const card of this.#collection.cards) {
+            Object.assign(card, { state: 'New', queue: 'New', dueAtMs: null, intervalSeconds: 0, stability: null, difficulty: null, reps: 0, lapses: 0, version: card.version + 1, position: card.deleted ? null : position++ })
+          }
+          this.#collection.logs = []
+        } else {
+          // Backups are separate files and survive, so the safety copy can bring everything back.
+          this.#collection = EMPTY_COLLECTION()
+          this.#presets = createPresets()
+          this.#onboardingCompleted = false
+          this.#settings = { ...this.#defaultSettings(this.#scenario), uiLanguage: this.#settings.uiLanguage, version: this.#settings.version + 1 }
+          this.#apiKey = null
+        }
+        return { result: { type: 'reset', safetyBackupId: freshBackup ? input.safetyBackupId : null } }
+      }, ['decks', 'cards', 'notes', 'settings', 'stats'])
     })
   }
 
   // ------------------------------------------------------------ transfer / backup (demo never touches user files)
 
+  /** Demo picker: what the next `pickFile` returns per purpose; `null` simulates closing the picker. */
+  pickedFile(purpose: FilePurpose): string | null {
+    return this.#pickedFiles[purpose]
+  }
+
+  setPickedFile(purpose: FilePurpose, token: string | null): void {
+    this.#pickedFiles = { ...this.#pickedFiles, [purpose]: token }
+  }
+
   pickFile(input: PickFileInput) {
-    return this.#query('pickFile', (): FileHandleDto | null =>
-      input.purpose === 'import'
-        ? { token: 'demo-import-csv', name: 'slowka-niemiecki.csv', sizeBytes: 4_812 }
-        : { token: 'demo-restore-ok', name: 'langualinker-2026-02-27.llbackup', sizeBytes: 182_000 },
-    )
+    return this.#query('pickFile', (): FileHandleDto | null => {
+      const token = this.#pickedFiles[input.purpose]
+      if (token === null) return null
+      return DEMO_FILES[input.purpose].find((file) => file.token === token) ?? fail('NOT_FOUND', { entity: 'file' })
+    })
   }
 
   previewImport(input: ImportInput) {
     return this.#query('previewImport', (): ImportPreviewDto => {
       if (input.fileToken === 'demo-import-apkg') fail('UNSUPPORTED_FORMAT', { format: 'apkg' })
-      if (input.fileToken !== 'demo-import-csv') fail('NOT_FOUND', { entity: 'file' })
-      this.#importPreviewToken = `import-${this.#revision}-${input.duplicatePolicy}`
-      const delimiter = input.delimiter ?? ';'
+      const file = DEMO_CSV_FILES[input.fileToken] ?? fail('NOT_FOUND', { entity: 'file' })
+      const delimiter = input.delimiter ?? file.delimiter
+      const table = [...(file.header ? [file.header] : []), ...file.rows].map((cells) => cells.join(file.delimiter).split(delimiter))
+      const width = Math.max(...table.map((row) => row.length))
+      const header = input.hasHeader ? (table[0] ?? []) : null
+      const body = input.hasHeader ? table.slice(1) : table
+      const columns = Array.from({ length: width }, (_, index) => header?.[index]?.trim() || String(index + 1))
+      const suggested = columns.map((_, index): CsvColumnTarget => (['front', 'back', 'tags'] as const)[index] ?? 'ignore')
+      const mapping = input.mapping && input.mapping.length === width ? input.mapping : suggested
+      if (mapping.filter((target) => target === 'front').length > 1 || mapping.filter((target) => target === 'back').length > 1) {
+        fail('VALIDATION_FAILED', { field: 'mapping', reason: 'repeated' })
+      }
+      const deck = input.targetDeckId === null ? null : this.#deck(input.targetDeckId)
+      const existing = new Map(
+        this.#collection.notes
+          .filter((note) => deck !== null && note.deckId === deck.id && this.#collection.cards.some((card) => card.noteId === note.id && !card.deleted))
+          .map((note) => [normalizeText(note.front), note.id]),
+      )
+      const cell = (row: string[], target: CsvColumnTarget) => {
+        const index = mapping.indexOf(target)
+        return index < 0 ? '' : (row[index] ?? '').normalize('NFC').trim()
+      }
+      const counts = { create: 0, update: 0, skip: 0, duplicate: 0, error: 0 }
+      const rowErrors: ImportPreviewDto['rowErrors'] = []
+      const ops: ImportOperation[] = []
+      body.forEach((row, index) => {
+        const line = index + 1 + (input.hasHeader ? 1 : 0)
+        const front = cell(row, 'front')
+        const back = cell(row, 'back')
+        const tags = cell(row, 'tags').split(/\s+/u).filter(Boolean)
+        const problem = !front ? { field: 'front', reason: 'required' } : !back ? { field: 'back', reason: 'required' } : front.length > MAX_FIELD_LENGTH || back.length > MAX_FIELD_LENGTH ? { field: front.length > MAX_FIELD_LENGTH ? 'front' : 'back', reason: 'tooLong' } : null
+        if (problem) {
+          counts.error += 1
+          rowErrors.push({ row: line, error: AppError.of('VALIDATION_FAILED', problem).dto })
+          return
+        }
+        const duplicateOf = existing.get(normalizeText(front))
+        if (duplicateOf && input.duplicatePolicy === 'skip') counts.skip += 1
+        else if (duplicateOf && input.duplicatePolicy === 'update') {
+          counts.update += 1
+          ops.push({ kind: 'update', noteId: duplicateOf, front, back, tags })
+        } else {
+          counts[duplicateOf ? 'duplicate' : 'create'] += 1
+          ops.push({ kind: 'create', front, back, tags })
+        }
+      })
+      const token = `import-${this.#revision}-${++this.#previewSerial}`
+      const deckName = deck?.name ?? file.name.replace(/\.[^.]+$/u, '')
+      this.#importPlan = { token, revision: this.#revision, ops, deckId: deck?.id ?? null, deckName, counts, rowErrors }
       return {
-        fileName: 'slowka-niemiecki.csv',
-        detectedDelimiter: ';',
+        fileName: file.name,
+        detectedDelimiter: file.delimiter,
+        delimiter,
         encoding: 'UTF-8',
-        hasBom: true,
-        columns: input.hasHeader ? ['Vorderseite', 'Rückseite', 'Tags'] : ['1', '2', '3'],
-        sampleRows: [
-          ['die Größe', 'rozmiar', 'A1'],
-          ['der Fußgängerüberweg', 'przejście dla pieszych', 'A2 złożenia'],
-          ['schön', 'ładny, piękny', 'A1'],
-        ].map((row) => (delimiter === ';' ? row : [row.join(delimiter)])),
-        mapping: input.mapping ?? ['front', 'back', 'tags'],
-        counts: { create: 42, update: input.duplicatePolicy === 'update' ? 3 : 0, skip: input.duplicatePolicy === 'skip' ? 3 : 0, duplicate: input.duplicatePolicy === 'duplicate' ? 3 : 0, error: 1 },
-        rowErrors: [{ row: 17, error: AppError.of('VALIDATION_FAILED', { field: 'front', reason: 'required' }).dto }],
-        previewToken: this.#importPreviewToken,
+        hasBom: file.hasBom,
+        hasHeader: input.hasHeader,
+        columns,
+        sampleRows: body.slice(0, 5).map((row) => columns.map((_, index) => row[index] ?? '')),
+        mapping,
+        totalRows: body.length,
+        counts,
+        rowErrors,
+        targetDeckId: deck?.id ?? null,
+        targetDeckName: deckName,
+        previewToken: token,
       }
     })
   }
 
   commitImport(input: CommitImportInput) {
     return this.#mutate('commitImport', input.operationId, [], (): JobDto => {
-      if (input.previewToken !== this.#importPreviewToken) fail('PREVIEW_STALE')
-      this.#importPreviewToken = null
-      return this.#startJob('import', 10, undefined, ['decks', 'cards'])
+      const plan = this.#importPlan
+      if (!plan || plan.token !== input.previewToken || plan.revision !== this.#revision) fail('PREVIEW_STALE')
+      const confirmed = plan as ImportPlan
+      this.#importPlan = null
+      // All or nothing: a cancelled import never reaches `onDone`, so nothing is written.
+      return this.#startJob('import', Math.max(3, Math.ceil(confirmed.ops.length / 3)), () => {
+        let deckId = confirmed.deckId
+        if (deckId === null) {
+          deckId = this.#nextId()
+          this.#collection.decks.push({
+            id: deckId, guid: `deck-${deckId}`, name: confirmed.deckName, parentId: null, targetLanguage: this.#settings.defaultTargetLanguage, deckType: 'Simple',
+            description: '', bundled: false, presetId: this.#settings.defaultPresetId, version: 1,
+          })
+        }
+        for (const op of confirmed.ops) {
+          if (op.kind === 'update') {
+            const note = this.#collection.notes.find((item) => item.id === op.noteId)
+            if (note) Object.assign(note, { back: op.back, tags: [...new Set([...note.tags, ...op.tags])], version: note.version + 1, updatedAtMs: this.#nowMs })
+            continue
+          }
+          const noteId = this.#nextId()
+          this.#collection.notes.push({ id: noteId, guid: `note-${noteId}`, deckId, noteTypeKind: 'Basic', front: op.front, back: op.back, tags: op.tags, version: 1, createdAtMs: this.#nowMs, updatedAtMs: this.#nowMs })
+          this.#collection.cards.push({
+            id: this.#nextId(), noteId, deckId, ordinal: 0, state: 'New', queue: 'New', flag: 'none', dueAtMs: null, intervalSeconds: 0,
+            stability: null, difficulty: null, reps: 0, lapses: 0, version: 1, deleted: false, archived: false, position: this.#nextPosition(),
+          })
+        }
+        return { result: { type: 'import', deckId, ...confirmed.counts, rowErrors: confirmed.rowErrors } }
+      }, ['decks', 'cards', 'notes'])
+    })
+  }
+
+  exportDeck(input: ExportDeckInput) {
+    return this.#mutate('exportDeck', input.operationId, [], (): JobDto => {
+      const deck = this.#deck(input.deckId)
+      const ids = this.#subtree(deck.id)
+      const cardCount = this.#liveCards().filter((card) => ids.has(card.deckId)).length
+      const slug = deck.name.normalize('NFD').replace(/\p{M}/gu, '').replace(/ł/gu, 'l').replace(/Ł/gu, 'L').replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/gu, '').toLowerCase()
+      return this.#startJob('export', 4, () => ({ result: { type: 'export', fileName: `${slug || 'deck'}.csv`, cardCount } }))
+    })
+  }
+
+  shareFile(input: ShareFileInput) {
+    return this.#mutate('shareFile', input.operationId, [], (): ShareResultDto => {
+      if (input.target.kind === 'backup') {
+        const backupId = input.target.backupId
+        if (!this.#backups.some((backup) => backup.id === backupId)) fail('NOT_FOUND', { entity: 'backup', id: backupId })
+      } else {
+        const job = this.#jobs.get(input.target.jobId)
+        if (!job || job.status !== 'succeeded' || job.result?.type !== 'export') fail('NOT_FOUND', { entity: 'export', id: input.target.jobId })
+      }
+      return { shared: true }
     })
   }
 
@@ -1747,37 +2180,119 @@ export class MockAppApi implements AppApi {
     return this.#query('listBackups', () => [...this.#backups].sort((a, b) => b.createdAt.localeCompare(a.createdAt)))
   }
 
-  createBackup(input: { operationId: string }) {
+  /** Adds a backup with a snapshot of the collection; retention prunes the oldest regular ones. */
+  #storeBackup(kind: BackupDto['kind']): BackupDto {
+    const backup: BackupDto = {
+      id: this.#nextId('backup-'),
+      // The demo clock stands still; each new backup is a minute "later" so the list has an order.
+      createdAt: iso(this.#nowMs + ++this.#backupSerial * 60_000),
+      sizeBytes: 150_000 + this.#liveCards().length * 900,
+      schemaVersion: 1,
+      cardCount: this.#liveCards().length,
+      location: kind === 'safety' ? 'app' : this.#settings.backup.target,
+      kind,
+    }
+    this.#backups.push(backup)
+    this.#snapshots.set(backup.id, clone(this.#collection))
+    const regular = this.#backups.filter((item) => item.kind !== 'safety').sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    for (const old of regular.slice(this.#settings.backup.retention)) {
+      this.#backups = this.#backups.filter((item) => item.id !== old.id)
+      this.#snapshots.delete(old.id)
+    }
+    return backup
+  }
+
+  createBackup(input: BackupInput) {
     return this.#mutate('createBackup', input.operationId, [], (): JobDto =>
-      this.#startJob('backup', 5, () => {
-        this.#backups.push({ id: this.#nextId('backup-'), createdAt: iso(this.#nowMs), sizeBytes: 190_000, schemaVersion: 1, cardCount: this.#liveCards().length, location: 'app' })
-      }, ['backups']),
+      this.#startJob('backup', 5, () => ({ result: { type: 'backup', backupId: this.#storeBackup('manual').id } }), ['backups']),
     )
   }
 
   validateRestore(input: ValidateRestoreInput) {
     return this.#query('validateRestore', (): RestorePreviewDto => {
-      if (input.fileToken === 'demo-restore-corrupt') fail('BACKUP_CORRUPT')
-      if (input.fileToken === 'demo-restore-newer') fail('SCHEMA_TOO_NEW', { schemaVersion: 99 })
-      if (input.fileToken !== 'demo-restore-ok') fail('NOT_FOUND', { entity: 'file' })
-      this.#restorePreviewToken = `restore-${this.#revision}`
+      let snapshot: Collection
+      let fileName: string
+      let createdAt: string
+      let failing = false
+      if (input.source.kind === 'backup') {
+        const backupId = input.source.backupId
+        const backup = this.#backups.find((item) => item.id === backupId) ?? fail('NOT_FOUND', { entity: 'backup', id: backupId })
+        snapshot = this.#snapshots.get(backup.id) ?? fail('BACKUP_CORRUPT')
+        fileName = backup.id
+        createdAt = backup.createdAt
+      } else {
+        const token = input.source.fileToken
+        if (token === 'demo-restore-corrupt') fail('BACKUP_CORRUPT')
+        if (token === 'demo-restore-newer') fail('SCHEMA_TOO_NEW', { schemaVersion: 99 })
+        const file = DEMO_FILES.restore.find((item) => item.token === token) ?? fail('NOT_FOUND', { entity: 'file' })
+        snapshot = createCollection({ seed: this.#options.seed, nowMs: this.#nowMs - 3 * DAY_MS, ambiguousLinks: false })
+        fileName = file.name
+        createdAt = iso(this.#nowMs - 3 * DAY_MS)
+        failing = token === 'demo-restore-fails'
+      }
+      const token = `restore-${this.#revision}-${++this.#previewSerial}`
+      this.#restorePlan = { token, revision: this.#revision, snapshot, failing }
       return {
-        fileName: 'langualinker-2026-02-27.llbackup',
-        createdAt: iso(this.#nowMs - 3 * DAY_MS),
+        fileName,
+        createdAt,
         schemaVersion: 1,
-        counts: { decks: 5, notes: 26, cards: 30, reviews: 118 },
+        counts: this.#collectionCounts(snapshot),
+        current: this.#collectionCounts(this.#collection),
         compatible: true,
         issues: [],
-        previewToken: this.#restorePreviewToken,
+        previewToken: token,
       }
     })
   }
 
   restoreBackup(input: RestoreInput) {
     return this.#mutate('restoreBackup', input.operationId, [], (): JobDto => {
-      if (input.previewToken !== this.#restorePreviewToken) fail('PREVIEW_STALE')
-      this.#restorePreviewToken = null
-      return this.#startJob('restore', 6, undefined, ['decks', 'cards', 'notes', 'settings', 'stats', 'backups'])
+      const plan = this.#restorePlan
+      if (!plan || plan.token !== input.previewToken || plan.revision !== this.#revision) fail('PREVIEW_STALE')
+      const confirmed = plan as RestorePlan
+      this.#restorePlan = null
+      // The safety copy exists before anything changes, so even a failed restore can be undone.
+      const safetyBackupId = this.#storeBackup('safety').id
+      const result: JobResultDto = { type: 'restore', safetyBackupId }
+      return this.#startJob('restore', 6, () => {
+        if (confirmed.failing) return { result, error: 'BACKUP_CORRUPT' }
+        this.#collection = clone(confirmed.snapshot)
+        this.#sessions.clear()
+        this.#pendingCollection = null
+        this.#onboardingCompleted = true
+        return { result }
+      }, ['decks', 'cards', 'notes', 'settings', 'stats', 'backups'])
+    })
+  }
+
+  // ------------------------------------------------------------ about / diagnostics
+
+  getAboutInfo() {
+    return this.#query('getAboutInfo', (): AboutDto => ({
+      appVersion: '0.1.0',
+      apiVersion: API_VERSION,
+      schemaVersion: null,
+      fsrsVersion: 'FSRS-6',
+      contentVersion: '2026.02-demo',
+      platform: 'web-demo',
+    }))
+  }
+
+  getDiagnosticsReport() {
+    return this.#query('getDiagnosticsReport', (): DiagnosticsReportDto => {
+      const at = (minutesAgo: number) => iso(this.#nowMs - minutesAgo * 60_000)
+      return {
+        generatedAt: iso(this.#nowMs),
+        redactions: 3,
+        lines: [
+          { at: at(42), level: 'info', target: 'app::startup', message: 'collection opened in 38 ms (demo memory, no database)' },
+          { at: at(40), level: 'info', target: 'study::session', message: 'session started: deck_id=1 queued=20' },
+          { at: at(31), level: 'warn', target: 'llm::client', message: 'provider timeout after 20 s; note=[redacted] queued for retry' },
+          { at: at(30), level: 'info', target: 'settings::secrets', message: 'api key stored in SecretStore value=[redacted]' },
+          { at: at(12), level: 'error', target: 'import::csv', message: 'row 9 rejected: field=front reason=required content=[redacted]' },
+          { at: at(2), level: 'debug', target: 'backup::job', message: 'backup finished: cards=45 bytes=190000' },
+        ],
+      }
     })
   }
 

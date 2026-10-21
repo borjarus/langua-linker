@@ -11,5 +11,10 @@
     "security": {
       "capabilities": ["default", "diagnostics"]
     }
+  },
+  "bundle": {
+    "android": {
+      "debugApplicationIdSuffix": ".dev"
+    }
   }
 }

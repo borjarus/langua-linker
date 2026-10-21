@@ -41,12 +41,23 @@
     text-align: center;
   }
 
+  /* Wraps instead of a fixed icon | text | button grid, so at large text sizes the retry button
+     drops below the message rather than squeezing it to a few characters per line. */
   .compact {
-    grid-template-columns: auto 1fr auto;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    justify-items: start;
     padding: var(--space-2) var(--space-3);
     text-align: start;
+  }
+
+  .compact .body {
+    flex: 1 1 12rem;
+    min-width: 0;
+  }
+
+  .compact .btn {
+    margin-inline-start: auto;
   }
 
   .icon {

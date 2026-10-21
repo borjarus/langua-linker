@@ -38,6 +38,12 @@
   --color-rating-good: var(--color-success);
   --color-rating-easy: var(--color-info);
 
+  /* Chart series (validated with the dataviz palette checks: lightness band, chroma, CVD ΔE, contrast).
+     Series 1 is also the single hue of sequential scales (heatmap); text never uses these colours. */
+  --color-chart-1: #16856a;
+  --color-chart-2: #b7561a;
+  --color-chart-grid: var(--color-border);
+
   /* Card flags: decorative swatches, always paired with the flag name. */
   --color-flag-red: #d32f2f;
   --color-flag-orange: #ef6c00;
@@ -128,6 +134,9 @@
   --color-error-soft: #45201c;
   --color-info: #a9c7ff;
   --color-info-soft: #1a2b45;
+
+  --color-chart-1: #2fa682;
+  --color-chart-2: #d47a3c;
 
   --color-focus: #8ab4f8;
   --color-demo: #c9a6f2;
