@@ -1,10 +1,25 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { JobEventDto, SearchInput } from '../src/api/types'
+import type { JobEventDto, SaveNoteInput, SearchInput } from '../src/api/types'
 import { MockAppApi, parseSearch } from '../src/demo/mockAppApi'
+
+const note = (overrides: Partial<SaveNoteInput> & { operationId: string }): SaveNoteInput => ({
+  noteId: null,
+  expectedVersion: null,
+  deckId: '1',
+  noteTypeKind: 'Basic',
+  front: 'front',
+  back: 'back',
+  tags: [],
+  manualAssociation: null,
+  grammarTips: [],
+  wordLinks: null,
+  ...overrides,
+})
 
 const search = (overrides: Partial<SearchInput> = {}): SearchInput => ({
   query: '',
   deckId: null,
+  tag: null,
   states: [],
   flags: [],
   sort: 'due',
@@ -162,17 +177,122 @@ describe('MockAppApi scenarios', () => {
 describe('MockAppApi content management', () => {
   it('creates two independent cards for a reversed note and protects against stale saves', async () => {
     const api = new MockAppApi()
-    const saved = await api.saveNote({ operationId: 'n1', noteId: null, expectedVersion: null, deckId: '4', noteTypeKind: 'BasicAndReversed', front: 'good night', back: 'dobranoc', tags: [], manualAssociation: null })
+    const saved = await api.saveNote(note({ operationId: 'n1', deckId: '4', noteTypeKind: 'BasicAndReversed', front: 'good night', back: 'dobranoc' }))
     expect(saved.cards).toHaveLength(2)
     expect(new Set(saved.cards.map((card) => card.direction))).toEqual(new Set(['forward', 'reverse']))
     await expect(
-      api.saveNote({ operationId: 'n2', noteId: saved.note.id, expectedVersion: saved.note.version + 5, deckId: '4', noteTypeKind: 'Basic', front: 'x', back: 'y', tags: [], manualAssociation: null }),
+      api.saveNote(note({ operationId: 'n2', noteId: saved.note.id, expectedVersion: saved.note.version + 5, deckId: '4', front: 'x', back: 'y' })),
     ).rejects.toMatchObject({ dto: { code: 'VERSION_CONFLICT' } })
   })
 
   it('validates required fields', async () => {
     const api = new MockAppApi()
-    await expect(api.saveNote({ operationId: 'v', noteId: null, expectedVersion: null, deckId: '1', noteTypeKind: 'Basic', front: '  ', back: 'x', tags: [], manualAssociation: null })).rejects.toMatchObject({ dto: { code: 'VALIDATION_FAILED', details: { field: 'front' } } })
+    await expect(api.saveNote(note({ operationId: 'v', front: '  ', back: 'x' }))).rejects.toMatchObject({ dto: { code: 'VALIDATION_FAILED', details: { field: 'front' } } })
+  })
+
+  it('archives a card on a note-type change and restores it with its history', async () => {
+    const api = new MockAppApi()
+    const page = await api.searchCards(search({ deckId: '4', sort: 'created' }))
+    const reverse = page.items.find((row) => row.direction === 'reverse')
+    if (!reverse) throw new Error('deck 4 has reversed notes')
+    const before = await api.getNoteDetails(reverse.cardId)
+    const reverseCard = before.cards.find((card) => card.direction === 'reverse')
+    const base = { deckId: '4', front: before.note.front, back: before.note.back, tags: before.note.tags }
+    const basic = await api.saveNote(note({ ...base, operationId: 't1', noteId: before.note.id, expectedVersion: before.note.version, noteTypeKind: 'Basic' }))
+    expect(basic.cards.map((card) => card.ordinal)).toEqual([0])
+    expect(basic.archivedOrdinals).toEqual([1])
+    const restored = await api.saveNote(note({ ...base, operationId: 't2', noteId: basic.note.id, expectedVersion: basic.note.version, noteTypeKind: 'BasicAndReversed' }))
+    const back = restored.cards.find((card) => card.ordinal === 1)
+    expect(back?.id).toBe(reverseCard?.id)
+    expect(back?.reps).toBe(reverseCard?.reps)
+    expect(back?.history).toHaveLength(reverseCard?.history.length ?? -1)
+    expect(restored.archivedOrdinals).toEqual([])
+  })
+
+  it('edits tips, associations and links in separate transactions', async () => {
+    const api = new MockAppApi()
+    const page = await api.searchCards(search({ query: 'Kühlschrank' }))
+    const cardId = page.items[0]?.cardId ?? ''
+    const details = await api.getNoteDetails(cardId)
+    const noteId = details.note.id
+    const added = await api.updateNoteContent({ operationId: 'c1', noteId, change: { type: 'addTip', text: 'Neue Regel' } })
+    expect(added.grammarTips.map((tip) => tip.text)).toEqual([...details.grammarTips.map((tip) => tip.text), 'Neue Regel'])
+    const reversed = [...added.grammarTips].reverse().map((tip) => tip.id)
+    const reordered = await api.updateNoteContent({ operationId: 'c2', noteId, change: { type: 'reorderTips', tipIds: reversed } })
+    expect(reordered.grammarTips.map((tip) => tip.id)).toEqual(reversed)
+    await expect(api.updateNoteContent({ operationId: 'c3', noteId, change: { type: 'reorderTips', tipIds: reversed.slice(1) } })).rejects.toMatchObject({ dto: { code: 'VALIDATION_FAILED' } })
+    const bundled = details.associations[0]
+    if (!bundled) throw new Error('fixture has a bundled association')
+    await expect(api.updateNoteContent({ operationId: 'c4', noteId, change: { type: 'editAssociation', associationId: bundled.id, text: 'x' } })).rejects.toMatchObject({ dto: { code: 'VALIDATION_FAILED' } })
+    const manual = await api.updateNoteContent({ operationId: 'c5', noteId, change: { type: 'addAssociation', text: 'Mein Bild' } })
+    expect(manual.associations.some((item) => item.provenance === 'manual' && item.text === 'Mein Bild')).toBe(true)
+    // Content edits do not bump the note version: an open editor draft stays valid.
+    expect(manual.note.version).toBe(details.note.version)
+  })
+
+  it('matches words exactly or after normalization and never guesses', async () => {
+    const api = new MockAppApi()
+    const bank = await api.searchWords({ targetLanguage: 'de', text: 'Bank', limit: 10 })
+    expect(bank.map((item) => item.lemma).sort()).toEqual(['die Bank (Geld)', 'die Bank (Sitz)'])
+    expect(bank.every((item) => item.match === 'exact')).toBe(true)
+    const folded = await api.searchWords({ targetLanguage: 'de', text: 'kuhlschrank', limit: 10 })
+    expect(folded).toEqual([expect.objectContaining({ lemma: 'der Kühlschrank', match: 'normalized' })])
+    expect(await api.searchWords({ targetLanguage: 'de', text: 'trinke', limit: 10 })).toEqual([])
+    expect(await api.searchWords({ targetLanguage: 'en', text: 'Tee', limit: 10 })).toEqual([])
+  })
+
+  it('stores editor word links and turns links to a deleted word into unresolved ones', async () => {
+    const api = new MockAppApi()
+    const [tee] = await api.searchWords({ targetLanguage: 'de', text: 'Tee', limit: 1 })
+    if (!tee) throw new Error('fixture has der Tee')
+    const front = 'Der Tee ist heiß.'
+    const saved = await api.saveNote(note({ operationId: 's1', deckId: '2', noteTypeKind: 'Sentence', front, back: 'Herbata jest gorąca.', wordLinks: [{ startIndex: 4, endIndex: 7, surface: 'Tee', wordNoteId: tee.noteId }] }))
+    expect(saved.wordLinks).toEqual([expect.objectContaining({ surface: 'Tee', resolution: 'userOverridden', wordNoteId: tee.noteId })])
+    await expect(api.saveNote(note({ operationId: 's2', deckId: '2', noteTypeKind: 'Sentence', front, back: 'x', wordLinks: [{ startIndex: 0, endIndex: 3, surface: 'Tee', wordNoteId: null }] }))).rejects.toMatchObject({ dto: { code: 'VALIDATION_FAILED', details: { field: 'wordLinks' } } })
+    const word = await api.getNoteDetails((await api.searchCards(search({ query: '"der Tee"' }))).items[0]?.cardId ?? '')
+    await api.deleteNote({ operationId: 'd', noteId: word.note.id, expectedVersion: word.note.version })
+    const sentence = await api.getNoteDetails(saved.cards[0]?.id ?? '')
+    expect(sentence.wordLinks[0]).toMatchObject({ resolution: 'unresolved', wordNoteId: null })
+  })
+
+  it('previews bulk effects before applying them', async () => {
+    const api = new MockAppApi()
+    const page = await api.searchCards(search({ deckId: '4' }))
+    const selection = { kind: 'ids' as const, cardIds: page.items.map((row) => row.cardId) }
+    const newCount = page.items.filter((row) => row.state === 'New').length
+    const preview = await api.previewBulkAction({ selection, action: { type: 'reposition', start: 1, step: 1 } })
+    expect(preview).toMatchObject({ selected: page.total, affected: newCount, unchanged: page.total - newCount, decks: newCount > 0 ? 1 : 0 })
+    const tagged = await api.previewBulkAction({ selection, action: { type: 'addTag', tag: 'podróże' } })
+    expect(tagged.notes).toBe(new Set(page.items.map((row) => row.noteId)).size)
+    await expect(api.previewBulkAction({ selection, action: { type: 'addTag', tag: 'two words' } })).rejects.toMatchObject({ dto: { code: 'VALIDATION_FAILED' } })
+    expect((await api.applyBulkAction({ operationId: 'b', selection, action: { type: 'addTag', tag: 'podróże' } })).affected).toBe(page.total)
+    const after = await api.searchCards(search({ deckId: '4', tag: 'podróże' }))
+    expect(after.total).toBe(page.total)
+  })
+
+  it('saves presets with validation and optimistic concurrency', async () => {
+    const api = new MockAppApi()
+    const [preset] = await api.listPresets()
+    if (!preset) throw new Error('fixture presets')
+    expect(preset.dependentDecks).toBeGreaterThan(1)
+    const clone = await api.savePreset({ operationId: 'p1', presetId: null, expectedVersion: null, name: 'Intensywny', config: { ...preset.config, newPerDay: 40 } })
+    expect(clone).toMatchObject({ builtIn: false, dependentDecks: 0, config: { newPerDay: 40 } })
+    await expect(api.savePreset({ operationId: 'p2', presetId: clone.id, expectedVersion: clone.version, name: 'x', config: { ...clone.config, desiredRetention: 1.2 } })).rejects.toMatchObject({ dto: { code: 'VALIDATION_FAILED', details: { field: 'desiredRetention' } } })
+    await expect(api.savePreset({ operationId: 'p3', presetId: clone.id, expectedVersion: clone.version, name: 'x', config: { ...clone.config, weights: [1, 2] } })).rejects.toMatchObject({ dto: { code: 'VALIDATION_FAILED', details: { field: 'weights' } } })
+    await expect(api.savePreset({ operationId: 'p4', presetId: clone.id, expectedVersion: 99, name: 'x', config: clone.config })).rejects.toMatchObject({ dto: { code: 'VERSION_CONFLICT' } })
+    const deck = await api.getDeck('4')
+    const moved = await api.updateDeck({ operationId: 'p5', deckId: '4', expectedVersion: deck.deck.version, patch: { presetId: clone.id } })
+    expect(moved).toMatchObject({ presetId: clone.id, presetName: 'Intensywny', presetDependentDecks: 1 })
+  })
+
+  it('lists every subdeck, parents first, and offers each deck type with what it hides', async () => {
+    const api = new MockAppApi()
+    const overview = await api.getDeck('1')
+    expect(overview.subdecks.map((deck) => deck.id)).toEqual(['5'])
+    expect(overview.typeOptions.map((option) => option.deckType)).toEqual(['Simple', 'TextWithAssociations', 'Linguistic'])
+    const simple = overview.typeOptions.find((option) => option.deckType === 'Simple')
+    expect(simple?.hiddenCounts.grammarTips).toBeGreaterThan(0)
+    expect(overview.hiddenSectionCounts).toEqual({ associations: 0, grammarTips: 0, wordLinks: 0 })
   })
 
   it('detects duplicates with Unicode normalization', async () => {

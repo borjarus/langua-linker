@@ -70,6 +70,38 @@ export interface CardRecord {
   lapses: number
   version: number
   deleted: boolean
+  /** Removed by a note-type change, not by the user: switching back restores it with its history. */
+  archived: boolean
+  /** Order in the new queue; `null` once the card has been studied. */
+  position: number | null
+}
+
+export interface PresetRecord {
+  id: string
+  name: string
+  version: number
+  builtIn: boolean
+  newPerDay: number
+  reviewsPerDay: number
+  desiredRetention: number
+  maxIntervalDays: number
+  learningStepsMinutes: number[]
+  relearningStepsMinutes: number[]
+  weights: number[]
+}
+
+/** FSRS-6 default weights w0–w20 (fixture copy; the pinned reference arrives in Phase 9). */
+export const DEFAULT_WEIGHTS = [
+  0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194, 0.001, 1.8722, 0.1666, 0.796, 1.4835, 0.0614, 0.2629, 1.6483, 0.6014,
+  1.8729, 0.5425, 0.0912, 0.0658, 0.1542,
+]
+
+export function createPresets(): PresetRecord[] {
+  const base = { version: 1, builtIn: true, reviewsPerDay: 200, desiredRetention: 0.9, maxIntervalDays: 36_500, learningStepsMinutes: [1, 10], relearningStepsMinutes: [10], weights: [...DEFAULT_WEIGHTS] }
+  return [
+    { ...base, id: 'preset-default', name: 'Domyślny (20 nowych/dzień)', newPerDay: 20 },
+    { ...base, id: 'preset-light', name: 'Lekki (10 nowych/dzień)', newPerDay: 10, reviewsPerDay: 100 },
+  ]
 }
 
 export interface AssociationRecord {
@@ -234,6 +266,7 @@ export function createCollection({ seed, nowMs, ambiguousLinks }: CollectionOpti
   let noteSeq = 100
   let cardSeq = 1000
   let extraSeq = 5000
+  let positionSeq = 1
 
   for (const { record, notes, noteType } of DECK_SEEDS) {
     collection.decks.push({ ...record, version: 1 })
@@ -276,6 +309,8 @@ export function createCollection({ seed, nowMs, ambiguousLinks }: CollectionOpti
           lapses: state === 'Relearning' ? 1 + Math.floor(random() * 3) : 0,
           version: 1,
           deleted: false,
+          archived: false,
+          position: state === 'New' ? positionSeq++ : null,
         })
         for (let index = 0; index < Math.min(reps, 5); index += 1) {
           collection.logs.push({

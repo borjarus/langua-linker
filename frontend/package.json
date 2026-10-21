@@ -25,6 +25,7 @@
     "ios:dev": "node scripts/tauri-variant.mjs dev ios dev"
   },
   "dependencies": {
+    "@tanstack/svelte-virtual": "3.13.40",
     "@tauri-apps/api": "2.12.2",
     "@tauri-apps/plugin-notification": "2.5.1",
     "i18next": "26.4.4",

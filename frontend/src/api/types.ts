@@ -1,5 +1,5 @@
 /**
- * Transport contract v0.3 between the Svelte frontend and the Rust backend.
+ * Transport contract v0.4 between the Svelte frontend and the Rust backend.
  *
  * Rules (plan §4.1):
  * - SQLite i64 identifiers and GUIDs travel as strings (`Id`).
@@ -11,7 +11,7 @@
  * Rust becomes the DTO source in Phase 7 (generated into `src/generated/`).
  */
 
-export const API_VERSION = '0.3'
+export const API_VERSION = '0.4'
 
 export type Id = string
 export type IsoDateTime = string
@@ -183,14 +183,24 @@ export interface HiddenSectionCountsDto {
   wordLinks: number
 }
 
+/** A deck type the deck could switch to, with what it would hide. Hidden content is kept, never deleted. */
+export interface DeckTypeOptionDto {
+  deckType: DeckType
+  capabilities: DeckCapabilitiesDto
+  hiddenCounts: HiddenSectionCountsDto
+}
+
 export interface DeckOverviewDto {
   deck: DeckSummaryDto
-  children: DeckSummaryDto[]
+  /** Every deck below this one (any depth), each parent listed before its children. */
+  subdecks: DeckSummaryDto[]
   description: string
   presetId: Id
   presetName: string
   presetDependentDecks: number
+  /** Content kept but hidden by the current deck type. */
   hiddenSectionCounts: HiddenSectionCountsDto
+  typeOptions: DeckTypeOptionDto[]
 }
 
 export interface CreateDeckInput {
@@ -207,6 +217,7 @@ export interface UpdateDeckInput {
   expectedVersion: number
   patch: {
     name?: string
+    description?: string
     parentId?: Id | null
     deckType?: DeckType
     presetId?: Id
@@ -222,6 +233,43 @@ export interface DeleteDeckInput {
 export interface DeleteDeckResultDto {
   deletedDecks: number
   deletedCards: number
+}
+
+// ---------------------------------------------------------------- presets (deck options)
+
+/** Number of FSRS-6 weights w0–w20. */
+export const FSRS_WEIGHT_COUNT = 21
+
+export interface PresetConfigDto {
+  newPerDay: number
+  reviewsPerDay: number
+  /** 0.70–0.99. */
+  desiredRetention: number
+  maxIntervalDays: number
+  learningStepsMinutes: number[]
+  relearningStepsMinutes: number[]
+  /** FSRS-6 weights; exactly `FSRS_WEIGHT_COUNT` finite numbers. */
+  weights: number[]
+}
+
+export interface PresetDto {
+  id: Id
+  name: string
+  version: number
+  /** Built-in presets can be cloned and edited like any other. */
+  builtIn: boolean
+  /** Decks using this preset; a change applies to all of them. */
+  dependentDecks: number
+  config: PresetConfigDto
+}
+
+export interface SavePresetInput {
+  operationId: OperationId
+  /** `null` creates a preset (also used to clone one). */
+  presetId: Id | null
+  expectedVersion: number | null
+  name: string
+  config: PresetConfigDto
 }
 
 // ---------------------------------------------------------------- notes / cards content
@@ -467,7 +515,9 @@ export interface RetrievabilityDto {
 export interface CardDetailsDto {
   id: Id
   noteId: Id
+  /** The scheduling deck belongs to the card: cards of one note may sit in different decks. */
   deckId: Id
+  deckName: string
   ordinal: number
   direction: CardDirection
   state: CardState
@@ -485,25 +535,83 @@ export interface CardDetailsDto {
 
 export interface NoteDetailsDto {
   note: NoteDto
+  /** Deck of the note's first card; decides which sections the details and the editor show. */
+  deckId: Id
+  targetLanguage: TargetLanguage
+  capabilities: DeckCapabilitiesDto
+  /** Live cards; each has its own schedule. */
   cards: CardDetailsDto[]
+  /** Template ordinals archived by a note-type change; switching back restores them with history. */
+  archivedOrdinals: number[]
   associations: AssociationDto[]
   grammarTips: GrammarTipDto[]
   wordLinks: WordLinkDto[]
 }
 
+export interface DeleteNoteInput {
+  operationId: OperationId
+  noteId: Id
+  expectedVersion: number
+}
+
+export interface DeleteNoteResultDto {
+  deletedCards: number
+}
+
+/** One edit of a note's tips, associations or word links (each change is its own transaction). */
+export type NoteContentChange =
+  | { type: 'addTip'; text: string }
+  | { type: 'editTip'; tipId: Id; text: string }
+  | { type: 'deleteTip'; tipId: Id }
+  /** The complete new order; any other set of ids is rejected. */
+  | { type: 'reorderTips'; tipIds: Id[] }
+  | { type: 'addAssociation'; text: string }
+  /** Only the user's own (manual) associations can be edited. */
+  | { type: 'editAssociation'; associationId: Id; text: string }
+  | { type: 'deleteAssociation'; associationId: Id }
+  /** Removes the link; the word note itself is untouched. */
+  | { type: 'unlinkWord'; linkId: Id }
+
+export interface UpdateNoteContentInput {
+  operationId: OperationId
+  noteId: Id
+  change: NoteContentChange
+}
+
 export interface EditorDeckOptionDto {
   id: Id
   name: string
+  parentId: Id | null
   deckType: DeckType
   capabilities: DeckCapabilitiesDto
   targetLanguage: TargetLanguage
 }
 
+/** Card template of a note type: which side is asked. */
+export interface NoteTemplateDto {
+  ordinal: number
+  direction: CardDirection
+}
+
+export interface NoteTypeDto {
+  kind: NoteTypeKind
+  templates: NoteTemplateDto[]
+}
+
 export interface EditorDataDto {
   decks: EditorDeckOptionDto[]
-  noteTypes: NoteTypeKind[]
+  noteTypes: NoteTypeDto[]
   tags: string[]
   maxFieldLength: number
+}
+
+/** A word link as the editor sends it; ranges are UTF-16 offsets in the NFC front text. */
+export interface WordLinkDraftDto {
+  startIndex: number
+  endIndex: number
+  surface: string
+  /** `null` keeps the phrase marked but unresolved; the backend never picks a word on its own. */
+  wordNoteId: Id | null
 }
 
 export interface SaveNoteInput {
@@ -517,6 +625,27 @@ export interface SaveNoteInput {
   back: string
   tags: string[]
   manualAssociation: string | null
+  /** Tips appended to the note; existing tips are edited on the card details. */
+  grammarTips: string[]
+  /** Complete set of word links for a sentence; `null` keeps the stored links. */
+  wordLinks: WordLinkDraftDto[] | null
+}
+
+export interface SearchWordsInput {
+  targetLanguage: TargetLanguage
+  text: string
+  limit: number
+}
+
+/** `exact`: same text; `normalized`: same after case/article/diacritic folding. Never a guess. */
+export type WordMatchKind = 'exact' | 'normalized'
+
+export interface WordMatchDto {
+  noteId: Id
+  lemma: string
+  translation: string
+  deckName: string
+  match: WordMatchKind
 }
 
 export interface DuplicateCheckInput {
@@ -555,6 +684,7 @@ export type SortKey = (typeof SORT_KEYS)[number]
 export interface SearchInput {
   query: string
   deckId: Id | null
+  tag: string | null
   states: CardState[]
   flags: CardFlag[]
   sort: SortKey
@@ -575,6 +705,9 @@ export interface CardRowDto {
   queue: QueueState
   flag: CardFlag
   dueAt: IsoDateTime | null
+  /** Order of a new card in the new queue; `null` for cards already studied. */
+  position: number | null
+  direction: CardDirection
   tags: string[]
 }
 
@@ -596,12 +729,35 @@ export type BulkAction =
   | { type: 'flag'; flag: CardFlag }
   | { type: 'changeDeck'; deckId: Id }
   | { type: 'addTag'; tag: string }
+  | { type: 'removeTag'; tag: string }
+  /** New cards only: positions start, start+step, …; studied cards are skipped. */
+  | { type: 'reposition'; start: number; step: number }
   | { type: 'delete' }
+
+export type BulkActionType = BulkAction['type']
 
 export interface BulkActionInput {
   operationId: OperationId
   selection: BulkSelection
   action: BulkAction
+}
+
+export interface BulkPreviewInput {
+  selection: BulkSelection
+  action: BulkAction
+}
+
+/** What a bulk action would do, shown before the user confirms it. */
+export interface BulkPreviewDto {
+  /** Cards in the selection. */
+  selected: number
+  /** Cards the action would change. */
+  affected: number
+  /** Cards left as they are (already in that state, or not new for reposition). */
+  unchanged: number
+  /** Notes and decks the affected cards belong to. */
+  notes: number
+  decks: number
 }
 
 export interface BulkResultDto {

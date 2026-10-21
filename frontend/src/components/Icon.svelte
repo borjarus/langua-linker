@@ -20,9 +20,16 @@
     refresh: 'M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6',
     chevronDown: 'm6 9 6 6 6-6',
     chevronUp: 'm6 15 6-6 6 6',
+    chevronRight: 'm9 6 6 6-6 6',
     flag: 'M5 21V4M5 4h11l-2 4 2 4H5',
     clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7v5l3 2',
     help: 'M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6v.6M12 17h.01M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z',
+    edit: 'M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4',
+    trash: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6',
+    tag: 'M3 12V4h8l10 10-8 8-10-10ZM7.5 7.5h.01',
+    copy: 'M9 9h10v10H9V9ZM5 15V5h10',
+    folder: 'M3 6.5V18a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8.5a1 1 0 0 0-1-1h-8L10 5H4a1 1 0 0 0-1 1.5Z',
+    sort: 'M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4',
   } as const
 
   export type IconName = keyof typeof PATHS

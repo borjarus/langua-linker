@@ -33,6 +33,10 @@
     border-radius: 0;
     background: transparent;
     font: inherit;
+    /* A button is an atomic inline box: a multi-word phrase must still wrap at 200% text. */
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: inherit;
     cursor: pointer;
   }
 

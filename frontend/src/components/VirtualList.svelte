@@ -1,5 +1,7 @@
 <script lang="ts">
+  import { createVirtualizer } from '@tanstack/svelte-virtual'
   import type { Snippet } from 'svelte'
+  import { untrack } from 'svelte'
 
   interface Props {
     itemCount: number
@@ -7,7 +9,7 @@
     rowHeightRem?: number
     label: string
     overscan?: number
-    /** Called when the visible window changes; drives page fetching. */
+    /** Called when the rendered window changes; drives page fetching. */
     onrange?: (start: number, end: number) => void
     row: Snippet<[number]>
   }
@@ -15,49 +17,63 @@
   let { itemCount, rowHeightRem = 3.5, label, overscan = 6, onrange, row }: Props = $props()
 
   let viewport = $state<HTMLElement>()
-  let scrollTop = $state(0)
-  let viewportHeight = $state(480)
   let rootFontPx = $state(16)
 
   const rowHeight = $derived(rowHeightRem * rootFontPx)
-  const start = $derived(Math.max(0, Math.floor(scrollTop / rowHeight) - overscan))
-  const end = $derived(Math.min(itemCount, Math.ceil((scrollTop + viewportHeight) / rowHeight) + overscan))
-  const indexes = $derived(Array.from({ length: Math.max(0, end - start) }, (_, offset) => start + offset))
+
+  // Options are pushed in the effect below; the store only needs a valid initial shape.
+  const virtualizer = createVirtualizer<HTMLElement, HTMLElement>({
+    count: 0,
+    getScrollElement: () => viewport ?? null,
+    estimateSize: () => rowHeight,
+  })
+
+  const items = $derived($virtualizer.getVirtualItems())
+  const offset = $derived(items[0]?.start ?? 0)
 
   $effect(() => {
-    if (!viewport) return
+    // Read every input here so the effect re-runs when the viewport mounts or the text scale changes.
+    const element = viewport ?? null
+    const size = rowHeight
+    const options = { count: itemCount, overscan, getScrollElement: () => element, estimateSize: () => size }
+    untrack(() => {
+      $virtualizer.setOptions(options)
+      // Rows have a fixed height; a new root font size invalidates every cached size.
+      $virtualizer.measure()
+    })
+  })
+
+  $effect(() => {
     const measure = () => {
       rootFontPx = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
-      viewportHeight = viewport?.clientHeight || viewportHeight
     }
     measure()
     if (typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(measure)
-    observer.observe(viewport)
     observer.observe(document.documentElement)
     return () => observer.disconnect()
   })
 
   $effect(() => {
-    onrange?.(start, end)
+    const first = items[0]
+    const last = items.at(-1)
+    if (first && last) untrack(() => onrange?.(first.index, last.index + 1))
   })
+
+  /** Scrolls the minimum needed to show row `index` (keyboard navigation). */
+  export function scrollToIndex(index: number): void {
+    $virtualizer.scrollToIndex(index, { align: 'auto' })
+  }
 </script>
 
 <!-- The scroll container must be focusable so keyboard users can scroll it (WCAG 2.1.1). -->
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-<div
-  class="viewport"
-  bind:this={viewport}
-  role="list"
-  aria-label={label}
-  tabindex="0"
-  onscroll={(event) => (scrollTop = event.currentTarget.scrollTop)}
->
-  <div class="spacer" style:height="{itemCount * rowHeight}px">
-    <div class="window" style:transform="translateY({start * rowHeight}px)">
-      {#each indexes as index (index)}
-        <div class="item" role="listitem" aria-setsize={itemCount} aria-posinset={index + 1} style:height="{rowHeight}px">
-          {@render row(index)}
+<div class="viewport" bind:this={viewport} role="list" aria-label={label} tabindex="0">
+  <div class="spacer" style:height="{$virtualizer.getTotalSize()}px">
+    <div class="window" style:transform="translateY({offset}px)">
+      {#each items as item (item.key)}
+        <div class="item" role="listitem" aria-setsize={itemCount} aria-posinset={item.index + 1} data-index={item.index} style:height="{item.size}px">
+          {@render row(item.index)}
         </div>
       {/each}
     </div>

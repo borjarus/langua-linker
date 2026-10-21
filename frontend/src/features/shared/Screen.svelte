@@ -11,11 +11,13 @@
     phase?: number
     /** Complete screen on demo data: says it is a prototype, not production learning (Phases 3–6). */
     prototype?: boolean
+    /** Screen-specific prototype notice (e.g. demo drafts), shown instead of the learning one. */
+    notice?: string
     actions?: Snippet
     children: Snippet
   }
 
-  let { title, back = false, phase, prototype = false, actions, children }: Props = $props()
+  let { title, back = false, phase, prototype = false, notice, actions, children }: Props = $props()
   const { i18n, router } = useServices()
 </script>
 
@@ -35,6 +37,8 @@
   </header>
   {#if phase !== undefined}
     <p class="placeholder row"><Icon name="info" />{i18n.t('common.phasePlaceholder', { phase })}</p>
+  {:else if notice}
+    <p class="placeholder row"><Icon name="info" />{notice}</p>
   {:else if prototype}
     <p class="placeholder row"><Icon name="info" />{i18n.t('common.prototype')}</p>
   {/if}

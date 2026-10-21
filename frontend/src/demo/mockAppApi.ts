@@ -2,12 +2,18 @@ import type { AppApi, AppApiOperation } from '../api/appApi'
 import { AppError } from '../api/errors'
 import {
   API_VERSION,
+  DECK_TYPES,
+  FSRS_WEIGHT_COUNT,
   RATINGS,
   type AssociationDto,
   type AttributionDto,
   type BackupDto,
+  type BulkAction,
   type BulkActionInput,
+  type BulkPreviewDto,
+  type BulkPreviewInput,
   type BulkResultDto,
+  type BulkSelection,
   type CardActionInput,
   type CardActionResultDto,
   type CardDetailsDto,
@@ -23,8 +29,11 @@ import {
   type DeckCountsDto,
   type DeckOverviewDto,
   type DeckSummaryDto,
+  type DeckType,
   type DeleteDeckInput,
   type DeleteDeckResultDto,
+  type DeleteNoteInput,
+  type DeleteNoteResultDto,
   type DuplicateCheckDto,
   type DuplicateCheckInput,
   type EditorDataDto,
@@ -40,8 +49,11 @@ import {
   type JobKind,
   type NoteContentDto,
   type NoteDetailsDto,
+  type NoteTypeDto,
   type OnboardingStateDto,
   type PickFileInput,
+  type PresetConfigDto,
+  type PresetDto,
   type PreviewInput,
   type QueueState,
   type RateCardInput,
@@ -53,7 +65,9 @@ import {
   type ResumableSessionDto,
   type ReviewResultDto,
   type SaveNoteInput,
+  type SavePresetInput,
   type SearchInput,
+  type SearchWordsInput,
   type SessionCardDto,
   type SessionSummaryDto,
   type SetFavoriteAssociationInput,
@@ -66,10 +80,13 @@ import {
   type UndoInput,
   type Unsubscribe,
   type UpdateDeckInput,
+  type UpdateNoteContentInput,
   type UpdateSettingsInput,
   type UpdateStudySessionInput,
   type ValidateRestoreInput,
+  type WordLinkDraftDto,
   type WordLinkDto,
+  type WordMatchDto,
 } from '../api/types'
 import {
   BUNDLED_DECKS,
@@ -77,11 +94,13 @@ import {
   LARGE_COLLECTION_SIZE,
   capabilitiesFor,
   createCollection,
+  createPresets,
   largeRow,
   type CardRecord,
   type Collection,
   type DeckRecord,
   type NoteRecord,
+  type PresetRecord,
 } from './fixtures'
 import { DAY_MS, HOUR_MS, createRandom, iso } from './random'
 import type { DemoScenario } from './scenarios'
@@ -129,12 +148,27 @@ const AI_FAILURES = ['PROVIDER_ERROR', 'INVALID_PROVIDER_OUTPUT', 'MODERATION_BL
 
 const SHELL_OPERATIONS: ReadonlySet<AppApiOperation> = new Set(['getAppInfo', 'getSettings', 'getOnboardingState', 'getAttributions'])
 const MAX_FIELD_LENGTH = 2000
+const MAX_TIP_LENGTH = 500
+/** Card templates per note type — the backend owns this map; the editor reads it from `getEditorData`. */
+const NOTE_TYPES: NoteTypeDto[] = [
+  { kind: 'Basic', templates: [{ ordinal: 0, direction: 'forward' }] },
+  { kind: 'BasicAndReversed', templates: [{ ordinal: 0, direction: 'forward' }, { ordinal: 1, direction: 'reverse' }] },
+  { kind: 'Sentence', templates: [{ ordinal: 0, direction: 'forward' }] },
+]
+/** Leading articles and particles ignored by the word matcher (`der Tee` matches `Tee`). */
+const ARTICLES = /^(der|die|das|den|dem|des|ein|eine|the|a|an|to)\s+/iu
 const PRESET_VERSION = 1
 const CUTOFF_HOUR = 4
 const EMPTY_COLLECTION = (): Collection => ({ decks: [], notes: [], cards: [], associations: [], tips: [], wordLinks: [], logs: [] })
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 const normalizeText = (text: string): string => text.normalize('NFC').trim().toLocaleLowerCase('pl')
+/** Word-matcher key: no article, no parenthetical sense label, case and diacritics folded. */
+const wordKey = (text: string): string =>
+  normalizeText(text.replace(/\s*\([^)]*\)\s*$/u, '').replace(ARTICLES, ''))
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/ß/gu, 'ss')
 const fail = (code: ErrorCode, details: Record<string, string | number | boolean | null> | null = null): never => {
   throw AppError.of(code, details)
 }
@@ -144,6 +178,7 @@ export class MockAppApi implements AppApi {
   #scenario: DemoScenario = 'happy'
   #nowMs = DEMO_EPOCH_MS
   #collection: Collection = EMPTY_COLLECTION()
+  #presets: PresetRecord[] = createPresets()
   #pendingCollection: Collection | null = null
   #sessions = new Map<string, SessionRecord>()
   #operations = new Map<string, unknown>()
@@ -198,6 +233,7 @@ export class MockAppApi implements AppApi {
     this.#preparing = new Set()
     this.#firstCompletedSessionId = null
     this.#generations = 0
+    this.#presets = createPresets()
 
     const full = createCollection({ seed: this.#options.seed, nowMs: this.#nowMs, ambiguousLinks: scenario === 'ambiguous' })
     this.#onboardingCompleted = scenario !== 'newUser'
@@ -602,8 +638,10 @@ export class MockAppApi implements AppApi {
   }
 
   #noteDetails(note: NoteRecord): NoteDetailsDto {
-    const cards: CardDetailsDto[] = this.#collection.cards
-      .filter((card) => card.noteId === note.id && !card.deleted)
+    const noteCards = this.#collection.cards.filter((card) => card.noteId === note.id)
+    const cards: CardDetailsDto[] = noteCards
+      .filter((card) => !card.deleted)
+      .sort((a, b) => a.ordinal - b.ordinal)
       .map((card) => {
         const history = this.#collection.logs
           .filter((log) => log.cardId === card.id)
@@ -620,6 +658,7 @@ export class MockAppApi implements AppApi {
           id: card.id,
           noteId: card.noteId,
           deckId: card.deckId,
+          deckName: this.#deckName(card.deckId) ?? '',
           ordinal: card.ordinal,
           direction: card.ordinal === 1 ? 'reverse' : 'forward',
           state: card.state,
@@ -641,7 +680,12 @@ export class MockAppApi implements AppApi {
           })),
         }
       })
+    const deck = this.#deck(noteCards.find((card) => !card.deleted)?.deckId ?? note.deckId)
     return {
+      deckId: deck.id,
+      targetLanguage: deck.targetLanguage,
+      capabilities: capabilitiesFor(deck.deckType),
+      archivedOrdinals: noteCards.filter((card) => card.archived).map((card) => card.ordinal).sort((a, b) => a - b),
       note: {
         id: note.id,
         guid: note.guid,
@@ -716,21 +760,49 @@ export class MockAppApi implements AppApi {
 
   #deckOverview(deckId: Id): DeckOverviewDto {
     const deck = this.#deck(deckId)
-    const caps = capabilitiesFor(deck.deckType)
-    const noteIds = new Set(this.#collection.notes.filter((note) => this.#subtree(deckId).has(note.deckId)).map((note) => note.id))
+    // Only the deck's own notes: subdecks have their own type.
+    const noteIds = new Set(this.#collection.notes.filter((note) => note.deckId === deckId).map((note) => note.id))
+    const totals = {
+      associations: this.#collection.associations.filter((item) => noteIds.has(item.noteId) && item.status === 'ready').length,
+      grammarTips: this.#collection.tips.filter((item) => noteIds.has(item.noteId)).length,
+      wordLinks: this.#collection.wordLinks.filter((item) => noteIds.has(item.sentenceNoteId)).length,
+    }
+    const hidden = (deckType: DeckType) => {
+      const caps = capabilitiesFor(deckType)
+      return {
+        associations: caps.associations ? 0 : totals.associations,
+        grammarTips: caps.grammarTips ? 0 : totals.grammarTips,
+        wordLinks: caps.wordLinks ? 0 : totals.wordLinks,
+      }
+    }
+    const preset = this.#preset(deck.presetId)
     return {
       deck: this.#deckSummary(deck),
-      children: this.#collection.decks.filter((child) => child.parentId === deckId).map((child) => this.#deckSummary(child)),
+      subdecks: this.#descendants(deckId).map((child) => this.#deckSummary(child)),
       description: deck.description,
-      presetId: deck.presetId,
-      presetName: deck.presetId === 'preset-light' ? 'Lekki (10 nowych/dzień)' : 'Domyślny (20 nowych/dzień)',
-      presetDependentDecks: this.#collection.decks.filter((other) => other.presetId === deck.presetId).length,
-      hiddenSectionCounts: {
-        associations: caps.associations ? 0 : this.#collection.associations.filter((item) => noteIds.has(item.noteId)).length,
-        grammarTips: caps.grammarTips ? 0 : this.#collection.tips.filter((item) => noteIds.has(item.noteId)).length,
-        wordLinks: caps.wordLinks ? 0 : this.#collection.wordLinks.filter((item) => noteIds.has(item.sentenceNoteId)).length,
-      },
+      presetId: preset.id,
+      presetName: preset.name,
+      presetDependentDecks: this.#collection.decks.filter((other) => other.presetId === preset.id).length,
+      hiddenSectionCounts: hidden(deck.deckType),
+      typeOptions: DECK_TYPES.map((deckType) => ({ deckType, capabilities: capabilitiesFor(deckType), hiddenCounts: hidden(deckType) })),
     }
+  }
+
+  /** Every deck below `deckId`, parents before children, siblings by name. */
+  #descendants(deckId: Id): DeckRecord[] {
+    const children = this.#collection.decks
+      .filter((deck) => deck.parentId === deckId)
+      .sort((a, b) => a.name.localeCompare(b.name, 'pl'))
+    return children.flatMap((child) => [child, ...this.#descendants(child.id)])
+  }
+
+  #preset(presetId: Id): PresetRecord {
+    return this.#presets.find((preset) => preset.id === presetId) ?? fail('NOT_FOUND', { entity: 'preset', id: presetId })
+  }
+
+  #presetDto(preset: PresetRecord): PresetDto {
+    const { id, name, version, builtIn, ...config } = preset
+    return { id, name, version, builtIn, dependentDecks: this.#collection.decks.filter((deck) => deck.presetId === id).length, config }
   }
 
   createDeck(input: CreateDeckInput) {
@@ -759,11 +831,17 @@ export class MockAppApi implements AppApi {
     return this.#mutate('updateDeck', input.operationId, ['decks'], () => {
       const deck = this.#deck(input.deckId)
       if (deck.version !== input.expectedVersion) fail('VERSION_CONFLICT', { currentVersion: deck.version })
-      const { name, parentId, deckType, presetId } = input.patch
+      const { name, description, parentId, deckType, presetId } = input.patch
       if (name !== undefined) {
         if (!name.trim()) fail('VALIDATION_FAILED', { field: 'name' })
+        if (name.trim().length > 120) fail('VALIDATION_FAILED', { field: 'name', reason: 'tooLong', max: 120 })
         deck.name = name.trim()
       }
+      if (description !== undefined) {
+        if (description.length > MAX_FIELD_LENGTH) fail('VALIDATION_FAILED', { field: 'description', reason: 'tooLong', max: MAX_FIELD_LENGTH })
+        deck.description = description.trim()
+      }
+      if (presetId !== undefined) this.#preset(presetId)
       if (parentId !== undefined) {
         if (parentId !== null && this.#subtree(deck.id).has(parentId)) fail('VALIDATION_FAILED', { field: 'parentId', reason: 'cycle' })
         if (parentId !== null) this.#deck(parentId)
@@ -794,6 +872,30 @@ export class MockAppApi implements AppApi {
     })
   }
 
+  listPresets() {
+    return this.#query('listPresets', (): PresetDto[] =>
+      [...this.#presets].sort((a, b) => Number(b.builtIn) - Number(a.builtIn) || a.name.localeCompare(b.name, 'pl')).map((preset) => this.#presetDto(preset)),
+    )
+  }
+
+  savePreset(input: SavePresetInput) {
+    return this.#mutate('savePreset', input.operationId, ['decks'], (): PresetDto => {
+      const name = input.name.trim()
+      if (!name) fail('VALIDATION_FAILED', { field: 'name', reason: 'required' })
+      validatePresetConfig(input.config)
+      const config = clone(input.config)
+      if (input.presetId === null) {
+        const preset: PresetRecord = { id: this.#nextId('preset-'), name, version: 1, builtIn: false, ...config }
+        this.#presets.push(preset)
+        return this.#presetDto(preset)
+      }
+      const preset = this.#preset(input.presetId)
+      if (preset.version !== input.expectedVersion) fail('VERSION_CONFLICT', { currentVersion: preset.version })
+      Object.assign(preset, config, { name, version: preset.version + 1 })
+      return this.#presetDto(preset)
+    })
+  }
+
   // ------------------------------------------------------------ study
 
   startStudy(input: StartStudyInput) {
@@ -808,7 +910,7 @@ export class MockAppApi implements AppApi {
           })
         : this.#liveCards()
             .filter((card) => deckIds.has(card.deckId) && this.#isStudyable(card))
-            .sort((a, b) => order(a) - order(b) || (a.dueAtMs ?? 0) - (b.dueAtMs ?? 0) || Number(a.id) - Number(b.id))
+            .sort((a, b) => order(a) - order(b) || (a.dueAtMs ?? 0) - (b.dueAtMs ?? 0) || (a.position ?? 0) - (b.position ?? 0) || Number(a.id) - Number(b.id))
             .slice(0, 50)
             .map((card) => card.id)
       // One durable session at a time: a new session closes the previous unfinished one.
@@ -887,6 +989,7 @@ export class MockAppApi implements AppApi {
       const seconds = this.#intervalSeconds(current, input.rating)
       current.state = this.#nextState(current, input.rating)
       current.queue = this.#queueFor(current.state)
+      if (current.state !== 'New') current.position = null
       current.intervalSeconds = seconds
       current.dueAtMs = this.#nowMs + seconds * 1000
       current.reps += 1
@@ -959,6 +1062,7 @@ export class MockAppApi implements AppApi {
           break
         case 'delete':
           card.deleted = true
+          card.archived = false
           break
       }
       card.version += 1
@@ -1049,11 +1153,12 @@ export class MockAppApi implements AppApi {
       decks: this.#collection.decks.map((deck) => ({
         id: deck.id,
         name: deck.name,
+        parentId: deck.parentId,
         deckType: deck.deckType,
         capabilities: capabilitiesFor(deck.deckType),
         targetLanguage: deck.targetLanguage,
       })),
-      noteTypes: ['Basic', 'BasicAndReversed', 'Sentence'],
+      noteTypes: NOTE_TYPES,
       tags: [...new Set(this.#collection.notes.flatMap((note) => note.tags))].sort(),
       maxFieldLength: MAX_FIELD_LENGTH,
     }))
@@ -1081,36 +1186,192 @@ export class MockAppApi implements AppApi {
       for (const [field, value] of [['front', front], ['back', back]] as const) {
         if (value.length > MAX_FIELD_LENGTH) fail('VALIDATION_FAILED', { field, reason: 'tooLong', max: MAX_FIELD_LENGTH })
       }
-      this.#deck(input.deckId)
+      const tags = [...new Set(input.tags.map((tag) => tag.normalize('NFC').trim()).filter(Boolean))]
+      if (tags.some((tag) => /\s/u.test(tag) || tag.length > 60)) fail('VALIDATION_FAILED', { field: 'tags', reason: 'invalidTag' })
+      const tips = input.grammarTips.map((tip) => tip.normalize('NFC').trim()).filter(Boolean)
+      if (tips.some((tip) => tip.length > MAX_TIP_LENGTH)) fail('VALIDATION_FAILED', { field: 'grammarTips', reason: 'tooLong', max: MAX_TIP_LENGTH })
+      const deck = this.#deck(input.deckId)
+      const template = NOTE_TYPES.find((type) => type.kind === input.noteTypeKind) ?? fail('VALIDATION_FAILED', { field: 'noteTypeKind' })
+      if (input.wordLinks !== null) this.#validateLinks(front, input.wordLinks, capabilitiesFor(deck.deckType).wordLinks)
+
       let note: NoteRecord
       if (input.noteId === null) {
         const id = this.#nextId()
-        note = { id, guid: `note-${id}`, deckId: input.deckId, noteTypeKind: input.noteTypeKind, front, back, tags: [...input.tags], version: 1, createdAtMs: this.#nowMs, updatedAtMs: this.#nowMs }
+        note = { id, guid: `note-${id}`, deckId: input.deckId, noteTypeKind: input.noteTypeKind, front, back, tags, version: 1, createdAtMs: this.#nowMs, updatedAtMs: this.#nowMs }
         this.#collection.notes.push(note)
       } else {
         note = this.#note(input.noteId)
         if (note.version !== input.expectedVersion) fail('VERSION_CONFLICT', { currentVersion: note.version })
-        Object.assign(note, { deckId: input.deckId, noteTypeKind: input.noteTypeKind, front, back, tags: [...input.tags], version: note.version + 1, updatedAtMs: this.#nowMs })
+        Object.assign(note, { deckId: input.deckId, noteTypeKind: input.noteTypeKind, front, back, tags, version: note.version + 1, updatedAtMs: this.#nowMs })
       }
-      const wanted = input.noteTypeKind === 'BasicAndReversed' ? [0, 1] : [0]
+
+      // Text edits keep schedules; a type change archives (never destroys) cards and restores them when switched back.
+      const wanted = new Set(template.templates.map((item) => item.ordinal))
       for (const ordinal of [0, 1]) {
-        const existing = this.#collection.cards.find((card) => card.noteId === note.id && card.ordinal === ordinal)
-        if (wanted.includes(ordinal)) {
-          if (existing) existing.deleted = false
-          else
+        const cards = this.#collection.cards.filter((card) => card.noteId === note.id && card.ordinal === ordinal)
+        const live = cards.find((card) => !card.deleted)
+        const archived = cards.find((card) => card.archived)
+        if (wanted.has(ordinal)) {
+          if (live) {
+            live.deckId = input.deckId
+          } else if (archived) {
+            Object.assign(archived, { deleted: false, archived: false, deckId: input.deckId, version: archived.version + 1 })
+          } else {
             this.#collection.cards.push({
               id: this.#nextId(), noteId: note.id, deckId: input.deckId, ordinal, state: 'New', queue: 'New', flag: 'none', dueAtMs: null,
-              intervalSeconds: 0, stability: null, difficulty: null, reps: 0, lapses: 0, version: 1, deleted: false,
+              intervalSeconds: 0, stability: null, difficulty: null, reps: 0, lapses: 0, version: 1, deleted: false, archived: false, position: this.#nextPosition(),
             })
-        } else if (existing) {
-          // Archived, not destroyed: history survives a type change.
-          existing.deleted = true
+          }
+        } else if (live) {
+          Object.assign(live, { deleted: true, archived: true, version: live.version + 1 })
         }
       }
+
       if (input.manualAssociation?.trim()) {
         this.#collection.associations.push({ id: this.#nextId(), noteId: note.id, text: input.manualAssociation.trim(), provenance: 'manual', favorite: false, status: 'ready' })
       }
+      let order = Math.max(-1, ...this.#tips(note.id).map((tip) => tip.order))
+      for (const text of tips) this.#collection.tips.push({ id: this.#nextId(), noteId: note.id, text, order: ++order })
+      this.#storeLinks(note, input.wordLinks)
       return this.#noteDetails(note)
+    })
+  }
+
+  #nextPosition(): number {
+    return Math.max(0, ...this.#collection.cards.map((card) => card.position ?? 0)) + 1
+  }
+
+  #validateLinks(front: string, links: WordLinkDraftDto[], allowed: boolean): void {
+    if (links.length > 0 && !allowed) fail('VALIDATION_FAILED', { field: 'wordLinks', reason: 'notSupported' })
+    const sorted = [...links].sort((a, b) => a.startIndex - b.startIndex)
+    let previousEnd = 0
+    for (const link of sorted) {
+      const inRange = Number.isInteger(link.startIndex) && Number.isInteger(link.endIndex) && link.startIndex >= previousEnd && link.endIndex > link.startIndex && link.endIndex <= front.length
+      if (!inRange || front.slice(link.startIndex, link.endIndex) !== link.surface.normalize('NFC')) {
+        fail('VALIDATION_FAILED', { field: 'wordLinks', reason: 'range', surface: link.surface })
+      }
+      if (link.wordNoteId !== null) this.#note(link.wordNoteId)
+      previousEnd = link.endIndex
+    }
+  }
+
+  /** `null` keeps stored links, dropping only those whose words the edit removed. */
+  #storeLinks(note: NoteRecord, drafts: WordLinkDraftDto[] | null): void {
+    const existing = this.#collection.wordLinks.filter((link) => link.sentenceNoteId === note.id)
+    const others = this.#collection.wordLinks.filter((link) => link.sentenceNoteId !== note.id)
+    if (drafts === null) {
+      this.#collection.wordLinks = [...others, ...existing.filter((link) => note.front.slice(link.startIndex, link.endIndex) === link.surface)]
+      return
+    }
+    const next = drafts.map((draft) => {
+      const kept = existing.find((link) => link.startIndex === draft.startIndex && link.endIndex === draft.endIndex && link.wordNoteId === draft.wordNoteId)
+      if (kept) return kept
+      const target = draft.wordNoteId === null ? null : this.#note(draft.wordNoteId)
+      return {
+        id: this.#nextId(), sentenceNoteId: note.id, surface: draft.surface.normalize('NFC'), startIndex: draft.startIndex, endIndex: draft.endIndex,
+        lemma: target?.front ?? null, resolution: target ? ('userOverridden' as const) : ('unresolved' as const), wordNoteId: target?.id ?? null, candidateNoteIds: [],
+      }
+    })
+    this.#collection.wordLinks = [...others, ...next]
+  }
+
+  deleteNote(input: DeleteNoteInput) {
+    return this.#mutate('deleteNote', input.operationId, ['notes', 'cards'], (): DeleteNoteResultDto => {
+      const note = this.#note(input.noteId)
+      if (note.version !== input.expectedVersion) fail('VERSION_CONFLICT', { currentVersion: note.version })
+      let deletedCards = 0
+      for (const card of this.#collection.cards.filter((candidate) => candidate.noteId === note.id)) {
+        if (!card.deleted) deletedCards += 1
+        Object.assign(card, { deleted: true, archived: false })
+      }
+      this.#collection.notes = this.#collection.notes.filter((candidate) => candidate.id !== note.id)
+      this.#collection.associations = this.#collection.associations.filter((item) => item.noteId !== note.id)
+      this.#collection.tips = this.#collection.tips.filter((item) => item.noteId !== note.id)
+      this.#collection.wordLinks = this.#collection.wordLinks.filter((link) => link.sentenceNoteId !== note.id)
+      // Sentences that pointed at this word keep the phrase, now without a target.
+      for (const link of this.#collection.wordLinks.filter((candidate) => candidate.wordNoteId === note.id)) {
+        Object.assign(link, { wordNoteId: null, resolution: 'unresolved' })
+      }
+      return { deletedCards }
+    })
+  }
+
+  updateNoteContent(input: UpdateNoteContentInput) {
+    return this.#mutate('updateNoteContent', input.operationId, ['notes'], (): NoteDetailsDto => {
+      const note = this.#note(input.noteId)
+      const change = input.change
+      const text = (value: string, max: number): string => {
+        const trimmed = value.normalize('NFC').trim()
+        if (!trimmed) fail('VALIDATION_FAILED', { field: 'text', reason: 'required' })
+        if (trimmed.length > max) fail('VALIDATION_FAILED', { field: 'text', reason: 'tooLong', max })
+        return trimmed
+      }
+      const tip = (tipId: Id) => this.#collection.tips.find((item) => item.id === tipId && item.noteId === note.id) ?? fail('NOT_FOUND', { entity: 'grammarTip', id: tipId })
+      const association = (associationId: Id) =>
+        this.#collection.associations.find((item) => item.id === associationId && item.noteId === note.id) ?? fail('NOT_FOUND', { entity: 'association', id: associationId })
+      const renumber = (ids: Id[]) => ids.forEach((id, order) => (tip(id).order = order))
+      switch (change.type) {
+        case 'addTip':
+          this.#collection.tips.push({ id: this.#nextId(), noteId: note.id, text: text(change.text, MAX_TIP_LENGTH), order: this.#tips(note.id).length })
+          break
+        case 'editTip':
+          tip(change.tipId).text = text(change.text, MAX_TIP_LENGTH)
+          break
+        case 'deleteTip':
+          tip(change.tipId)
+          this.#collection.tips = this.#collection.tips.filter((item) => item.id !== change.tipId)
+          renumber(this.#tips(note.id).map((item) => item.id))
+          break
+        case 'reorderTips': {
+          const current = this.#tips(note.id).map((item) => item.id)
+          const same = change.tipIds.length === current.length && new Set(change.tipIds).size === current.length && change.tipIds.every((id) => current.includes(id))
+          if (!same) fail('VALIDATION_FAILED', { field: 'tipIds', reason: 'mismatch' })
+          renumber(change.tipIds)
+          break
+        }
+        case 'addAssociation':
+          this.#collection.associations.push({ id: this.#nextId(), noteId: note.id, text: text(change.text, MAX_TIP_LENGTH), provenance: 'manual', favorite: false, status: 'ready' })
+          break
+        case 'editAssociation': {
+          const target = association(change.associationId)
+          if (target.provenance !== 'manual') fail('VALIDATION_FAILED', { field: 'associationId', reason: 'notEditable' })
+          target.text = text(change.text, MAX_TIP_LENGTH)
+          break
+        }
+        case 'deleteAssociation':
+          association(change.associationId)
+          this.#collection.associations = this.#collection.associations.filter((item) => item.id !== change.associationId)
+          break
+        case 'unlinkWord': {
+          const exists = this.#collection.wordLinks.some((link) => link.id === change.linkId && link.sentenceNoteId === note.id)
+          if (!exists) fail('NOT_FOUND', { entity: 'wordLink', id: change.linkId })
+          this.#collection.wordLinks = this.#collection.wordLinks.filter((link) => link.id !== change.linkId)
+          break
+        }
+      }
+      // Tips, associations and links are separate entities: an open editor draft of the note stays valid.
+      note.updatedAtMs = this.#nowMs
+      return this.#noteDetails(note)
+    })
+  }
+
+  searchWords(input: SearchWordsInput) {
+    return this.#query('searchWords', (): WordMatchDto[] => {
+      if (!Number.isInteger(input.limit) || input.limit < 1 || input.limit > 50) fail('VALIDATION_FAILED', { field: 'limit' })
+      const text = input.text.normalize('NFC').trim()
+      if (!text) return []
+      const key = wordKey(text)
+      const bare = (front: string) => front.replace(/\s*\([^)]*\)\s*$/u, '').replace(ARTICLES, '')
+      return this.#collection.notes
+        .flatMap((note): WordMatchDto[] => {
+          const deck = this.#collection.decks.find((candidate) => candidate.id === note.deckId)
+          if (!deck || note.noteTypeKind === 'Sentence' || deck.targetLanguage !== input.targetLanguage) return []
+          const exact = note.front === text || bare(note.front) === text
+          if (!exact && wordKey(note.front) !== key) return []
+          return [{ noteId: note.id, lemma: note.front, translation: note.back, deckName: deck.name, match: exact ? 'exact' : 'normalized' }]
+        })
+        .sort((a, b) => Number(a.match === 'normalized') - Number(b.match === 'normalized') || a.lemma.localeCompare(b.lemma, 'pl'))
+        .slice(0, input.limit)
     })
   }
 
@@ -1181,7 +1442,8 @@ export class MockAppApi implements AppApi {
       const offset = input.cursor === null ? 0 : Number.parseInt(input.cursor, 10)
       if (!Number.isFinite(offset) || offset < 0) fail('VALIDATION_FAILED', { field: 'cursor' })
       const filter = parseSearch(input.query)
-      const filterVersion = `${this.#revision}:${JSON.stringify([input.query, input.deckId, input.states, input.flags, input.sort, input.direction])}`
+      const tagFilter = input.tag ? normalizeText(input.tag) : null
+      const filterVersion = `${this.#revision}:${JSON.stringify([input.query, input.deckId, input.tag, input.states, input.flags, input.sort, input.direction])}`
 
       if (this.#scenario === 'large') {
         const matches: number[] = []
@@ -1189,6 +1451,7 @@ export class MockAppApi implements AppApi {
           const row = largeRow(index)
           if (filter.text && !normalizeText(`${row.front} ${row.back}`).includes(filter.text)) continue
           if (input.states.length > 0 && !input.states.includes(row.state)) continue
+          if (tagFilter || filter.tag || (input.flags.length > 0 && !input.flags.includes('none'))) continue
           matches.push(index)
         }
         if (input.direction === 'desc') matches.reverse()
@@ -1197,7 +1460,8 @@ export class MockAppApi implements AppApi {
           return {
             cardId: String(1_000_000 + index), noteId: String(2_000_000 + index), deckId: '1', deckName: 'Niemiecki — słówka A1',
             front: row.front, back: row.back, state: row.state, queue: this.#queueFor(row.state), flag: 'none',
-            dueAt: row.state === 'New' ? null : iso(this.#nowMs + row.dueOffsetDays * DAY_MS), tags: [],
+            dueAt: row.state === 'New' ? null : iso(this.#nowMs + row.dueOffsetDays * DAY_MS),
+            position: row.state === 'New' ? index + 1 : null, direction: 'forward', tags: [],
           }
         })
         this.#filterSnapshots.set(filterVersion, matches.map((index) => String(1_000_000 + index)))
@@ -1215,6 +1479,7 @@ export class MockAppApi implements AppApi {
           if (deckIds && !deckIds.has(card.deckId)) return []
           if (filter.deck && !normalizeText(deck.name).startsWith(filter.deck)) return []
           if (filter.tag && !note.tags.some((tag) => normalizeText(tag) === filter.tag)) return []
+          if (tagFilter && !note.tags.some((tag) => normalizeText(tag) === tagFilter)) return []
           if (filter.text && !normalizeText(`${note.front} ${note.back}`).includes(filter.text)) return []
           if (filter.is === 'new' && card.state !== 'New') return []
           if (filter.is === 'due' && (card.state === 'New' || (card.dueAtMs ?? Infinity) > dayEnd)) return []
@@ -1226,14 +1491,16 @@ export class MockAppApi implements AppApi {
             cardId: card.id, noteId: note.id, deckId: deck.id, deckName: deck.name,
             front: reverse ? note.back : note.front, back: reverse ? note.front : note.back,
             state: card.state, queue: card.queue, flag: card.flag,
-            dueAt: card.dueAtMs === null ? null : iso(card.dueAtMs), tags: [...note.tags],
+            dueAt: card.dueAtMs === null ? null : iso(card.dueAtMs),
+            position: card.state === 'New' ? card.position : null, direction: reverse ? 'reverse' : 'forward', tags: [...note.tags],
           }]
         })
       const cardById = new Map(this.#collection.cards.map((card) => [card.id, card]))
       const key = (row: CardRowDto): string | number => {
         const card = cardById.get(row.cardId)
         switch (input.sort) {
-          case 'due': return card?.dueAtMs ?? Number.MAX_SAFE_INTEGER
+          // New cards follow their queue position after every scheduled card.
+          case 'due': return card?.dueAtMs ?? Number.MAX_SAFE_INTEGER / 2 + (card?.position ?? 0)
           case 'created': return Number(row.noteId)
           case 'front': return normalizeText(row.front)
           case 'deck': return normalizeText(row.deckName)
@@ -1255,39 +1522,85 @@ export class MockAppApi implements AppApi {
     })
   }
 
-  applyBulkAction(input: BulkActionInput) {
-    return this.#mutate('applyBulkAction', input.operationId, ['cards'], (): BulkResultDto => {
-      let ids: string[]
-      if (input.selection.kind === 'ids') {
-        ids = input.selection.cardIds
-      } else {
-        const snapshot = this.#filterSnapshots.get(input.selection.filterVersion)
-        if (!snapshot || !input.selection.filterVersion.startsWith(`${this.#revision}:`)) fail('PREVIEW_STALE')
-        const excluded = new Set(input.selection.excludedCardIds)
-        ids = (snapshot ?? []).filter((id) => !excluded.has(id))
+  #selectionIds(selection: BulkSelection): string[] {
+    if (selection.kind === 'ids') return [...new Set(selection.cardIds)]
+    const snapshot = this.#filterSnapshots.get(selection.filterVersion)
+    if (!snapshot || !selection.filterVersion.startsWith(`${this.#revision}:`)) fail('PREVIEW_STALE')
+    const excluded = new Set(selection.excludedCardIds)
+    return (snapshot ?? []).filter((id) => !excluded.has(id))
+  }
+
+  #validateBulkAction(action: BulkAction): void {
+    if ((action.type === 'addTag' || action.type === 'removeTag') && (!action.tag.trim() || /\s/u.test(action.tag.trim()))) fail('VALIDATION_FAILED', { field: 'tag' })
+    if (action.type === 'changeDeck') this.#deck(action.deckId)
+    if (action.type === 'reposition' && (!Number.isInteger(action.start) || action.start < 1 || !Number.isInteger(action.step) || action.step < 1)) {
+      fail('VALIDATION_FAILED', { field: action.start < 1 || !Number.isInteger(action.start) ? 'start' : 'step' })
+    }
+  }
+
+  /** Whether the action would change this card; unchanged cards are counted, not touched. */
+  #bulkChanges(card: CardRecord, action: BulkAction): boolean {
+    const note = this.#collection.notes.find((candidate) => candidate.id === card.noteId)
+    const tag = 'tag' in action ? action.tag.trim() : ''
+    switch (action.type) {
+      case 'suspend': return card.queue !== 'Suspended'
+      case 'unsuspend': return card.queue === 'Suspended'
+      case 'flag': return card.flag !== action.flag
+      case 'changeDeck': return card.deckId !== action.deckId
+      case 'addTag': return note !== undefined && !note.tags.includes(tag)
+      case 'removeTag': return note !== undefined && note.tags.includes(tag)
+      case 'reposition': return card.state === 'New'
+      case 'delete': return true
+    }
+  }
+
+  previewBulkAction(input: BulkPreviewInput) {
+    return this.#query('previewBulkAction', (): BulkPreviewDto => {
+      this.#validateBulkAction(input.action)
+      const ids = this.#selectionIds(input.selection)
+      if (this.#scenario === 'large') {
+        const affected = input.action.type === 'reposition' ? ids.filter((id) => (Number(id) - 1_000_000) % 4 === 0).length : ids.length
+        return { selected: ids.length, affected, unchanged: ids.length - affected, notes: affected, decks: affected > 0 ? 1 : 0 }
       }
+      const cards = ids.flatMap((id) => this.#collection.cards.filter((card) => card.id === id && !card.deleted))
+      const changed = cards.filter((card) => this.#bulkChanges(card, input.action))
+      return {
+        selected: cards.length,
+        affected: changed.length,
+        unchanged: cards.length - changed.length,
+        notes: new Set(changed.map((card) => card.noteId)).size,
+        decks: new Set(changed.map((card) => card.deckId)).size,
+      }
+    })
+  }
+
+  applyBulkAction(input: BulkActionInput) {
+    return this.#mutate('applyBulkAction', input.operationId, ['cards', 'notes'], (): BulkResultDto => {
+      this.#validateBulkAction(input.action)
+      const ids = this.#selectionIds(input.selection)
       if (this.#scenario === 'large') return { affected: ids.length }
-      let affected = 0
-      for (const id of ids) {
-        const card = this.#collection.cards.find((candidate) => candidate.id === id && !candidate.deleted)
-        if (!card) continue
-        const action = input.action
+      const action = input.action
+      const changed = ids
+        .flatMap((id) => this.#collection.cards.filter((card) => card.id === id && !card.deleted))
+        .filter((card) => this.#bulkChanges(card, action))
+      // Reposition keeps the cards' current relative order.
+      if (action.type === 'reposition') changed.sort((a, b) => (a.position ?? 0) - (b.position ?? 0) || Number(a.id) - Number(b.id))
+      changed.forEach((card, index) => {
+        const note = this.#collection.notes.find((candidate) => candidate.id === card.noteId)
         switch (action.type) {
           case 'suspend': card.queue = 'Suspended'; break
           case 'unsuspend': card.queue = this.#queueFor(card.state); break
           case 'flag': card.flag = action.flag; break
-          case 'changeDeck': this.#deck(action.deckId); card.deckId = action.deckId; break
-          case 'addTag': {
-            const note = this.#collection.notes.find((candidate) => candidate.id === card.noteId)
-            if (note && !note.tags.includes(action.tag)) note.tags.push(action.tag)
-            break
-          }
-          case 'delete': card.deleted = true; break
+          case 'changeDeck': card.deckId = action.deckId; break
+          // Both cards of a reversed note share its tags.
+          case 'addTag': if (note && !note.tags.includes(action.tag.trim())) note.tags.push(action.tag.trim()); break
+          case 'removeTag': if (note) note.tags = note.tags.filter((tag) => tag !== action.tag.trim()); break
+          case 'reposition': card.position = action.start + index * action.step; break
+          case 'delete': Object.assign(card, { deleted: true, archived: false }); break
         }
         card.version += 1
-        affected += 1
-      }
-      return { affected }
+      })
+      return { affected: changed.length }
     })
   }
 
@@ -1496,6 +1809,26 @@ export class MockAppApi implements AppApi {
   onCollectionChanged(listener: (event: CollectionChangedEventDto) => void): Unsubscribe {
     this.#collectionListeners.add(listener)
     return () => this.#collectionListeners.delete(listener)
+  }
+}
+
+/** Range checks the Rust use case repeats in Phase 11; the editor validates the same limits for UX. */
+export function validatePresetConfig(config: PresetConfigDto): void {
+  const integer = (field: string, value: number, min: number, max: number) => {
+    if (!Number.isInteger(value) || value < min || value > max) fail('VALIDATION_FAILED', { field, min, max })
+  }
+  integer('newPerDay', config.newPerDay, 0, 9999)
+  integer('reviewsPerDay', config.reviewsPerDay, 0, 99_999)
+  integer('maxIntervalDays', config.maxIntervalDays, 1, 36_500)
+  if (!Number.isFinite(config.desiredRetention) || config.desiredRetention < 0.7 || config.desiredRetention > 0.99) {
+    fail('VALIDATION_FAILED', { field: 'desiredRetention', min: 0.7, max: 0.99 })
+  }
+  for (const field of ['learningStepsMinutes', 'relearningStepsMinutes'] as const) {
+    const steps = config[field]
+    if (steps.length > 10 || steps.some((step) => !Number.isFinite(step) || step <= 0 || step > 43_200)) fail('VALIDATION_FAILED', { field })
+  }
+  if (config.weights.length !== FSRS_WEIGHT_COUNT || config.weights.some((weight) => !Number.isFinite(weight) || weight < 0 || weight > 100)) {
+    fail('VALIDATION_FAILED', { field: 'weights', count: FSRS_WEIGHT_COUNT })
   }
 }
 
