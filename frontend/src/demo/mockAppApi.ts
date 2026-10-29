@@ -254,6 +254,8 @@ export class MockAppApi implements AppApi {
   #sessions = new Map<string, SessionRecord>()
   #operations = new Map<string, unknown>()
   #failures = new Map<AppApiOperation, ErrorCode>()
+  /** Fails whichever mutation runs next (demo banner); `#failures` targets one operation. */
+  #failNextSave: ErrorCode | null = null
   #jobs = new Map<string, JobDto>()
   #jobTimers = new Map<string, ReturnType<typeof setTimeout>>()
   #jobListeners = new Set<(event: JobEventDto) => void>()
@@ -303,6 +305,7 @@ export class MockAppApi implements AppApi {
     this.#sessions.clear()
     this.#operations.clear()
     this.#failures.clear()
+    this.#failNextSave = null
     this.#jobs.clear()
     this.#filterSnapshots.clear()
     this.#revision = 0
@@ -414,6 +417,10 @@ export class MockAppApi implements AppApi {
     this.#failures.set(operation, code)
   }
 
+  failNextSave(code: ErrorCode): void {
+    this.#failNextSave = code
+  }
+
   dispose(): void {
     for (const timer of this.#jobTimers.values()) clearTimeout(timer)
     this.#jobTimers.clear()
@@ -430,6 +437,11 @@ export class MockAppApi implements AppApi {
   async #mutate<T>(operation: AppApiOperation, operationId: string, scopes: CollectionScope[], run: () => T): Promise<T> {
     await this.#gate(operation)
     if (!operationId) fail('VALIDATION_FAILED', { field: 'operationId' })
+    const injected = this.#failNextSave
+    if (injected) {
+      this.#failNextSave = null
+      fail(injected)
+    }
     const key = `${operation}:${operationId}`
     if (this.#operations.has(key)) return clone(this.#operations.get(key) as T)
     const result = run()

@@ -7,18 +7,17 @@
     title: string
     /** Shows a back button; hardware/browser back works regardless. */
     back?: boolean
-    /** Plan phase that replaces this placeholder with the complete screen. */
-    phase?: number
-    /** Complete screen on demo data: says it is a prototype, not production learning (Phases 3–6). */
+    /** Complete screen on demo data: says it is a prototype, not production learning. Demo profile only. */
     prototype?: boolean
-    /** Screen-specific prototype notice (e.g. demo drafts), shown instead of the learning one. */
+    /** Screen-specific prototype notice (e.g. demo drafts), shown instead of the learning one. Demo profile only. */
     notice?: string
     actions?: Snippet
     children: Snippet
   }
 
-  let { title, back = false, phase, prototype = false, notice, actions, children }: Props = $props()
-  const { i18n, router } = useServices()
+  let { title, back = false, prototype = false, notice, actions, children }: Props = $props()
+  // The notices describe the mock; with the production adapter (`demo === null`) the same screen shows none.
+  const { demo, i18n, router } = useServices()
 </script>
 
 <svelte:head>
@@ -35,12 +34,10 @@
     <h1 tabindex="-1" data-screen-heading>{title}</h1>
     {#if actions}<div class="row actions">{@render actions()}</div>{/if}
   </header>
-  {#if phase !== undefined}
-    <p class="placeholder row"><Icon name="info" />{i18n.t('common.phasePlaceholder', { phase })}</p>
-  {:else if notice}
-    <p class="placeholder row"><Icon name="info" />{notice}</p>
-  {:else if prototype}
-    <p class="placeholder row"><Icon name="info" />{i18n.t('common.prototype')}</p>
+  {#if demo && notice}
+    <p class="notice row"><Icon name="info" />{notice}</p>
+  {:else if demo && prototype}
+    <p class="notice row"><Icon name="info" />{i18n.t('common.prototype')}</p>
   {/if}
   <div class="stack">{@render children()}</div>
 </div>
@@ -63,7 +60,7 @@
     min-width: 0;
   }
 
-  .placeholder {
+  .notice {
     padding: var(--space-2) var(--space-3);
     border: 1px dashed var(--color-border-strong);
     border-radius: var(--radius-md);

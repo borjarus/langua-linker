@@ -215,7 +215,8 @@ describe('privacy, reset and about', () => {
 
   it('about lists versions and a redacted diagnostic log', async () => {
     const { calls, stop, user } = await open('#/settings/about')
-    expect(await screen.findByText('none (demo memory)')).toBeInTheDocument()
+    expect(await screen.findByText('Database schema')).toBeInTheDocument()
+    expect(screen.getByText('Database schema').nextElementSibling).toHaveTextContent(/^none$/)
     expect(screen.getByText('FSRS-6')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Show diagnostic log' }))
     expect(await screen.findByText('3 values were hidden before the log left the app core.')).toBeInTheDocument()

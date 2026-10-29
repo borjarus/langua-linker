@@ -233,7 +233,7 @@ Every phase:
 - [ ] Ships a schema change with a migration, fixture test, and recovery plan.
 - [ ] Keeps secrets, card content, and prompts out of unredacted logs/telemetry.
 - [ ] Updates ADRs, documentation, and the UI→backend matrix.
-- [ ] Records a demonstration and limitations; from Phase 1, performs smoke tests on the Android emulator and iOS simulator; physical Android and iOS devices are required from the Phase 6 gate onward (owner decision 2026-10-12).
+- [ ] Records a demonstration and limitations; from Phase 1, performs smoke tests on the Android emulator and iOS simulator; physical Android devices are required from the Phase 6 gate onward (owner decision 2026-10-12); iOS stays on the simulator until a physical iPhone is available (owner decision 2026-10-29).
 
 In Phases 2–6, functional tests may use mocks, but mobile smoke tests use the real shell/WebView. A browser test does not close the DoD for a native application.
 
@@ -307,7 +307,7 @@ After Phase 6, all screens exist as accepted GUI. After Phase 10, the first real
 ### Step 2 — native proof of capability
 
 7. Implement `get_app_info` and a test event; validate DTOs/errors. This is infrastructure, not business logic.
-8. `[SPIKE]` SecretStore: save/read/delete a test secret on the Android emulator and iOS simulator (physical devices at the Phase 6 gate, owner decision 2026-10-12); create a custom plugin if the wrapper does not meet requirements.
+8. `[SPIKE]` SecretStore: save/read/delete a test secret on the Android emulator and iOS simulator (physical Android device at the Phase 6 gate, owner decisions 2026-10-12 and 2026-10-29; physical iPhone when available); create a custom plugin if the wrapper does not meet requirements.
 9. `[SPIKE]` Notification permission/send/schedule/tap, TTS, file selection/save/share — separate result per target.
 10. `[SPIKE]` WebView: Svelte component, keyboard resize, safe areas, focus, CSS, orientation, and 200% text scale.
 11. Configure CSP and minimal capabilities; no remote page is a privileged GUI.
@@ -513,19 +513,21 @@ After Phase 6, all screens exist as accepted GUI. After Phase 10, the first real
 4. Freeze contract v1 with versioning, not a ban on change; complete DTOs for screens.
 5. Dual-adapter contract tests: mock and future real adapter, fake repository mappings in Rust.
 6. Approve the per-screen integration checklist; no silent mock fallback.
-7. Physical TalkBack/VoiceOver/WebView/orientation/keyboard-resize review — first run on physical Android and iOS devices (deferred here from Phase 1); emulator results do not close this step.
+7. Physical TalkBack/VoiceOver/WebView/orientation/keyboard-resize review — first run on a physical Android device (deferred here from Phase 1); Android emulator results do not close this step. iOS: the iOS simulator run counts for this gate, because no iPhone is available for testing (owner decision 2026-10-29); the physical iPhone run is carried over until one is available.
 8. Screenshot baseline/demo of the entire application. GUI milestone ≠ working domain.
 9. svelte-check/lint/reactivity cleanup green; no remaining React-specific dependencies in the active frontend.
 
 ### DoD — condition to start Phase 7
 
-- [ ] All screens/critical flows are complete on mocks.
-- [ ] No blocking UX/accessibility issues; owner acceptance recorded.
-- [ ] Contracts/matrix/adapter tests are current and framework-independent.
-- [ ] Native integrations are feasible based on spikes.
-- [ ] Adapter replacement does not require rewriting Svelte components.
+- [x] All screens/critical flows are complete on mocks.
+- [ ] No blocking UX/accessibility issues; owner acceptance recorded. *(Product-owner review (step 2) and the physical Android run plus the iOS simulator run (step 7) are pending; protocol and backlog in [docs/release/phase6-gate.md](release/phase6-gate.md).)*
+- [x] Contracts/matrix/adapter tests are current and framework-independent.
+- [x] Native integrations are feasible based on spikes. *(ADR-07 and ADR-12 on emulator and simulator; physical Android confirmation is part of step 7; physical iOS is carried over.)*
+- [x] Adapter replacement does not require rewriting Svelte components.
 
 Before this gate, do not implement production FSRS/CRUD/LLM. Spikes, IPC transport, DTOs, and content editing are acceptable; business-domain expansion is not.
+
+> **Status 2026-10-26 — gate open.** Automated part done, contract **v1.0** ([docs/contracts/README.md](contracts/README.md#changes-in-v10-phase-6)). Step 1: prototype notices render only with demo services, so the same screens show none on the production adapter; the unused phase placeholder and two mock-specific strings removed; [tests/guiAudit.test.ts](../frontend/tests/guiAudit.test.ts) checks that every production route has a UI entry point. Step 3: [e2e/acceptance.spec.ts](../frontend/e2e/acceptance.spec.ts) — new user, 50 000-card browser, nothing due, offline, save error (new demo-banner control "Fail the next save"), ambiguous word, reset, restore — 16/16 in Chromium and WebKit with the layout check. Steps 4–5: v1 frozen in [crates/contracts/v1](../crates/contracts/v1) (catalogue and 70 recorded calls covering every callable operation, error payloads and both events) with `MAJOR.MINOR` versioning rules; [tests/contractV1.test.ts](../frontend/tests/contractV1.test.ts) replays the same samples on `MockAppApi` and on `TauriAppApi` over a frozen-payload backend, [crates/contracts/tests/contract_v1.rs](../crates/contracts/tests/contract_v1.rs) checks the same files from Rust, and `src-tauri` checks the real `get_app_info`. Step 6: [integration checklist](contracts/integration-checklist.md) (every v1 command registered in Phase 7, unimplemented ones answer `NOT_IMPLEMENTED`, never demo data) and [tests/adapterSwap.test.ts](../frontend/tests/adapterSwap.test.ts) (all screens through the production adapter, no demo services, no component change). Step 8: [e2e/tour.spec.ts](../frontend/e2e/tour.spec.ts) — every screen plus study → summary, PL, light/dark, 360 px; pixels deterministic locally, Linux baselines still to be generated with the `E2E baselines` workflow and committed. Step 9: svelte-check 0/0, ESLint, i18n lint, 293 Vitest tests, release/beta bundles free of demo code, Rust contract and shell tests green. Open: owner review with the prioritized backlog (step 2), physical Android TalkBack/keyboard/orientation run and iOS simulator VoiceOver run (step 7; owner decision 2026-10-29: no physical iPhone for now), committed baselines (step 8).
 
 ---
 

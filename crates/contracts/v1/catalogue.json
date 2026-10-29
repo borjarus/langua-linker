@@ -1,0 +1,628 @@
+{
+  "apiVersion": "1.0",
+  "errorCodes": [
+    "VALIDATION_FAILED",
+    "VERSION_CONFLICT",
+    "NOT_FOUND",
+    "DELETED",
+    "DB_BUSY",
+    "STORAGE_FULL",
+    "PERMISSION_DENIED",
+    "NETWORK_UNAVAILABLE",
+    "PROVIDER_ERROR",
+    "PROVIDER_TIMEOUT",
+    "INVALID_PROVIDER_OUTPUT",
+    "MODERATION_BLOCKED",
+    "QUOTA_EXCEEDED",
+    "UNSUPPORTED_FORMAT",
+    "BACKUP_CORRUPT",
+    "SCHEMA_TOO_NEW",
+    "PREVIEW_STALE",
+    "CANCELLED",
+    "NOT_IMPLEMENTED",
+    "INTERNAL"
+  ],
+  "operations": {
+    "getAppInfo": {
+      "kind": "query",
+      "command": "get_app_info",
+      "errors": [],
+      "emits": [],
+      "permission": "none"
+    },
+    "getAttributions": {
+      "kind": "query",
+      "command": "get_attributions",
+      "errors": [],
+      "emits": [],
+      "permission": "none"
+    },
+    "getAboutInfo": {
+      "kind": "query",
+      "command": "get_about_info",
+      "errors": [],
+      "emits": [],
+      "permission": "none"
+    },
+    "getDiagnosticsReport": {
+      "kind": "query",
+      "command": "get_diagnostics_report",
+      "errors": [],
+      "emits": [],
+      "permission": "none"
+    },
+    "getDashboard": {
+      "kind": "query",
+      "command": "get_dashboard",
+      "errors": [
+        "DB_BUSY"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "getDeck": {
+      "kind": "query",
+      "command": "get_deck",
+      "errors": [
+        "NOT_FOUND",
+        "DELETED",
+        "DB_BUSY"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "createDeck": {
+      "kind": "mutation",
+      "command": "create_deck",
+      "errors": [
+        "VALIDATION_FAILED",
+        "DB_BUSY",
+        "STORAGE_FULL"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "updateDeck": {
+      "kind": "mutation",
+      "command": "update_deck",
+      "errors": [
+        "VALIDATION_FAILED",
+        "VERSION_CONFLICT",
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "deleteDeck": {
+      "kind": "mutation",
+      "command": "delete_deck",
+      "errors": [
+        "VERSION_CONFLICT",
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "listPresets": {
+      "kind": "query",
+      "command": "list_presets",
+      "errors": [
+        "DB_BUSY"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "savePreset": {
+      "kind": "mutation",
+      "command": "save_preset",
+      "errors": [
+        "VALIDATION_FAILED",
+        "VERSION_CONFLICT",
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "startStudy": {
+      "kind": "mutation",
+      "command": "start_study",
+      "errors": [
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "resumeStudy": {
+      "kind": "query",
+      "command": "resume_study",
+      "errors": [
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "updateStudySession": {
+      "kind": "mutation",
+      "command": "update_study_session",
+      "errors": [
+        "VALIDATION_FAILED",
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "getRatingPreview": {
+      "kind": "query",
+      "command": "get_rating_preview",
+      "errors": [
+        "NOT_FOUND",
+        "VERSION_CONFLICT"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "rateCard": {
+      "kind": "mutation",
+      "command": "rate_card",
+      "errors": [
+        "PREVIEW_STALE",
+        "VERSION_CONFLICT",
+        "NOT_FOUND",
+        "DB_BUSY",
+        "STORAGE_FULL"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "undoReview": {
+      "kind": "mutation",
+      "command": "undo_review",
+      "errors": [
+        "VERSION_CONFLICT",
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "applyCardAction": {
+      "kind": "mutation",
+      "command": "apply_card_action",
+      "errors": [
+        "VERSION_CONFLICT",
+        "NOT_FOUND",
+        "DELETED",
+        "DB_BUSY"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "getSessionSummary": {
+      "kind": "query",
+      "command": "get_session_summary",
+      "errors": [
+        "NOT_FOUND"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "getNoteDetails": {
+      "kind": "query",
+      "command": "get_note_details",
+      "errors": [
+        "NOT_FOUND",
+        "DELETED"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "getNoteContent": {
+      "kind": "query",
+      "command": "get_note_content",
+      "errors": [
+        "NOT_FOUND",
+        "DELETED"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "getEditorData": {
+      "kind": "query",
+      "command": "get_editor_data",
+      "errors": [
+        "DB_BUSY"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "checkDuplicate": {
+      "kind": "query",
+      "command": "check_duplicate",
+      "errors": [
+        "VALIDATION_FAILED"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "saveNote": {
+      "kind": "mutation",
+      "command": "save_note",
+      "errors": [
+        "VALIDATION_FAILED",
+        "VERSION_CONFLICT",
+        "NOT_FOUND",
+        "DB_BUSY",
+        "STORAGE_FULL"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "deleteNote": {
+      "kind": "mutation",
+      "command": "delete_note",
+      "errors": [
+        "VERSION_CONFLICT",
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "updateNoteContent": {
+      "kind": "mutation",
+      "command": "update_note_content",
+      "errors": [
+        "VALIDATION_FAILED",
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "setFavoriteAssociation": {
+      "kind": "mutation",
+      "command": "set_favorite_association",
+      "errors": [
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "resolveWordLink": {
+      "kind": "mutation",
+      "command": "resolve_word_link",
+      "errors": [
+        "VALIDATION_FAILED",
+        "NOT_FOUND"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "searchWords": {
+      "kind": "query",
+      "command": "search_words",
+      "errors": [
+        "VALIDATION_FAILED"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "generateAssociation": {
+      "kind": "job",
+      "command": "generate_association",
+      "errors": [
+        "NETWORK_UNAVAILABLE",
+        "PROVIDER_ERROR",
+        "PROVIDER_TIMEOUT",
+        "INVALID_PROVIDER_OUTPUT",
+        "MODERATION_BLOCKED",
+        "QUOTA_EXCEEDED",
+        "PERMISSION_DENIED"
+      ],
+      "emits": [
+        "job_progress",
+        "collection_changed"
+      ],
+      "permission": "network"
+    },
+    "searchCards": {
+      "kind": "query",
+      "command": "search_cards",
+      "errors": [
+        "VALIDATION_FAILED",
+        "DB_BUSY"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "previewBulkAction": {
+      "kind": "query",
+      "command": "preview_bulk_action",
+      "errors": [
+        "VALIDATION_FAILED",
+        "PREVIEW_STALE",
+        "DB_BUSY"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "applyBulkAction": {
+      "kind": "mutation",
+      "command": "apply_bulk_action",
+      "errors": [
+        "VALIDATION_FAILED",
+        "PREVIEW_STALE",
+        "DB_BUSY"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "getStats": {
+      "kind": "query",
+      "command": "get_stats",
+      "errors": [
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "getSettings": {
+      "kind": "query",
+      "command": "get_settings",
+      "errors": [],
+      "emits": [],
+      "permission": "none"
+    },
+    "updateSettings": {
+      "kind": "mutation",
+      "command": "update_settings",
+      "errors": [
+        "VALIDATION_FAILED",
+        "VERSION_CONFLICT"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "setAiApiKey": {
+      "kind": "mutation",
+      "command": "set_ai_api_key",
+      "errors": [
+        "VALIDATION_FAILED",
+        "PERMISSION_DENIED"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "secret"
+    },
+    "requestNotificationPermission": {
+      "kind": "mutation",
+      "command": "request_notification_permission",
+      "errors": [],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "notifications"
+    },
+    "getOnboardingState": {
+      "kind": "query",
+      "command": "get_onboarding_state",
+      "errors": [],
+      "emits": [],
+      "permission": "none"
+    },
+    "completeOnboarding": {
+      "kind": "job",
+      "command": "complete_onboarding",
+      "errors": [
+        "VALIDATION_FAILED",
+        "STORAGE_FULL"
+      ],
+      "emits": [
+        "job_progress",
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "previewReset": {
+      "kind": "query",
+      "command": "preview_reset",
+      "errors": [
+        "DB_BUSY"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "resetCollection": {
+      "kind": "job",
+      "command": "reset_collection",
+      "errors": [
+        "PREVIEW_STALE",
+        "VALIDATION_FAILED",
+        "DB_BUSY"
+      ],
+      "emits": [
+        "job_progress",
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "pickFile": {
+      "kind": "query",
+      "command": "pick_file",
+      "errors": [
+        "PERMISSION_DENIED",
+        "CANCELLED"
+      ],
+      "emits": [],
+      "permission": "file"
+    },
+    "previewImport": {
+      "kind": "query",
+      "command": "preview_import",
+      "errors": [
+        "UNSUPPORTED_FORMAT",
+        "VALIDATION_FAILED",
+        "NOT_FOUND"
+      ],
+      "emits": [],
+      "permission": "file"
+    },
+    "commitImport": {
+      "kind": "job",
+      "command": "commit_import",
+      "errors": [
+        "PREVIEW_STALE",
+        "STORAGE_FULL",
+        "CANCELLED"
+      ],
+      "emits": [
+        "job_progress",
+        "collection_changed"
+      ],
+      "permission": "file"
+    },
+    "exportDeck": {
+      "kind": "job",
+      "command": "export_deck",
+      "errors": [
+        "NOT_FOUND",
+        "STORAGE_FULL",
+        "CANCELLED"
+      ],
+      "emits": [
+        "job_progress"
+      ],
+      "permission": "file"
+    },
+    "shareFile": {
+      "kind": "mutation",
+      "command": "share_file",
+      "errors": [
+        "NOT_FOUND",
+        "PERMISSION_DENIED"
+      ],
+      "emits": [],
+      "permission": "file"
+    },
+    "listBackups": {
+      "kind": "query",
+      "command": "list_backups",
+      "errors": [
+        "PERMISSION_DENIED"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "createBackup": {
+      "kind": "job",
+      "command": "create_backup",
+      "errors": [
+        "STORAGE_FULL",
+        "PERMISSION_DENIED",
+        "CANCELLED"
+      ],
+      "emits": [
+        "job_progress",
+        "collection_changed"
+      ],
+      "permission": "file"
+    },
+    "validateRestore": {
+      "kind": "query",
+      "command": "validate_restore",
+      "errors": [
+        "BACKUP_CORRUPT",
+        "SCHEMA_TOO_NEW",
+        "UNSUPPORTED_FORMAT",
+        "NOT_FOUND"
+      ],
+      "emits": [],
+      "permission": "file"
+    },
+    "restoreBackup": {
+      "kind": "job",
+      "command": "restore_backup",
+      "errors": [
+        "PREVIEW_STALE",
+        "BACKUP_CORRUPT",
+        "STORAGE_FULL"
+      ],
+      "emits": [
+        "job_progress",
+        "collection_changed"
+      ],
+      "permission": "file"
+    },
+    "getJobStatus": {
+      "kind": "query",
+      "command": "get_job_status",
+      "errors": [
+        "NOT_FOUND"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "cancelJob": {
+      "kind": "mutation",
+      "command": "cancel_job",
+      "errors": [
+        "NOT_FOUND"
+      ],
+      "emits": [
+        "job_progress"
+      ],
+      "permission": "none"
+    },
+    "onJobEvent": {
+      "kind": "subscription",
+      "command": "job_progress",
+      "errors": [],
+      "emits": [],
+      "permission": "none"
+    },
+    "onCollectionChanged": {
+      "kind": "subscription",
+      "command": "collection_changed",
+      "errors": [],
+      "emits": [],
+      "permission": "none"
+    }
+  }
+}

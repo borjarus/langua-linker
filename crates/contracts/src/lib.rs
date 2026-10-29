@@ -1,14 +1,15 @@
 //! IPC transport contract shared with `frontend/src/api/types.ts`.
 //! Until Phase 7 generates TypeScript from these types, both sides are kept aligned by tests.
+//! Contract v1 is frozen in `v1/catalogue.json` and `v1/samples.json` (see `tests/contract_v1.rs`).
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 /// Contract version; must equal `API_VERSION` in `frontend/src/api/types.ts`.
-pub const API_VERSION: &str = "0.5";
+pub const API_VERSION: &str = "1.0";
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AppInfoDto {
     pub api_version: String,
     pub app_name: String,
@@ -53,7 +54,7 @@ pub struct ProbeStepDto {
 }
 
 /// Error codes from plan §14.3; serialized as SCREAMING_SNAKE_CASE strings.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ErrorCode {
     ValidationFailed,
@@ -142,8 +143,8 @@ impl ErrorCode {
 }
 
 /// User-facing error: the UI translates `message_key`; raw SQL or stack traces never cross IPC.
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ErrorDto {
     pub code: ErrorCode,
     pub message_key: String,

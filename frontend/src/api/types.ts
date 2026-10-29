@@ -1,5 +1,5 @@
 /**
- * Transport contract v0.5 between the Svelte frontend and the Rust backend.
+ * Transport contract v1.0 between the Svelte frontend and the Rust backend.
  *
  * Rules (plan §4.1):
  * - SQLite i64 identifiers and GUIDs travel as strings (`Id`).
@@ -11,7 +11,7 @@
  * Rust becomes the DTO source in Phase 7 (generated into `src/generated/`).
  */
 
-export const API_VERSION = '0.5'
+export const API_VERSION = '1.0'
 
 export type Id = string
 export type IsoDateTime = string

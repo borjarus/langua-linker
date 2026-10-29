@@ -2,7 +2,7 @@
 
 Step-by-step instructions for a manual pass on the emulator. It closes the open DoD item of phase 5 ("Light/dark/200% and accessibility pass on devices") and can be repeated in later phases. Record results in [device-smoke.md](device-smoke.md) (rows 17–26).
 
-The emulator does not replace a device: the phase 6 gate requires a physical Android phone and an iPhone ([plan, phase 6](../Detailed-Implementation-Plan.md#phase-6--complete-gui-acceptance-gate)).
+The Android emulator does not replace a device: the phase 6 gate requires a physical Android phone — see [android-device-testing.md](android-device-testing.md). For iOS the simulator run (section 7) counts at the gate, because no iPhone is available for testing (owner decision 2026-10-29; [plan, phase 6](../Detailed-Implementation-Plan.md#phase-6--complete-gui-acceptance-gate)).
 
 ## 1. Setup (one-time)
 

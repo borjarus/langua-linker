@@ -76,4 +76,4 @@ The probes were run on the `com.mila.langualinker.dev` variant via `#/diagnostic
 - Registering the notification plugin adds `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED` and `WAKE_LOCK` to the Android manifest of every variant. Phase 15 needs them anyway; the store privacy declarations must list them.
 - File operations (import/export) will be driven through Rust commands using `tauri-plugin-dialog` and `tauri-plugin-fs`.
 - TTS and Share sheet will follow platform-specific paths: stock Web APIs on iOS/desktop, and native plugin/Intent bridges on Android.
-- Verification on physical devices remains a Phase 6 gate requirement.
+- Verification on a physical Android device remains a Phase 6 gate requirement; physical iOS verification waits for an iPhone (owner decision 2026-10-29).

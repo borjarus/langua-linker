@@ -1,0 +1,3708 @@
+{
+  "apiVersion": "1.0",
+  "calls": [
+    {
+      "operation": "getAppInfo",
+      "command": "get_app_info",
+      "args": [],
+      "output": {
+        "apiVersion": "1.0",
+        "appName": "LanguaLinker",
+        "appVersion": "0.1.0",
+        "mode": "demo"
+      }
+    },
+    {
+      "operation": "getAttributions",
+      "command": "get_attributions",
+      "args": [],
+      "output": [
+        {
+          "name": "Svelte",
+          "license": "MIT",
+          "url": "https://svelte.dev",
+          "scope": "dependency"
+        },
+        {
+          "name": "Tauri",
+          "license": "MIT OR Apache-2.0",
+          "url": "https://tauri.app",
+          "scope": "dependency"
+        },
+        {
+          "name": "i18next",
+          "license": "MIT",
+          "url": "https://www.i18next.com",
+          "scope": "dependency"
+        },
+        {
+          "name": "TanStack Virtual",
+          "license": "MIT",
+          "url": "https://tanstack.com/virtual",
+          "scope": "dependency"
+        },
+        {
+          "name": "Demo deck content",
+          "license": "Demo fixtures — not for release",
+          "url": null,
+          "scope": "content"
+        }
+      ]
+    },
+    {
+      "operation": "getAboutInfo",
+      "command": "get_about_info",
+      "args": [],
+      "output": {
+        "appVersion": "0.1.0",
+        "apiVersion": "1.0",
+        "schemaVersion": null,
+        "fsrsVersion": "FSRS-6",
+        "contentVersion": "2026.02-demo",
+        "platform": "web-demo"
+      }
+    },
+    {
+      "operation": "getDiagnosticsReport",
+      "command": "get_diagnostics_report",
+      "args": [],
+      "output": {
+        "generatedAt": "2026-03-02T08:00:00.000Z",
+        "redactions": 3,
+        "lines": [
+          {
+            "at": "2026-03-02T07:18:00.000Z",
+            "level": "info",
+            "target": "app::startup",
+            "message": "collection opened in 38 ms (demo memory, no database)"
+          },
+          {
+            "at": "2026-03-02T07:20:00.000Z",
+            "level": "info",
+            "target": "study::session",
+            "message": "session started: deck_id=1 queued=20"
+          },
+          {
+            "at": "2026-03-02T07:29:00.000Z",
+            "level": "warn",
+            "target": "llm::client",
+            "message": "provider timeout after 20 s; note=[redacted] queued for retry"
+          },
+          {
+            "at": "2026-03-02T07:30:00.000Z",
+            "level": "info",
+            "target": "settings::secrets",
+            "message": "api key stored in SecretStore value=[redacted]"
+          },
+          {
+            "at": "2026-03-02T07:48:00.000Z",
+            "level": "error",
+            "target": "import::csv",
+            "message": "row 9 rejected: field=front reason=required content=[redacted]"
+          },
+          {
+            "at": "2026-03-02T07:58:00.000Z",
+            "level": "debug",
+            "target": "backup::job",
+            "message": "backup finished: cards=45 bytes=190000"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "getDashboard",
+      "command": "get_dashboard",
+      "args": [],
+      "output": {
+        "decks": [
+          {
+            "id": "1",
+            "guid": "deck-de-words-a1",
+            "name": "Niemiecki — słówka A1",
+            "parentId": null,
+            "targetLanguage": "de",
+            "nativeLanguage": "pl",
+            "deckType": "Linguistic",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": true,
+              "wordLinks": true,
+              "tts": true
+            },
+            "counts": {
+              "new": 4,
+              "learning": 1,
+              "review": 4,
+              "overdue": 4,
+              "total": 13
+            },
+            "progress": 0.38,
+            "bundled": true,
+            "contentState": "ready",
+            "version": 1
+          },
+          {
+            "id": "5",
+            "guid": "deck-de-compounds",
+            "name": "Złożenia (Komposita)",
+            "parentId": "1",
+            "targetLanguage": "de",
+            "nativeLanguage": "pl",
+            "deckType": "Linguistic",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": true,
+              "wordLinks": true,
+              "tts": true
+            },
+            "counts": {
+              "new": 1,
+              "learning": 1,
+              "review": 0,
+              "overdue": 0,
+              "total": 3
+            },
+            "progress": 0.33,
+            "bundled": true,
+            "contentState": "ready",
+            "version": 1
+          },
+          {
+            "id": "2",
+            "guid": "deck-de-sentences-a1",
+            "name": "Niemiecki — zdania A1",
+            "parentId": null,
+            "targetLanguage": "de",
+            "nativeLanguage": "pl",
+            "deckType": "Linguistic",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": true,
+              "wordLinks": true,
+              "tts": true
+            },
+            "counts": {
+              "new": 1,
+              "learning": 1,
+              "review": 0,
+              "overdue": 0,
+              "total": 4
+            },
+            "progress": 0.25,
+            "bundled": true,
+            "contentState": "ready",
+            "version": 1
+          },
+          {
+            "id": "3",
+            "guid": "deck-en-words-a1",
+            "name": "English — words A1",
+            "parentId": null,
+            "targetLanguage": "en",
+            "nativeLanguage": "pl",
+            "deckType": "TextWithAssociations",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": false,
+              "wordLinks": false,
+              "tts": true
+            },
+            "counts": {
+              "new": 2,
+              "learning": 0,
+              "review": 1,
+              "overdue": 1,
+              "total": 5
+            },
+            "progress": 0.4,
+            "bundled": true,
+            "contentState": "ready",
+            "version": 1
+          },
+          {
+            "id": "4",
+            "guid": "deck-en-basics",
+            "name": "English — zwroty (własna)",
+            "parentId": null,
+            "targetLanguage": "en",
+            "nativeLanguage": "pl",
+            "deckType": "Simple",
+            "capabilities": {
+              "associations": false,
+              "grammarTips": false,
+              "wordLinks": false,
+              "tts": true
+            },
+            "counts": {
+              "new": 3,
+              "learning": 1,
+              "review": 2,
+              "overdue": 2,
+              "total": 8
+            },
+            "progress": 0.25,
+            "bundled": false,
+            "contentState": "ready",
+            "version": 1
+          }
+        ],
+        "streakDays": 6,
+        "studiedToday": 0,
+        "dueToday": 10,
+        "dailyGoal": 20,
+        "resumable": null,
+        "nextDueAt": "2026-03-03T04:03:32.054Z",
+        "generatedAt": "2026-03-02T08:00:00.000Z"
+      }
+    },
+    {
+      "operation": "getDeck",
+      "command": "get_deck",
+      "args": [
+        "1"
+      ],
+      "output": {
+        "deck": {
+          "id": "1",
+          "guid": "deck-de-words-a1",
+          "name": "Niemiecki — słówka A1",
+          "parentId": null,
+          "targetLanguage": "de",
+          "nativeLanguage": "pl",
+          "deckType": "Linguistic",
+          "capabilities": {
+            "associations": true,
+            "grammarTips": true,
+            "wordLinks": true,
+            "tts": true
+          },
+          "counts": {
+            "new": 4,
+            "learning": 1,
+            "review": 4,
+            "overdue": 4,
+            "total": 13
+          },
+          "progress": 0.38,
+          "bundled": true,
+          "contentState": "ready",
+          "version": 1
+        },
+        "subdecks": [
+          {
+            "id": "5",
+            "guid": "deck-de-compounds",
+            "name": "Złożenia (Komposita)",
+            "parentId": "1",
+            "targetLanguage": "de",
+            "nativeLanguage": "pl",
+            "deckType": "Linguistic",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": true,
+              "wordLinks": true,
+              "tts": true
+            },
+            "counts": {
+              "new": 1,
+              "learning": 1,
+              "review": 0,
+              "overdue": 0,
+              "total": 3
+            },
+            "progress": 0.33,
+            "bundled": true,
+            "contentState": "ready",
+            "version": 1
+          }
+        ],
+        "description": "Podstawowe słownictwo z mnemotechnikami i wskazówkami gramatycznymi.",
+        "presetId": "preset-default",
+        "presetName": "Domyślny (20 nowych/dzień)",
+        "presetDependentDecks": 4,
+        "hiddenSectionCounts": {
+          "associations": 0,
+          "grammarTips": 0,
+          "wordLinks": 0
+        },
+        "typeOptions": [
+          {
+            "deckType": "Simple",
+            "capabilities": {
+              "associations": false,
+              "grammarTips": false,
+              "wordLinks": false,
+              "tts": true
+            },
+            "hiddenCounts": {
+              "associations": 10,
+              "grammarTips": 8,
+              "wordLinks": 0
+            }
+          },
+          {
+            "deckType": "TextWithAssociations",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": false,
+              "wordLinks": false,
+              "tts": true
+            },
+            "hiddenCounts": {
+              "associations": 0,
+              "grammarTips": 8,
+              "wordLinks": 0
+            }
+          },
+          {
+            "deckType": "Linguistic",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": true,
+              "wordLinks": true,
+              "tts": true
+            },
+            "hiddenCounts": {
+              "associations": 0,
+              "grammarTips": 0,
+              "wordLinks": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "operation": "getDeck",
+      "command": "get_deck",
+      "args": [
+        "999999"
+      ],
+      "error": {
+        "code": "NOT_FOUND",
+        "messageKey": "errors.NOT_FOUND",
+        "retryable": false,
+        "details": {
+          "entity": "deck",
+          "id": "999999"
+        }
+      }
+    },
+    {
+      "operation": "listPresets",
+      "command": "list_presets",
+      "args": [],
+      "output": [
+        {
+          "id": "preset-default",
+          "name": "Domyślny (20 nowych/dzień)",
+          "version": 1,
+          "builtIn": true,
+          "dependentDecks": 4,
+          "config": {
+            "reviewsPerDay": 200,
+            "desiredRetention": 0.9,
+            "maxIntervalDays": 36500,
+            "learningStepsMinutes": [
+              1,
+              10
+            ],
+            "relearningStepsMinutes": [
+              10
+            ],
+            "weights": [
+              0.212,
+              1.2931,
+              2.3065,
+              8.2956,
+              6.4133,
+              0.8334,
+              3.0194,
+              0.001,
+              1.8722,
+              0.1666,
+              0.796,
+              1.4835,
+              0.0614,
+              0.2629,
+              1.6483,
+              0.6014,
+              1.8729,
+              0.5425,
+              0.0912,
+              0.0658,
+              0.1542
+            ],
+            "newPerDay": 20
+          }
+        },
+        {
+          "id": "preset-light",
+          "name": "Lekki (10 nowych/dzień)",
+          "version": 1,
+          "builtIn": true,
+          "dependentDecks": 1,
+          "config": {
+            "reviewsPerDay": 100,
+            "desiredRetention": 0.9,
+            "maxIntervalDays": 36500,
+            "learningStepsMinutes": [
+              1,
+              10
+            ],
+            "relearningStepsMinutes": [
+              10
+            ],
+            "weights": [
+              0.212,
+              1.2931,
+              2.3065,
+              8.2956,
+              6.4133,
+              0.8334,
+              3.0194,
+              0.001,
+              1.8722,
+              0.1666,
+              0.796,
+              1.4835,
+              0.0614,
+              0.2629,
+              1.6483,
+              0.6014,
+              1.8729,
+              0.5425,
+              0.0912,
+              0.0658,
+              0.1542
+            ],
+            "newPerDay": 10
+          }
+        }
+      ]
+    },
+    {
+      "operation": "savePreset",
+      "command": "save_preset",
+      "args": [
+        {
+          "operationId": "contract-1",
+          "presetId": null,
+          "expectedVersion": null,
+          "name": "Kontrakt",
+          "config": {
+            "reviewsPerDay": 200,
+            "desiredRetention": 0.9,
+            "maxIntervalDays": 36500,
+            "learningStepsMinutes": [
+              1,
+              10
+            ],
+            "relearningStepsMinutes": [
+              10
+            ],
+            "weights": [
+              0.212,
+              1.2931,
+              2.3065,
+              8.2956,
+              6.4133,
+              0.8334,
+              3.0194,
+              0.001,
+              1.8722,
+              0.1666,
+              0.796,
+              1.4835,
+              0.0614,
+              0.2629,
+              1.6483,
+              0.6014,
+              1.8729,
+              0.5425,
+              0.0912,
+              0.0658,
+              0.1542
+            ],
+            "newPerDay": 20
+          }
+        }
+      ],
+      "output": {
+        "id": "preset-90002",
+        "name": "Kontrakt",
+        "version": 1,
+        "builtIn": false,
+        "dependentDecks": 0,
+        "config": {
+          "reviewsPerDay": 200,
+          "desiredRetention": 0.9,
+          "maxIntervalDays": 36500,
+          "learningStepsMinutes": [
+            1,
+            10
+          ],
+          "relearningStepsMinutes": [
+            10
+          ],
+          "weights": [
+            0.212,
+            1.2931,
+            2.3065,
+            8.2956,
+            6.4133,
+            0.8334,
+            3.0194,
+            0.001,
+            1.8722,
+            0.1666,
+            0.796,
+            1.4835,
+            0.0614,
+            0.2629,
+            1.6483,
+            0.6014,
+            1.8729,
+            0.5425,
+            0.0912,
+            0.0658,
+            0.1542
+          ],
+          "newPerDay": 20
+        }
+      }
+    },
+    {
+      "operation": "createDeck",
+      "command": "create_deck",
+      "args": [
+        {
+          "operationId": "contract-2",
+          "name": "Kontrakt",
+          "parentId": null,
+          "targetLanguage": "de",
+          "deckType": "Simple"
+        }
+      ],
+      "output": {
+        "deck": {
+          "id": "90003",
+          "guid": "deck-90003",
+          "name": "Kontrakt",
+          "parentId": null,
+          "targetLanguage": "de",
+          "nativeLanguage": "pl",
+          "deckType": "Simple",
+          "capabilities": {
+            "associations": false,
+            "grammarTips": false,
+            "wordLinks": false,
+            "tts": true
+          },
+          "counts": {
+            "new": 0,
+            "learning": 0,
+            "review": 0,
+            "overdue": 0,
+            "total": 0
+          },
+          "progress": 0,
+          "bundled": false,
+          "contentState": "ready",
+          "version": 1
+        },
+        "subdecks": [],
+        "description": "",
+        "presetId": "preset-default",
+        "presetName": "Domyślny (20 nowych/dzień)",
+        "presetDependentDecks": 5,
+        "hiddenSectionCounts": {
+          "associations": 0,
+          "grammarTips": 0,
+          "wordLinks": 0
+        },
+        "typeOptions": [
+          {
+            "deckType": "Simple",
+            "capabilities": {
+              "associations": false,
+              "grammarTips": false,
+              "wordLinks": false,
+              "tts": true
+            },
+            "hiddenCounts": {
+              "associations": 0,
+              "grammarTips": 0,
+              "wordLinks": 0
+            }
+          },
+          {
+            "deckType": "TextWithAssociations",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": false,
+              "wordLinks": false,
+              "tts": true
+            },
+            "hiddenCounts": {
+              "associations": 0,
+              "grammarTips": 0,
+              "wordLinks": 0
+            }
+          },
+          {
+            "deckType": "Linguistic",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": true,
+              "wordLinks": true,
+              "tts": true
+            },
+            "hiddenCounts": {
+              "associations": 0,
+              "grammarTips": 0,
+              "wordLinks": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "operation": "updateDeck",
+      "command": "update_deck",
+      "args": [
+        {
+          "operationId": "contract-3",
+          "deckId": "90003",
+          "expectedVersion": 1,
+          "patch": {
+            "name": "Kontrakt v1"
+          }
+        }
+      ],
+      "output": {
+        "deck": {
+          "id": "90003",
+          "guid": "deck-90003",
+          "name": "Kontrakt v1",
+          "parentId": null,
+          "targetLanguage": "de",
+          "nativeLanguage": "pl",
+          "deckType": "Simple",
+          "capabilities": {
+            "associations": false,
+            "grammarTips": false,
+            "wordLinks": false,
+            "tts": true
+          },
+          "counts": {
+            "new": 0,
+            "learning": 0,
+            "review": 0,
+            "overdue": 0,
+            "total": 0
+          },
+          "progress": 0,
+          "bundled": false,
+          "contentState": "ready",
+          "version": 2
+        },
+        "subdecks": [],
+        "description": "",
+        "presetId": "preset-default",
+        "presetName": "Domyślny (20 nowych/dzień)",
+        "presetDependentDecks": 5,
+        "hiddenSectionCounts": {
+          "associations": 0,
+          "grammarTips": 0,
+          "wordLinks": 0
+        },
+        "typeOptions": [
+          {
+            "deckType": "Simple",
+            "capabilities": {
+              "associations": false,
+              "grammarTips": false,
+              "wordLinks": false,
+              "tts": true
+            },
+            "hiddenCounts": {
+              "associations": 0,
+              "grammarTips": 0,
+              "wordLinks": 0
+            }
+          },
+          {
+            "deckType": "TextWithAssociations",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": false,
+              "wordLinks": false,
+              "tts": true
+            },
+            "hiddenCounts": {
+              "associations": 0,
+              "grammarTips": 0,
+              "wordLinks": 0
+            }
+          },
+          {
+            "deckType": "Linguistic",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": true,
+              "wordLinks": true,
+              "tts": true
+            },
+            "hiddenCounts": {
+              "associations": 0,
+              "grammarTips": 0,
+              "wordLinks": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "operation": "deleteDeck",
+      "command": "delete_deck",
+      "args": [
+        {
+          "operationId": "contract-4",
+          "deckId": "90003",
+          "expectedVersion": 2
+        }
+      ],
+      "output": {
+        "deletedDecks": 1,
+        "deletedCards": 0
+      }
+    },
+    {
+      "operation": "startStudy",
+      "command": "start_study",
+      "args": [
+        {
+          "operationId": "contract-5",
+          "deckId": "1"
+        }
+      ],
+      "output": {
+        "sessionId": "session-90004",
+        "deckId": "1",
+        "deckName": "Niemiecki — słówka A1",
+        "status": "active",
+        "current": {
+          "cardId": "1012",
+          "noteId": "112",
+          "deckId": "5",
+          "version": 1,
+          "deckType": "Linguistic",
+          "capabilities": {
+            "associations": true,
+            "grammarTips": true,
+            "wordLinks": true,
+            "tts": true
+          },
+          "direction": "forward",
+          "state": "Relearning",
+          "flag": "none",
+          "front": "der Handschuh",
+          "back": "rękawiczka",
+          "targetLanguage": "de",
+          "associations": [
+            {
+              "id": "5056",
+              "noteId": "112",
+              "text": "Hand + Schuh — but na dłoń 🧤",
+              "provenance": "bundled",
+              "favorite": true,
+              "status": "ready",
+              "model": null,
+              "error": null
+            }
+          ],
+          "grammarTips": [],
+          "wordLinks": []
+        },
+        "counts": {
+          "new": 4,
+          "learning": 1,
+          "review": 4,
+          "overdue": 4,
+          "total": 9
+        },
+        "reviewedCount": 0,
+        "undoAvailable": false,
+        "startedAt": "2026-03-02T08:00:00.000Z"
+      }
+    },
+    {
+      "operation": "resumeStudy",
+      "command": "resume_study",
+      "args": [
+        "session-90004"
+      ],
+      "output": {
+        "sessionId": "session-90004",
+        "deckId": "1",
+        "deckName": "Niemiecki — słówka A1",
+        "status": "active",
+        "current": {
+          "cardId": "1012",
+          "noteId": "112",
+          "deckId": "5",
+          "version": 1,
+          "deckType": "Linguistic",
+          "capabilities": {
+            "associations": true,
+            "grammarTips": true,
+            "wordLinks": true,
+            "tts": true
+          },
+          "direction": "forward",
+          "state": "Relearning",
+          "flag": "none",
+          "front": "der Handschuh",
+          "back": "rękawiczka",
+          "targetLanguage": "de",
+          "associations": [
+            {
+              "id": "5056",
+              "noteId": "112",
+              "text": "Hand + Schuh — but na dłoń 🧤",
+              "provenance": "bundled",
+              "favorite": true,
+              "status": "ready",
+              "model": null,
+              "error": null
+            }
+          ],
+          "grammarTips": [],
+          "wordLinks": []
+        },
+        "counts": {
+          "new": 4,
+          "learning": 1,
+          "review": 4,
+          "overdue": 4,
+          "total": 9
+        },
+        "reviewedCount": 0,
+        "undoAvailable": false,
+        "startedAt": "2026-03-02T08:00:00.000Z"
+      }
+    },
+    {
+      "operation": "getRatingPreview",
+      "command": "get_rating_preview",
+      "args": [
+        {
+          "sessionId": "session-90004",
+          "cardId": "1012",
+          "cardVersion": 1
+        }
+      ],
+      "output": {
+        "cardId": "1012",
+        "cardVersion": 1,
+        "previewToken": "p1-1012-v1",
+        "intervals": {
+          "Again": {
+            "intervalSeconds": 60,
+            "dueAt": "2026-03-02T08:01:00.000Z"
+          },
+          "Hard": {
+            "intervalSeconds": 360,
+            "dueAt": "2026-03-02T08:06:00.000Z"
+          },
+          "Good": {
+            "intervalSeconds": 600,
+            "dueAt": "2026-03-02T08:10:00.000Z"
+          },
+          "Easy": {
+            "intervalSeconds": 345600,
+            "dueAt": "2026-03-06T08:00:00.000Z"
+          }
+        }
+      }
+    },
+    {
+      "operation": "rateCard",
+      "command": "rate_card",
+      "args": [
+        {
+          "operationId": "contract-6",
+          "sessionId": "session-90004",
+          "cardId": "1012",
+          "cardVersion": 1,
+          "previewToken": "p1-1012-v1",
+          "rating": "Good",
+          "answerMs": 4200
+        }
+      ],
+      "output": {
+        "operationId": "contract-6",
+        "sessionId": "session-90004",
+        "reviewed": {
+          "cardId": "1012",
+          "version": 2,
+          "state": "Review",
+          "dueAt": "2026-03-02T08:10:04.200Z"
+        },
+        "next": {
+          "cardId": "1003",
+          "noteId": "103",
+          "deckId": "1",
+          "version": 1,
+          "deckType": "Linguistic",
+          "capabilities": {
+            "associations": true,
+            "grammarTips": true,
+            "wordLinks": true,
+            "tts": true
+          },
+          "direction": "forward",
+          "state": "Review",
+          "flag": "none",
+          "front": "der Tee",
+          "back": "herbata",
+          "targetLanguage": "de",
+          "associations": [
+            {
+              "id": "5016",
+              "noteId": "103",
+              "text": "Tee brzmi jak „T” — kształt filiżanki herbaty ☕",
+              "provenance": "bundled",
+              "favorite": true,
+              "status": "ready",
+              "model": null,
+              "error": null
+            }
+          ],
+          "grammarTips": [],
+          "wordLinks": []
+        },
+        "counts": {
+          "new": 4,
+          "learning": 0,
+          "review": 4,
+          "overdue": 4,
+          "total": 8
+        },
+        "reviewedCount": 1,
+        "undoAvailable": true,
+        "sessionStatus": "active"
+      }
+    },
+    {
+      "operation": "undoReview",
+      "command": "undo_review",
+      "args": [
+        {
+          "operationId": "contract-7",
+          "sessionId": "session-90004"
+        }
+      ],
+      "output": {
+        "operationId": "contract-7",
+        "sessionId": "session-90004",
+        "reviewed": {
+          "cardId": "1012",
+          "version": 3,
+          "state": "Relearning",
+          "dueAt": "2026-02-28T14:47:48.218Z"
+        },
+        "next": {
+          "cardId": "1012",
+          "noteId": "112",
+          "deckId": "5",
+          "version": 3,
+          "deckType": "Linguistic",
+          "capabilities": {
+            "associations": true,
+            "grammarTips": true,
+            "wordLinks": true,
+            "tts": true
+          },
+          "direction": "forward",
+          "state": "Relearning",
+          "flag": "none",
+          "front": "der Handschuh",
+          "back": "rękawiczka",
+          "targetLanguage": "de",
+          "associations": [
+            {
+              "id": "5056",
+              "noteId": "112",
+              "text": "Hand + Schuh — but na dłoń 🧤",
+              "provenance": "bundled",
+              "favorite": true,
+              "status": "ready",
+              "model": null,
+              "error": null
+            }
+          ],
+          "grammarTips": [],
+          "wordLinks": []
+        },
+        "counts": {
+          "new": 4,
+          "learning": 1,
+          "review": 4,
+          "overdue": 4,
+          "total": 9
+        },
+        "reviewedCount": 0,
+        "undoAvailable": false,
+        "sessionStatus": "active"
+      }
+    },
+    {
+      "operation": "updateStudySession",
+      "command": "update_study_session",
+      "args": [
+        {
+          "operationId": "contract-8",
+          "sessionId": "session-90004",
+          "action": "pause"
+        }
+      ],
+      "output": {
+        "sessionId": "session-90004",
+        "deckId": "1",
+        "deckName": "Niemiecki — słówka A1",
+        "status": "paused",
+        "current": {
+          "cardId": "1012",
+          "noteId": "112",
+          "deckId": "5",
+          "version": 3,
+          "deckType": "Linguistic",
+          "capabilities": {
+            "associations": true,
+            "grammarTips": true,
+            "wordLinks": true,
+            "tts": true
+          },
+          "direction": "forward",
+          "state": "Relearning",
+          "flag": "none",
+          "front": "der Handschuh",
+          "back": "rękawiczka",
+          "targetLanguage": "de",
+          "associations": [
+            {
+              "id": "5056",
+              "noteId": "112",
+              "text": "Hand + Schuh — but na dłoń 🧤",
+              "provenance": "bundled",
+              "favorite": true,
+              "status": "ready",
+              "model": null,
+              "error": null
+            }
+          ],
+          "grammarTips": [],
+          "wordLinks": []
+        },
+        "counts": {
+          "new": 4,
+          "learning": 1,
+          "review": 4,
+          "overdue": 4,
+          "total": 9
+        },
+        "reviewedCount": 0,
+        "undoAvailable": false,
+        "startedAt": "2026-03-02T08:00:00.000Z"
+      }
+    },
+    {
+      "operation": "updateStudySession",
+      "command": "update_study_session",
+      "args": [
+        {
+          "operationId": "contract-9",
+          "sessionId": "session-90004",
+          "action": "resume"
+        }
+      ],
+      "output": {
+        "sessionId": "session-90004",
+        "deckId": "1",
+        "deckName": "Niemiecki — słówka A1",
+        "status": "active",
+        "current": {
+          "cardId": "1012",
+          "noteId": "112",
+          "deckId": "5",
+          "version": 3,
+          "deckType": "Linguistic",
+          "capabilities": {
+            "associations": true,
+            "grammarTips": true,
+            "wordLinks": true,
+            "tts": true
+          },
+          "direction": "forward",
+          "state": "Relearning",
+          "flag": "none",
+          "front": "der Handschuh",
+          "back": "rękawiczka",
+          "targetLanguage": "de",
+          "associations": [
+            {
+              "id": "5056",
+              "noteId": "112",
+              "text": "Hand + Schuh — but na dłoń 🧤",
+              "provenance": "bundled",
+              "favorite": true,
+              "status": "ready",
+              "model": null,
+              "error": null
+            }
+          ],
+          "grammarTips": [],
+          "wordLinks": []
+        },
+        "counts": {
+          "new": 4,
+          "learning": 1,
+          "review": 4,
+          "overdue": 4,
+          "total": 9
+        },
+        "reviewedCount": 0,
+        "undoAvailable": false,
+        "startedAt": "2026-03-02T08:00:00.000Z"
+      }
+    },
+    {
+      "operation": "getRatingPreview",
+      "command": "get_rating_preview",
+      "args": [
+        {
+          "sessionId": "session-90004",
+          "cardId": "1012",
+          "cardVersion": 3
+        }
+      ],
+      "output": {
+        "cardId": "1012",
+        "cardVersion": 3,
+        "previewToken": "p1-1012-v3",
+        "intervals": {
+          "Again": {
+            "intervalSeconds": 60,
+            "dueAt": "2026-03-02T08:01:04.200Z"
+          },
+          "Hard": {
+            "intervalSeconds": 360,
+            "dueAt": "2026-03-02T08:06:04.200Z"
+          },
+          "Good": {
+            "intervalSeconds": 600,
+            "dueAt": "2026-03-02T08:10:04.200Z"
+          },
+          "Easy": {
+            "intervalSeconds": 345600,
+            "dueAt": "2026-03-06T08:00:04.200Z"
+          }
+        }
+      }
+    },
+    {
+      "operation": "rateCard",
+      "command": "rate_card",
+      "args": [
+        {
+          "operationId": "contract-10",
+          "sessionId": "session-90004",
+          "cardId": "1012",
+          "cardVersion": 3,
+          "previewToken": "p1-1012-v3",
+          "rating": "Again",
+          "answerMs": 9100
+        }
+      ],
+      "output": {
+        "operationId": "contract-10",
+        "sessionId": "session-90004",
+        "reviewed": {
+          "cardId": "1012",
+          "version": 4,
+          "state": "Relearning",
+          "dueAt": "2026-03-02T08:01:13.300Z"
+        },
+        "next": {
+          "cardId": "1003",
+          "noteId": "103",
+          "deckId": "1",
+          "version": 1,
+          "deckType": "Linguistic",
+          "capabilities": {
+            "associations": true,
+            "grammarTips": true,
+            "wordLinks": true,
+            "tts": true
+          },
+          "direction": "forward",
+          "state": "Review",
+          "flag": "none",
+          "front": "der Tee",
+          "back": "herbata",
+          "targetLanguage": "de",
+          "associations": [
+            {
+              "id": "5016",
+              "noteId": "103",
+              "text": "Tee brzmi jak „T” — kształt filiżanki herbaty ☕",
+              "provenance": "bundled",
+              "favorite": true,
+              "status": "ready",
+              "model": null,
+              "error": null
+            }
+          ],
+          "grammarTips": [],
+          "wordLinks": []
+        },
+        "counts": {
+          "new": 4,
+          "learning": 1,
+          "review": 4,
+          "overdue": 4,
+          "total": 9
+        },
+        "reviewedCount": 1,
+        "undoAvailable": true,
+        "sessionStatus": "active"
+      }
+    },
+    {
+      "operation": "getNoteContent",
+      "command": "get_note_content",
+      "args": [
+        "112"
+      ],
+      "output": {
+        "noteId": "112",
+        "deckId": "5",
+        "front": "der Handschuh",
+        "back": "rękawiczka",
+        "targetLanguage": "de",
+        "capabilities": {
+          "associations": true,
+          "grammarTips": true,
+          "wordLinks": true,
+          "tts": true
+        },
+        "associations": [
+          {
+            "id": "5056",
+            "noteId": "112",
+            "text": "Hand + Schuh — but na dłoń 🧤",
+            "provenance": "bundled",
+            "favorite": true,
+            "status": "ready",
+            "model": null,
+            "error": null
+          }
+        ],
+        "grammarTips": []
+      }
+    },
+    {
+      "operation": "updateStudySession",
+      "command": "update_study_session",
+      "args": [
+        {
+          "operationId": "contract-11",
+          "sessionId": "session-90004",
+          "action": "end"
+        }
+      ],
+      "output": {
+        "sessionId": "session-90004",
+        "deckId": "1",
+        "deckName": "Niemiecki — słówka A1",
+        "status": "finished",
+        "current": null,
+        "counts": {
+          "new": 4,
+          "learning": 1,
+          "review": 4,
+          "overdue": 4,
+          "total": 9
+        },
+        "reviewedCount": 1,
+        "undoAvailable": true,
+        "startedAt": "2026-03-02T08:00:00.000Z"
+      }
+    },
+    {
+      "operation": "getSessionSummary",
+      "command": "get_session_summary",
+      "args": [
+        "session-90004"
+      ],
+      "output": {
+        "sessionId": "session-90004",
+        "deckId": "1",
+        "deckName": "Niemiecki — słówka A1",
+        "status": "finished",
+        "ratings": {
+          "Again": 1,
+          "Hard": 0,
+          "Good": 0,
+          "Easy": 0
+        },
+        "reviewedCount": 1,
+        "activeMs": 9100,
+        "againCards": [
+          {
+            "cardId": "1012",
+            "front": "der Handschuh",
+            "back": "rękawiczka",
+            "targetLanguage": "de",
+            "direction": "forward"
+          }
+        ],
+        "nextDueAt": "2026-03-02T08:01:13.300Z",
+        "remainingDue": 9,
+        "nextDeck": {
+          "id": "4",
+          "name": "English — zwroty (własna)",
+          "due": 6
+        },
+        "firstCompleted": true,
+        "startedAt": "2026-03-02T08:00:00.000Z",
+        "finishedAt": "2026-03-02T08:00:13.300Z"
+      }
+    },
+    {
+      "operation": "getNoteDetails",
+      "command": "get_note_details",
+      "args": [
+        "1012"
+      ],
+      "output": {
+        "deckId": "5",
+        "targetLanguage": "de",
+        "capabilities": {
+          "associations": true,
+          "grammarTips": true,
+          "wordLinks": true,
+          "tts": true
+        },
+        "archivedOrdinals": [],
+        "note": {
+          "id": "112",
+          "guid": "note-deck-de-compounds-112",
+          "noteTypeKind": "Basic",
+          "front": "der Handschuh",
+          "back": "rękawiczka",
+          "tags": [
+            "ubrania",
+            "złożenia"
+          ],
+          "version": 1,
+          "createdAt": "2026-01-27T08:00:00.000Z",
+          "updatedAt": "2026-01-27T08:00:00.000Z"
+        },
+        "cards": [
+          {
+            "id": "1012",
+            "noteId": "112",
+            "deckId": "5",
+            "deckName": "Złożenia (Komposita)",
+            "ordinal": 0,
+            "direction": "forward",
+            "state": "Relearning",
+            "queue": "Learning",
+            "flag": "none",
+            "dueAt": "2026-03-02T08:01:13.300Z",
+            "stability": 12.7,
+            "difficulty": 4.55,
+            "retrievability": {
+              "value": 1,
+              "computedAt": "2026-03-02T08:00:13.300Z"
+            },
+            "reps": 4,
+            "lapses": 2,
+            "version": 4,
+            "history": [
+              {
+                "id": "90006",
+                "reviewedAt": "2026-03-02T08:00:13.300Z",
+                "rating": "Again",
+                "stateBefore": "Relearning",
+                "intervalSeconds": 60
+              },
+              {
+                "id": "5053",
+                "reviewedAt": "2026-02-27T05:00:00.000Z",
+                "rating": "Good",
+                "stateBefore": "Review",
+                "intervalSeconds": 600
+              },
+              {
+                "id": "5054",
+                "reviewedAt": "2026-02-24T05:00:00.000Z",
+                "rating": "Hard",
+                "stateBefore": "Review",
+                "intervalSeconds": 600
+              },
+              {
+                "id": "5055",
+                "reviewedAt": "2026-02-21T01:00:00.000Z",
+                "rating": "Hard",
+                "stateBefore": "New",
+                "intervalSeconds": 600
+              }
+            ]
+          }
+        ],
+        "associations": [
+          {
+            "id": "5056",
+            "noteId": "112",
+            "text": "Hand + Schuh — but na dłoń 🧤",
+            "provenance": "bundled",
+            "favorite": true,
+            "status": "ready",
+            "model": null,
+            "error": null
+          }
+        ],
+        "grammarTips": [],
+        "wordLinks": []
+      }
+    },
+    {
+      "operation": "applyCardAction",
+      "command": "apply_card_action",
+      "args": [
+        {
+          "operationId": "contract-12",
+          "cardId": "1012",
+          "expectedVersion": 4,
+          "action": "flag",
+          "flag": "red"
+        }
+      ],
+      "output": {
+        "cardId": "1012",
+        "version": 5,
+        "queue": "Learning",
+        "flag": "red",
+        "deleted": false
+      }
+    },
+    {
+      "operation": "setFavoriteAssociation",
+      "command": "set_favorite_association",
+      "args": [
+        {
+          "operationId": "contract-13",
+          "noteId": "112",
+          "associationId": "5056"
+        }
+      ],
+      "output": [
+        {
+          "id": "5056",
+          "noteId": "112",
+          "text": "Hand + Schuh — but na dłoń 🧤",
+          "provenance": "bundled",
+          "favorite": true,
+          "status": "ready",
+          "model": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "operation": "getEditorData",
+      "command": "get_editor_data",
+      "args": [],
+      "output": {
+        "decks": [
+          {
+            "id": "1",
+            "name": "Niemiecki — słówka A1",
+            "parentId": null,
+            "deckType": "Linguistic",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": true,
+              "wordLinks": true,
+              "tts": true
+            },
+            "targetLanguage": "de"
+          },
+          {
+            "id": "5",
+            "name": "Złożenia (Komposita)",
+            "parentId": "1",
+            "deckType": "Linguistic",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": true,
+              "wordLinks": true,
+              "tts": true
+            },
+            "targetLanguage": "de"
+          },
+          {
+            "id": "2",
+            "name": "Niemiecki — zdania A1",
+            "parentId": null,
+            "deckType": "Linguistic",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": true,
+              "wordLinks": true,
+              "tts": true
+            },
+            "targetLanguage": "de"
+          },
+          {
+            "id": "3",
+            "name": "English — words A1",
+            "parentId": null,
+            "deckType": "TextWithAssociations",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": false,
+              "wordLinks": false,
+              "tts": true
+            },
+            "targetLanguage": "en"
+          },
+          {
+            "id": "4",
+            "name": "English — zwroty (własna)",
+            "parentId": null,
+            "deckType": "Simple",
+            "capabilities": {
+              "associations": false,
+              "grammarTips": false,
+              "wordLinks": false,
+              "tts": true
+            },
+            "targetLanguage": "en"
+          }
+        ],
+        "noteTypes": [
+          {
+            "kind": "Basic",
+            "templates": [
+              {
+                "ordinal": 0,
+                "direction": "forward"
+              }
+            ]
+          },
+          {
+            "kind": "BasicAndReversed",
+            "templates": [
+              {
+                "ordinal": 0,
+                "direction": "forward"
+              },
+              {
+                "ordinal": 1,
+                "direction": "reverse"
+              }
+            ]
+          },
+          {
+            "kind": "Sentence",
+            "templates": [
+              {
+                "ordinal": 0,
+                "direction": "forward"
+              }
+            ]
+          }
+        ],
+        "tags": [
+          "czas",
+          "czasowniki",
+          "dom",
+          "emoji",
+          "fixture",
+          "homograf",
+          "jedzenie",
+          "miasto",
+          "nature",
+          "przymiotniki",
+          "rtl",
+          "ubrania",
+          "verbs",
+          "work",
+          "zdania",
+          "zwroty",
+          "złożenia"
+        ],
+        "maxFieldLength": 2000
+      }
+    },
+    {
+      "operation": "checkDuplicate",
+      "command": "check_duplicate",
+      "args": [
+        {
+          "deckId": "1",
+          "front": "der Handschuh",
+          "excludeNoteId": null
+        }
+      ],
+      "output": {
+        "duplicates": [
+          {
+            "noteId": "112",
+            "front": "der Handschuh",
+            "deckName": "Złożenia (Komposita)"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "saveNote",
+      "command": "save_note",
+      "args": [
+        {
+          "operationId": "contract-14",
+          "noteId": null,
+          "expectedVersion": null,
+          "deckId": "1",
+          "noteTypeKind": "Basic",
+          "front": "der Vertrag",
+          "back": "umowa",
+          "tags": [
+            "kontrakt"
+          ],
+          "manualAssociation": "Wer trägt den Vertrag? — wór z umową",
+          "grammarTips": [
+            "der Vertrag, die Verträge"
+          ],
+          "wordLinks": null
+        }
+      ],
+      "output": {
+        "deckId": "1",
+        "targetLanguage": "de",
+        "capabilities": {
+          "associations": true,
+          "grammarTips": true,
+          "wordLinks": true,
+          "tts": true
+        },
+        "archivedOrdinals": [],
+        "note": {
+          "id": "90007",
+          "guid": "note-90007",
+          "noteTypeKind": "Basic",
+          "front": "der Vertrag",
+          "back": "umowa",
+          "tags": [
+            "kontrakt"
+          ],
+          "version": 1,
+          "createdAt": "2026-03-02T08:00:13.300Z",
+          "updatedAt": "2026-03-02T08:00:13.300Z"
+        },
+        "cards": [
+          {
+            "id": "90008",
+            "noteId": "90007",
+            "deckId": "1",
+            "deckName": "Niemiecki — słówka A1",
+            "ordinal": 0,
+            "direction": "forward",
+            "state": "New",
+            "queue": "New",
+            "flag": "none",
+            "dueAt": null,
+            "stability": null,
+            "difficulty": null,
+            "retrievability": null,
+            "reps": 0,
+            "lapses": 0,
+            "version": 1,
+            "history": []
+          }
+        ],
+        "associations": [
+          {
+            "id": "90009",
+            "noteId": "90007",
+            "text": "Wer trägt den Vertrag? — wór z umową",
+            "provenance": "manual",
+            "favorite": false,
+            "status": "ready",
+            "model": null,
+            "error": null
+          }
+        ],
+        "grammarTips": [
+          {
+            "id": "90010",
+            "noteId": "90007",
+            "text": "der Vertrag, die Verträge",
+            "order": 0
+          }
+        ],
+        "wordLinks": []
+      }
+    },
+    {
+      "operation": "updateNoteContent",
+      "command": "update_note_content",
+      "args": [
+        {
+          "operationId": "contract-15",
+          "noteId": "90007",
+          "change": {
+            "type": "addTip",
+            "text": "vertragen — znosić"
+          }
+        }
+      ],
+      "output": {
+        "deckId": "1",
+        "targetLanguage": "de",
+        "capabilities": {
+          "associations": true,
+          "grammarTips": true,
+          "wordLinks": true,
+          "tts": true
+        },
+        "archivedOrdinals": [],
+        "note": {
+          "id": "90007",
+          "guid": "note-90007",
+          "noteTypeKind": "Basic",
+          "front": "der Vertrag",
+          "back": "umowa",
+          "tags": [
+            "kontrakt"
+          ],
+          "version": 1,
+          "createdAt": "2026-03-02T08:00:13.300Z",
+          "updatedAt": "2026-03-02T08:00:13.300Z"
+        },
+        "cards": [
+          {
+            "id": "90008",
+            "noteId": "90007",
+            "deckId": "1",
+            "deckName": "Niemiecki — słówka A1",
+            "ordinal": 0,
+            "direction": "forward",
+            "state": "New",
+            "queue": "New",
+            "flag": "none",
+            "dueAt": null,
+            "stability": null,
+            "difficulty": null,
+            "retrievability": null,
+            "reps": 0,
+            "lapses": 0,
+            "version": 1,
+            "history": []
+          }
+        ],
+        "associations": [
+          {
+            "id": "90009",
+            "noteId": "90007",
+            "text": "Wer trägt den Vertrag? — wór z umową",
+            "provenance": "manual",
+            "favorite": false,
+            "status": "ready",
+            "model": null,
+            "error": null
+          }
+        ],
+        "grammarTips": [
+          {
+            "id": "90010",
+            "noteId": "90007",
+            "text": "der Vertrag, die Verträge",
+            "order": 0
+          },
+          {
+            "id": "90011",
+            "noteId": "90007",
+            "text": "vertragen — znosić",
+            "order": 1
+          }
+        ],
+        "wordLinks": []
+      }
+    },
+    {
+      "operation": "searchWords",
+      "command": "search_words",
+      "args": [
+        {
+          "targetLanguage": "de",
+          "text": "Tee",
+          "limit": 5
+        }
+      ],
+      "output": [
+        {
+          "noteId": "103",
+          "lemma": "der Tee",
+          "translation": "herbata",
+          "deckName": "Niemiecki — słówka A1",
+          "match": "exact"
+        }
+      ]
+    },
+    {
+      "operation": "generateAssociation",
+      "command": "generate_association",
+      "args": [
+        {
+          "operationId": "contract-16",
+          "noteId": "90007",
+          "variants": 1
+        }
+      ],
+      "output": {
+        "jobId": "job-90013",
+        "kind": "llm",
+        "status": "queued",
+        "sequence": 0,
+        "progress": {
+          "done": 0,
+          "total": 3
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": null,
+        "error": null,
+        "result": null
+      }
+    },
+    {
+      "operation": "getJobStatus",
+      "command": "get_job_status",
+      "args": [
+        "job-90013"
+      ],
+      "output": {
+        "jobId": "job-90013",
+        "kind": "llm",
+        "status": "succeeded",
+        "sequence": 3,
+        "progress": {
+          "done": 3,
+          "total": 3
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": "2026-03-02T08:00:13.300Z",
+        "error": null,
+        "result": null
+      }
+    },
+    {
+      "operation": "deleteNote",
+      "command": "delete_note",
+      "args": [
+        {
+          "operationId": "contract-17",
+          "noteId": "90007",
+          "expectedVersion": 1
+        }
+      ],
+      "output": {
+        "deletedCards": 1
+      }
+    },
+    {
+      "operation": "getNoteDetails",
+      "command": "get_note_details",
+      "args": [
+        "1016"
+      ],
+      "output": {
+        "deckId": "2",
+        "targetLanguage": "de",
+        "capabilities": {
+          "associations": true,
+          "grammarTips": true,
+          "wordLinks": true,
+          "tts": true
+        },
+        "archivedOrdinals": [],
+        "note": {
+          "id": "116",
+          "guid": "note-deck-de-sentences-a1-116",
+          "noteTypeKind": "Sentence",
+          "front": "Wir frühstücken gemütlich zusammen.",
+          "back": "Jemy razem spokojne śniadanie.",
+          "tags": [
+            "zdania"
+          ],
+          "version": 1,
+          "createdAt": "2026-01-29T08:00:00.000Z",
+          "updatedAt": "2026-01-29T08:00:00.000Z"
+        },
+        "cards": [
+          {
+            "id": "1016",
+            "noteId": "116",
+            "deckId": "2",
+            "deckName": "Niemiecki — zdania A1",
+            "ordinal": 0,
+            "direction": "forward",
+            "state": "Relearning",
+            "queue": "Learning",
+            "flag": "none",
+            "dueAt": "2026-03-02T14:02:52.462Z",
+            "stability": 30.74,
+            "difficulty": 1.48,
+            "retrievability": {
+              "value": 0.989,
+              "computedAt": "2026-03-02T08:00:13.300Z"
+            },
+            "reps": 11,
+            "lapses": 1,
+            "version": 1,
+            "history": [
+              {
+                "id": "5066",
+                "reviewedAt": "2026-02-27T07:00:00.000Z",
+                "rating": "Good",
+                "stateBefore": "Review",
+                "intervalSeconds": 600
+              },
+              {
+                "id": "5067",
+                "reviewedAt": "2026-02-24T03:00:00.000Z",
+                "rating": "Good",
+                "stateBefore": "Review",
+                "intervalSeconds": 600
+              },
+              {
+                "id": "5068",
+                "reviewedAt": "2026-02-21T01:00:00.000Z",
+                "rating": "Easy",
+                "stateBefore": "Review",
+                "intervalSeconds": 600
+              },
+              {
+                "id": "5069",
+                "reviewedAt": "2026-02-18T03:00:00.000Z",
+                "rating": "Easy",
+                "stateBefore": "Review",
+                "intervalSeconds": 600
+              },
+              {
+                "id": "5070",
+                "reviewedAt": "2026-02-15T02:00:00.000Z",
+                "rating": "Good",
+                "stateBefore": "Review",
+                "intervalSeconds": 600
+              }
+            ]
+          }
+        ],
+        "associations": [],
+        "grammarTips": [],
+        "wordLinks": [
+          {
+            "id": "5119",
+            "sentenceNoteId": "116",
+            "surface": "frühstücken",
+            "startIndex": 4,
+            "endIndex": 15,
+            "lemma": "frühstücken",
+            "resolution": "unresolved",
+            "wordNoteId": null,
+            "translation": null,
+            "candidates": [
+              {
+                "noteId": "101",
+                "lemma": "das Frühstück",
+                "translation": "śniadanie"
+              }
+            ]
+          },
+          {
+            "id": "5120",
+            "sentenceNoteId": "116",
+            "surface": "gemütlich",
+            "startIndex": 16,
+            "endIndex": 25,
+            "lemma": "gemütlich",
+            "resolution": "resolved",
+            "wordNoteId": "107",
+            "translation": "przytulny, wygodny",
+            "candidates": []
+          }
+        ]
+      }
+    },
+    {
+      "operation": "resolveWordLink",
+      "command": "resolve_word_link",
+      "args": [
+        {
+          "operationId": "contract-18",
+          "linkId": "5119",
+          "wordNoteId": "101"
+        }
+      ],
+      "output": {
+        "id": "5119",
+        "sentenceNoteId": "116",
+        "surface": "frühstücken",
+        "startIndex": 4,
+        "endIndex": 15,
+        "lemma": "frühstücken",
+        "resolution": "userOverridden",
+        "wordNoteId": "101",
+        "translation": "śniadanie",
+        "candidates": [
+          {
+            "noteId": "101",
+            "lemma": "das Frühstück",
+            "translation": "śniadanie"
+          }
+        ]
+      }
+    },
+    {
+      "operation": "searchCards",
+      "command": "search_cards",
+      "args": [
+        {
+          "query": "",
+          "deckId": "1",
+          "tag": null,
+          "states": [],
+          "flags": [],
+          "sort": "due",
+          "direction": "asc",
+          "cursor": null,
+          "pageSize": 5
+        }
+      ],
+      "output": {
+        "items": [
+          {
+            "cardId": "1003",
+            "noteId": "103",
+            "deckId": "1",
+            "deckName": "Niemiecki — słówka A1",
+            "front": "der Tee",
+            "back": "herbata",
+            "state": "Review",
+            "queue": "Review",
+            "flag": "none",
+            "dueAt": "2026-02-28T16:06:45.913Z",
+            "position": null,
+            "direction": "forward",
+            "tags": [
+              "jedzenie"
+            ]
+          },
+          {
+            "cardId": "1009",
+            "noteId": "109",
+            "deckId": "1",
+            "deckName": "Niemiecki — słówka A1",
+            "front": "die Brücke",
+            "back": "most",
+            "state": "Review",
+            "queue": "Review",
+            "flag": "none",
+            "dueAt": "2026-02-28T23:20:17.616Z",
+            "position": null,
+            "direction": "forward",
+            "tags": [
+              "miasto"
+            ]
+          },
+          {
+            "cardId": "1004",
+            "noteId": "104",
+            "deckId": "1",
+            "deckName": "Niemiecki — słówka A1",
+            "front": "die Bank (Sitz)",
+            "back": "ławka",
+            "state": "Review",
+            "queue": "Review",
+            "flag": "red",
+            "dueAt": "2026-03-01T08:07:32.899Z",
+            "position": null,
+            "direction": "forward",
+            "tags": [
+              "miasto",
+              "homograf"
+            ]
+          },
+          {
+            "cardId": "1006",
+            "noteId": "106",
+            "deckId": "1",
+            "deckName": "Niemiecki — słówka A1",
+            "front": "trinken",
+            "back": "pić",
+            "state": "Review",
+            "queue": "Review",
+            "flag": "none",
+            "dueAt": "2026-03-01T13:42:21.320Z",
+            "position": null,
+            "direction": "forward",
+            "tags": [
+              "czasowniki"
+            ]
+          },
+          {
+            "cardId": "1012",
+            "noteId": "112",
+            "deckId": "5",
+            "deckName": "Złożenia (Komposita)",
+            "front": "der Handschuh",
+            "back": "rękawiczka",
+            "state": "Relearning",
+            "queue": "Learning",
+            "flag": "red",
+            "dueAt": "2026-03-02T08:01:13.300Z",
+            "position": null,
+            "direction": "forward",
+            "tags": [
+              "ubrania",
+              "złożenia"
+            ]
+          }
+        ],
+        "nextCursor": "5",
+        "total": 13,
+        "filterVersion": "19:[\"\",\"1\",null,[],[],\"due\",\"asc\"]"
+      }
+    },
+    {
+      "operation": "previewBulkAction",
+      "command": "preview_bulk_action",
+      "args": [
+        {
+          "selection": {
+            "kind": "ids",
+            "cardIds": [
+              "1003"
+            ]
+          },
+          "action": {
+            "type": "addTag",
+            "tag": "kontrakt"
+          }
+        }
+      ],
+      "output": {
+        "selected": 1,
+        "affected": 1,
+        "unchanged": 0,
+        "notes": 1,
+        "decks": 1
+      }
+    },
+    {
+      "operation": "applyBulkAction",
+      "command": "apply_bulk_action",
+      "args": [
+        {
+          "operationId": "contract-19",
+          "selection": {
+            "kind": "ids",
+            "cardIds": [
+              "1003"
+            ]
+          },
+          "action": {
+            "type": "addTag",
+            "tag": "kontrakt"
+          }
+        }
+      ],
+      "output": {
+        "affected": 1
+      }
+    },
+    {
+      "operation": "getStats",
+      "command": "get_stats",
+      "args": [
+        {
+          "deckId": "1",
+          "range": "1m"
+        }
+      ],
+      "output": {
+        "range": "1m",
+        "deckId": "1",
+        "reviewsByDay": [
+          {
+            "day": "2026-02-01",
+            "count": 11,
+            "activeMs": 109340
+          },
+          {
+            "day": "2026-02-02",
+            "count": 0,
+            "activeMs": 0
+          },
+          {
+            "day": "2026-02-03",
+            "count": 0,
+            "activeMs": 0
+          },
+          {
+            "day": "2026-02-04",
+            "count": 0,
+            "activeMs": 0
+          },
+          {
+            "day": "2026-02-05",
+            "count": 1,
+            "activeMs": 7134
+          },
+          {
+            "day": "2026-02-06",
+            "count": 5,
+            "activeMs": 38125
+          },
+          {
+            "day": "2026-02-07",
+            "count": 0,
+            "activeMs": 0
+          },
+          {
+            "day": "2026-02-08",
+            "count": 0,
+            "activeMs": 0
+          },
+          {
+            "day": "2026-02-09",
+            "count": 5,
+            "activeMs": 28605
+          },
+          {
+            "day": "2026-02-10",
+            "count": 7,
+            "activeMs": 64155
+          },
+          {
+            "day": "2026-02-11",
+            "count": 0,
+            "activeMs": 0
+          },
+          {
+            "day": "2026-02-12",
+            "count": 9,
+            "activeMs": 61569
+          },
+          {
+            "day": "2026-02-13",
+            "count": 11,
+            "activeMs": 78617
+          },
+          {
+            "day": "2026-02-14",
+            "count": 10,
+            "activeMs": 81530
+          },
+          {
+            "day": "2026-02-15",
+            "count": 3,
+            "activeMs": 19836
+          },
+          {
+            "day": "2026-02-16",
+            "count": 5,
+            "activeMs": 29520
+          },
+          {
+            "day": "2026-02-17",
+            "count": 12,
+            "activeMs": 117888
+          },
+          {
+            "day": "2026-02-18",
+            "count": 3,
+            "activeMs": 13293
+          },
+          {
+            "day": "2026-02-19",
+            "count": 8,
+            "activeMs": 73144
+          },
+          {
+            "day": "2026-02-20",
+            "count": 11,
+            "activeMs": 46475
+          },
+          {
+            "day": "2026-02-21",
+            "count": 8,
+            "activeMs": 47824
+          },
+          {
+            "day": "2026-02-22",
+            "count": 8,
+            "activeMs": 67416
+          },
+          {
+            "day": "2026-02-23",
+            "count": 4,
+            "activeMs": 37656
+          },
+          {
+            "day": "2026-02-24",
+            "count": 5,
+            "activeMs": 31665
+          },
+          {
+            "day": "2026-02-25",
+            "count": 4,
+            "activeMs": 21404
+          },
+          {
+            "day": "2026-02-26",
+            "count": 12,
+            "activeMs": 63720
+          },
+          {
+            "day": "2026-02-27",
+            "count": 6,
+            "activeMs": 24528
+          },
+          {
+            "day": "2026-02-28",
+            "count": 0,
+            "activeMs": 0
+          },
+          {
+            "day": "2026-03-01",
+            "count": 3,
+            "activeMs": 21675
+          },
+          {
+            "day": "2026-03-02",
+            "count": 2,
+            "activeMs": 9948
+          }
+        ],
+        "forecast": [
+          {
+            "day": "2026-03-02",
+            "stored": 5,
+            "projected": 5
+          },
+          {
+            "day": "2026-03-03",
+            "stored": 3,
+            "projected": 3
+          },
+          {
+            "day": "2026-03-04",
+            "stored": 1,
+            "projected": 1
+          },
+          {
+            "day": "2026-03-05",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-06",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-07",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-08",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-09",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-10",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-11",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-12",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-13",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-14",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-15",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-16",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-17",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-18",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-19",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-20",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-21",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-22",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-23",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-24",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-25",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-26",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-27",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-28",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-29",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-30",
+            "stored": 0,
+            "projected": 0
+          },
+          {
+            "day": "2026-03-31",
+            "stored": 0,
+            "projected": 0
+          }
+        ],
+        "forecastAssumptions": {
+          "reviewsPerDay": 200,
+          "newPerDay": 20,
+          "includesNew": false
+        },
+        "overdue": 4,
+        "cardStates": {
+          "New": 4,
+          "Learning": 0,
+          "Review": 8,
+          "Relearning": 1,
+          "Suspended": 0
+        },
+        "maturity": {
+          "young": 3,
+          "mature": 5
+        },
+        "matureThresholdDays": 21,
+        "trueRetention": {
+          "young": {
+            "passed": 14,
+            "total": 16
+          },
+          "mature": {
+            "passed": 12,
+            "total": 12
+          }
+        },
+        "stability": [
+          {
+            "minDays": 0,
+            "maxDays": 1,
+            "count": 0
+          },
+          {
+            "minDays": 1,
+            "maxDays": 3,
+            "count": 0
+          },
+          {
+            "minDays": 3,
+            "maxDays": 7,
+            "count": 0
+          },
+          {
+            "minDays": 7,
+            "maxDays": 14,
+            "count": 2
+          },
+          {
+            "minDays": 14,
+            "maxDays": 30,
+            "count": 5
+          },
+          {
+            "minDays": 30,
+            "maxDays": 90,
+            "count": 2
+          },
+          {
+            "minDays": 90,
+            "maxDays": null,
+            "count": 0
+          }
+        ],
+        "difficultyStability": [
+          {
+            "cardId": "1000",
+            "stability": 11.93,
+            "difficulty": 6.62
+          },
+          {
+            "cardId": "1001",
+            "stability": 34.49,
+            "difficulty": 1.46
+          },
+          {
+            "cardId": "1003",
+            "stability": 33.36,
+            "difficulty": 3.88
+          },
+          {
+            "cardId": "1004",
+            "stability": 27.39,
+            "difficulty": 7.13
+          },
+          {
+            "cardId": "1005",
+            "stability": 29.78,
+            "difficulty": 9.41
+          },
+          {
+            "cardId": "1006",
+            "stability": 18.99,
+            "difficulty": 8.59
+          },
+          {
+            "cardId": "1009",
+            "stability": 27.19,
+            "difficulty": 4.02
+          },
+          {
+            "cardId": "1010",
+            "stability": 20.57,
+            "difficulty": 2.66
+          },
+          {
+            "cardId": "1012",
+            "stability": 12.7,
+            "difficulty": 4.55
+          }
+        ],
+        "streakDays": 2,
+        "longestStreakDays": 16,
+        "generatedAt": "2026-03-02T08:00:13.300Z"
+      }
+    },
+    {
+      "operation": "getSettings",
+      "command": "get_settings",
+      "args": [],
+      "output": {
+        "uiLanguage": "pl",
+        "nativeLanguage": "pl",
+        "defaultTargetLanguage": "de",
+        "theme": "system",
+        "dailyGoal": 20,
+        "timeZone": "Europe/Warsaw",
+        "dayCutoffHour": 4,
+        "defaultPresetId": "preset-default",
+        "notifications": "prompt",
+        "reminderTime": null,
+        "ttsEnabled": true,
+        "ttsRate": 1,
+        "ai": {
+          "consent": "granted",
+          "provider": "demo",
+          "model": "demo-mnemonic-v1",
+          "endpoint": null,
+          "hasApiKey": false,
+          "providers": [
+            {
+              "id": "demo",
+              "name": "Demo",
+              "requiresKey": false,
+              "models": [
+                "demo-mnemonic-v1"
+              ],
+              "customEndpoint": false
+            },
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "requiresKey": true,
+              "models": [
+                "claude-haiku-5-5",
+                "claude-sonnet-5-5"
+              ],
+              "customEndpoint": false
+            },
+            {
+              "id": "openaiCompatible",
+              "name": "OpenAI-compatible",
+              "requiresKey": true,
+              "models": [],
+              "customEndpoint": true
+            }
+          ],
+          "quota": {
+            "used": 12,
+            "limit": 50,
+            "resetsAt": "2026-03-03T08:00:00.000Z"
+          }
+        },
+        "telemetryOptIn": false,
+        "backup": {
+          "automatic": true,
+          "retention": 5,
+          "target": "app",
+          "externalFolder": null
+        },
+        "version": 1
+      }
+    },
+    {
+      "operation": "updateSettings",
+      "command": "update_settings",
+      "args": [
+        {
+          "operationId": "contract-20",
+          "expectedVersion": 1,
+          "patch": {
+            "dailyGoal": 25
+          }
+        }
+      ],
+      "output": {
+        "uiLanguage": "pl",
+        "nativeLanguage": "pl",
+        "defaultTargetLanguage": "de",
+        "theme": "system",
+        "dailyGoal": 25,
+        "timeZone": "Europe/Warsaw",
+        "dayCutoffHour": 4,
+        "defaultPresetId": "preset-default",
+        "notifications": "prompt",
+        "reminderTime": null,
+        "ttsEnabled": true,
+        "ttsRate": 1,
+        "ai": {
+          "consent": "granted",
+          "provider": "demo",
+          "model": "demo-mnemonic-v1",
+          "endpoint": null,
+          "hasApiKey": false,
+          "providers": [
+            {
+              "id": "demo",
+              "name": "Demo",
+              "requiresKey": false,
+              "models": [
+                "demo-mnemonic-v1"
+              ],
+              "customEndpoint": false
+            },
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "requiresKey": true,
+              "models": [
+                "claude-haiku-5-5",
+                "claude-sonnet-5-5"
+              ],
+              "customEndpoint": false
+            },
+            {
+              "id": "openaiCompatible",
+              "name": "OpenAI-compatible",
+              "requiresKey": true,
+              "models": [],
+              "customEndpoint": true
+            }
+          ],
+          "quota": {
+            "used": 12,
+            "limit": 50,
+            "resetsAt": "2026-03-03T08:00:00.000Z"
+          }
+        },
+        "telemetryOptIn": false,
+        "backup": {
+          "automatic": true,
+          "retention": 5,
+          "target": "app",
+          "externalFolder": null
+        },
+        "version": 2
+      }
+    },
+    {
+      "operation": "setAiApiKey",
+      "command": "set_ai_api_key",
+      "args": [
+        {
+          "operationId": "contract-21",
+          "apiKey": "contract-test-key"
+        }
+      ],
+      "output": {
+        "consent": "granted",
+        "provider": "demo",
+        "model": "demo-mnemonic-v1",
+        "endpoint": null,
+        "hasApiKey": true,
+        "providers": [
+          {
+            "id": "demo",
+            "name": "Demo",
+            "requiresKey": false,
+            "models": [
+              "demo-mnemonic-v1"
+            ],
+            "customEndpoint": false
+          },
+          {
+            "id": "anthropic",
+            "name": "Anthropic",
+            "requiresKey": true,
+            "models": [
+              "claude-haiku-5-5",
+              "claude-sonnet-5-5"
+            ],
+            "customEndpoint": false
+          },
+          {
+            "id": "openaiCompatible",
+            "name": "OpenAI-compatible",
+            "requiresKey": true,
+            "models": [],
+            "customEndpoint": true
+          }
+        ],
+        "quota": {
+          "used": 12,
+          "limit": 50,
+          "resetsAt": "2026-03-03T08:00:00.000Z"
+        }
+      }
+    },
+    {
+      "operation": "requestNotificationPermission",
+      "command": "request_notification_permission",
+      "args": [
+        {
+          "operationId": "contract-22"
+        }
+      ],
+      "output": {
+        "uiLanguage": "pl",
+        "nativeLanguage": "pl",
+        "defaultTargetLanguage": "de",
+        "theme": "system",
+        "dailyGoal": 25,
+        "timeZone": "Europe/Warsaw",
+        "dayCutoffHour": 4,
+        "defaultPresetId": "preset-default",
+        "notifications": "granted",
+        "reminderTime": null,
+        "ttsEnabled": true,
+        "ttsRate": 1,
+        "ai": {
+          "consent": "granted",
+          "provider": "demo",
+          "model": "demo-mnemonic-v1",
+          "endpoint": null,
+          "hasApiKey": true,
+          "providers": [
+            {
+              "id": "demo",
+              "name": "Demo",
+              "requiresKey": false,
+              "models": [
+                "demo-mnemonic-v1"
+              ],
+              "customEndpoint": false
+            },
+            {
+              "id": "anthropic",
+              "name": "Anthropic",
+              "requiresKey": true,
+              "models": [
+                "claude-haiku-5-5",
+                "claude-sonnet-5-5"
+              ],
+              "customEndpoint": false
+            },
+            {
+              "id": "openaiCompatible",
+              "name": "OpenAI-compatible",
+              "requiresKey": true,
+              "models": [],
+              "customEndpoint": true
+            }
+          ],
+          "quota": {
+            "used": 12,
+            "limit": 50,
+            "resetsAt": "2026-03-03T08:00:00.000Z"
+          }
+        },
+        "telemetryOptIn": false,
+        "backup": {
+          "automatic": true,
+          "retention": 5,
+          "target": "app",
+          "externalFolder": null
+        },
+        "version": 4
+      }
+    },
+    {
+      "operation": "getOnboardingState",
+      "command": "get_onboarding_state",
+      "args": [],
+      "output": {
+        "completed": true,
+        "step": "ready",
+        "availableDecks": [
+          {
+            "guid": "deck-de-words-a1",
+            "name": "Niemiecki — słówka A1",
+            "description": "Podstawowe słownictwo z mnemotechnikami i wskazówkami gramatycznymi.",
+            "targetLanguage": "de",
+            "deckType": "Linguistic",
+            "noteCount": 10,
+            "cardCount": 10,
+            "level": "A1"
+          },
+          {
+            "guid": "deck-de-sentences-a1",
+            "name": "Niemiecki — zdania A1",
+            "description": "Zdania z linkami do słówek.",
+            "targetLanguage": "de",
+            "deckType": "Linguistic",
+            "noteCount": 4,
+            "cardCount": 4,
+            "level": "A1"
+          },
+          {
+            "guid": "deck-en-words-a1",
+            "name": "English — words A1",
+            "description": "Słówka angielskie z mnemotechnikami.",
+            "targetLanguage": "en",
+            "deckType": "TextWithAssociations",
+            "noteCount": 5,
+            "cardCount": 5,
+            "level": "A1"
+          }
+        ],
+        "installedDeckGuids": [
+          "deck-de-words-a1",
+          "deck-de-sentences-a1",
+          "deck-en-words-a1"
+        ],
+        "nativeLanguage": "pl",
+        "targetLanguages": [
+          "de",
+          "en"
+        ],
+        "dailyGoal": 25
+      }
+    },
+    {
+      "operation": "completeOnboarding",
+      "command": "complete_onboarding",
+      "args": [
+        {
+          "operationId": "contract-23",
+          "nativeLanguage": "pl",
+          "targetLanguages": [
+            "de",
+            "en"
+          ],
+          "dailyGoal": 25,
+          "deckGuids": []
+        }
+      ],
+      "output": {
+        "jobId": "job-90014",
+        "kind": "prepareContent",
+        "status": "queued",
+        "sequence": 0,
+        "progress": {
+          "done": 0,
+          "total": 2
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": null,
+        "error": null,
+        "result": null
+      }
+    },
+    {
+      "operation": "getJobStatus",
+      "command": "get_job_status",
+      "args": [
+        "job-90014"
+      ],
+      "output": {
+        "jobId": "job-90014",
+        "kind": "prepareContent",
+        "status": "succeeded",
+        "sequence": 2,
+        "progress": {
+          "done": 2,
+          "total": 2
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": "2026-03-02T08:00:13.300Z",
+        "error": null,
+        "result": {
+          "type": "prepareContent",
+          "deckIds": []
+        }
+      }
+    },
+    {
+      "operation": "pickFile",
+      "command": "pick_file",
+      "args": [
+        {
+          "purpose": "import"
+        }
+      ],
+      "output": {
+        "token": "demo-import-csv",
+        "name": "slowka-niemiecki.csv",
+        "sizeBytes": 1284
+      }
+    },
+    {
+      "operation": "previewImport",
+      "command": "preview_import",
+      "args": [
+        {
+          "fileToken": "demo-import-csv",
+          "delimiter": null,
+          "hasHeader": true,
+          "mapping": null,
+          "duplicatePolicy": "skip",
+          "targetDeckId": "1"
+        }
+      ],
+      "output": {
+        "fileName": "slowka-niemiecki.csv",
+        "detectedDelimiter": ";",
+        "delimiter": ";",
+        "encoding": "UTF-8",
+        "hasBom": true,
+        "hasHeader": true,
+        "columns": [
+          "Vorderseite",
+          "Rückseite",
+          "Tags"
+        ],
+        "sampleRows": [
+          [
+            "die Größe",
+            "rozmiar",
+            "A1"
+          ],
+          [
+            "der Fußgängerüberweg",
+            "przejście dla pieszych",
+            "A2 złożenia"
+          ],
+          [
+            "schön",
+            "ładny, piękny",
+            "A1"
+          ],
+          [
+            "der Tee",
+            "herbata (napój)",
+            "A1 jedzenie"
+          ],
+          [
+            "trinken",
+            "pić",
+            "A1 czasowniki"
+          ]
+        ],
+        "mapping": [
+          "front",
+          "back",
+          "tags"
+        ],
+        "totalRows": 15,
+        "counts": {
+          "create": 12,
+          "update": 0,
+          "skip": 2,
+          "duplicate": 0,
+          "error": 1
+        },
+        "rowErrors": [
+          {
+            "row": 9,
+            "error": {
+              "code": "VALIDATION_FAILED",
+              "messageKey": "errors.VALIDATION_FAILED",
+              "retryable": false,
+              "details": {
+                "field": "front",
+                "reason": "required"
+              }
+            }
+          }
+        ],
+        "targetDeckId": "1",
+        "targetDeckName": "Niemiecki — słówka A1",
+        "previewToken": "import-25-1"
+      }
+    },
+    {
+      "operation": "commitImport",
+      "command": "commit_import",
+      "args": [
+        {
+          "operationId": "contract-24",
+          "previewToken": "import-25-1"
+        }
+      ],
+      "output": {
+        "jobId": "job-90015",
+        "kind": "import",
+        "status": "queued",
+        "sequence": 0,
+        "progress": {
+          "done": 0,
+          "total": 4
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": null,
+        "error": null,
+        "result": null
+      }
+    },
+    {
+      "operation": "cancelJob",
+      "command": "cancel_job",
+      "args": [
+        "job-90015"
+      ],
+      "output": {
+        "jobId": "job-90015",
+        "kind": "import",
+        "status": "cancelled",
+        "sequence": 1,
+        "progress": {
+          "done": 0,
+          "total": 4
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": "2026-03-02T08:00:13.300Z",
+        "error": null,
+        "result": null
+      }
+    },
+    {
+      "operation": "getJobStatus",
+      "command": "get_job_status",
+      "args": [
+        "job-90015"
+      ],
+      "output": {
+        "jobId": "job-90015",
+        "kind": "import",
+        "status": "cancelled",
+        "sequence": 1,
+        "progress": {
+          "done": 0,
+          "total": 4
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": "2026-03-02T08:00:13.300Z",
+        "error": null,
+        "result": null
+      }
+    },
+    {
+      "operation": "previewImport",
+      "command": "preview_import",
+      "args": [
+        {
+          "fileToken": "demo-import-csv",
+          "delimiter": null,
+          "hasHeader": true,
+          "mapping": null,
+          "duplicatePolicy": "skip",
+          "targetDeckId": "1"
+        }
+      ],
+      "output": {
+        "fileName": "slowka-niemiecki.csv",
+        "detectedDelimiter": ";",
+        "delimiter": ";",
+        "encoding": "UTF-8",
+        "hasBom": true,
+        "hasHeader": true,
+        "columns": [
+          "Vorderseite",
+          "Rückseite",
+          "Tags"
+        ],
+        "sampleRows": [
+          [
+            "die Größe",
+            "rozmiar",
+            "A1"
+          ],
+          [
+            "der Fußgängerüberweg",
+            "przejście dla pieszych",
+            "A2 złożenia"
+          ],
+          [
+            "schön",
+            "ładny, piękny",
+            "A1"
+          ],
+          [
+            "der Tee",
+            "herbata (napój)",
+            "A1 jedzenie"
+          ],
+          [
+            "trinken",
+            "pić",
+            "A1 czasowniki"
+          ]
+        ],
+        "mapping": [
+          "front",
+          "back",
+          "tags"
+        ],
+        "totalRows": 15,
+        "counts": {
+          "create": 12,
+          "update": 0,
+          "skip": 2,
+          "duplicate": 0,
+          "error": 1
+        },
+        "rowErrors": [
+          {
+            "row": 9,
+            "error": {
+              "code": "VALIDATION_FAILED",
+              "messageKey": "errors.VALIDATION_FAILED",
+              "retryable": false,
+              "details": {
+                "field": "front",
+                "reason": "required"
+              }
+            }
+          }
+        ],
+        "targetDeckId": "1",
+        "targetDeckName": "Niemiecki — słówka A1",
+        "previewToken": "import-27-2"
+      }
+    },
+    {
+      "operation": "commitImport",
+      "command": "commit_import",
+      "args": [
+        {
+          "operationId": "contract-25",
+          "previewToken": "import-27-2"
+        }
+      ],
+      "output": {
+        "jobId": "job-90016",
+        "kind": "import",
+        "status": "queued",
+        "sequence": 0,
+        "progress": {
+          "done": 0,
+          "total": 4
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": null,
+        "error": null,
+        "result": null
+      }
+    },
+    {
+      "operation": "getJobStatus",
+      "command": "get_job_status",
+      "args": [
+        "job-90016"
+      ],
+      "output": {
+        "jobId": "job-90016",
+        "kind": "import",
+        "status": "succeeded",
+        "sequence": 4,
+        "progress": {
+          "done": 4,
+          "total": 4
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": "2026-03-02T08:00:13.300Z",
+        "error": null,
+        "result": {
+          "type": "import",
+          "deckId": "1",
+          "create": 12,
+          "update": 0,
+          "skip": 2,
+          "duplicate": 0,
+          "error": 1,
+          "rowErrors": [
+            {
+              "row": 9,
+              "error": {
+                "code": "VALIDATION_FAILED",
+                "messageKey": "errors.VALIDATION_FAILED",
+                "retryable": false,
+                "details": {
+                  "field": "front",
+                  "reason": "required"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "operation": "exportDeck",
+      "command": "export_deck",
+      "args": [
+        {
+          "operationId": "contract-26",
+          "deckId": "1",
+          "format": "csv",
+          "includeScheduling": true
+        }
+      ],
+      "output": {
+        "jobId": "job-90041",
+        "kind": "export",
+        "status": "queued",
+        "sequence": 0,
+        "progress": {
+          "done": 0,
+          "total": 4
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": null,
+        "error": null,
+        "result": null
+      }
+    },
+    {
+      "operation": "getJobStatus",
+      "command": "get_job_status",
+      "args": [
+        "job-90041"
+      ],
+      "output": {
+        "jobId": "job-90041",
+        "kind": "export",
+        "status": "succeeded",
+        "sequence": 4,
+        "progress": {
+          "done": 4,
+          "total": 4
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": "2026-03-02T08:00:13.300Z",
+        "error": null,
+        "result": {
+          "type": "export",
+          "fileName": "niemiecki-slowka-a1.csv",
+          "cardCount": 25
+        }
+      }
+    },
+    {
+      "operation": "shareFile",
+      "command": "share_file",
+      "args": [
+        {
+          "operationId": "contract-27",
+          "target": {
+            "kind": "export",
+            "jobId": "job-90041"
+          }
+        }
+      ],
+      "output": {
+        "shared": true
+      }
+    },
+    {
+      "operation": "listBackups",
+      "command": "list_backups",
+      "args": [],
+      "output": [
+        {
+          "id": "backup-3",
+          "createdAt": "2026-02-27T08:00:00.000Z",
+          "sizeBytes": 200000,
+          "schemaVersion": 1,
+          "cardCount": 30,
+          "location": "external",
+          "kind": "automatic"
+        },
+        {
+          "id": "backup-2",
+          "createdAt": "2026-02-20T08:00:00.000Z",
+          "sizeBytes": 191000,
+          "schemaVersion": 1,
+          "cardCount": 30,
+          "location": "app",
+          "kind": "manual"
+        },
+        {
+          "id": "backup-1",
+          "createdAt": "2026-02-13T08:00:00.000Z",
+          "sizeBytes": 182000,
+          "schemaVersion": 1,
+          "cardCount": 30,
+          "location": "app",
+          "kind": "automatic"
+        }
+      ]
+    },
+    {
+      "operation": "createBackup",
+      "command": "create_backup",
+      "args": [
+        {
+          "operationId": "contract-28"
+        }
+      ],
+      "output": {
+        "jobId": "job-90042",
+        "kind": "backup",
+        "status": "queued",
+        "sequence": 0,
+        "progress": {
+          "done": 0,
+          "total": 5
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": null,
+        "error": null,
+        "result": null
+      }
+    },
+    {
+      "operation": "getJobStatus",
+      "command": "get_job_status",
+      "args": [
+        "job-90042"
+      ],
+      "output": {
+        "jobId": "job-90042",
+        "kind": "backup",
+        "status": "succeeded",
+        "sequence": 5,
+        "progress": {
+          "done": 5,
+          "total": 5
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": "2026-03-02T08:00:13.300Z",
+        "error": null,
+        "result": {
+          "type": "backup",
+          "backupId": "backup-90043"
+        }
+      }
+    },
+    {
+      "operation": "shareFile",
+      "command": "share_file",
+      "args": [
+        {
+          "operationId": "contract-29",
+          "target": {
+            "kind": "backup",
+            "backupId": "backup-3"
+          }
+        }
+      ],
+      "output": {
+        "shared": true
+      }
+    },
+    {
+      "operation": "validateRestore",
+      "command": "validate_restore",
+      "args": [
+        {
+          "source": {
+            "kind": "file",
+            "fileToken": "demo-restore-corrupt"
+          }
+        }
+      ],
+      "error": {
+        "code": "BACKUP_CORRUPT",
+        "messageKey": "errors.BACKUP_CORRUPT",
+        "retryable": false,
+        "details": null
+      }
+    },
+    {
+      "operation": "validateRestore",
+      "command": "validate_restore",
+      "args": [
+        {
+          "source": {
+            "kind": "backup",
+            "backupId": "backup-3"
+          }
+        }
+      ],
+      "output": {
+        "fileName": "backup-3",
+        "createdAt": "2026-02-27T08:00:00.000Z",
+        "schemaVersion": 1,
+        "counts": {
+          "decks": 5,
+          "notes": 26,
+          "cards": 30,
+          "reviews": 83
+        },
+        "current": {
+          "decks": 5,
+          "notes": 38,
+          "cards": 42,
+          "reviews": 84
+        },
+        "compatible": true,
+        "issues": [],
+        "previewToken": "restore-35-3"
+      }
+    },
+    {
+      "operation": "restoreBackup",
+      "command": "restore_backup",
+      "args": [
+        {
+          "operationId": "contract-30",
+          "previewToken": "restore-35-3"
+        }
+      ],
+      "output": {
+        "jobId": "job-90045",
+        "kind": "restore",
+        "status": "queued",
+        "sequence": 0,
+        "progress": {
+          "done": 0,
+          "total": 6
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": null,
+        "error": null,
+        "result": null
+      }
+    },
+    {
+      "operation": "getJobStatus",
+      "command": "get_job_status",
+      "args": [
+        "job-90045"
+      ],
+      "output": {
+        "jobId": "job-90045",
+        "kind": "restore",
+        "status": "succeeded",
+        "sequence": 6,
+        "progress": {
+          "done": 6,
+          "total": 6
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": "2026-03-02T08:00:13.300Z",
+        "error": null,
+        "result": {
+          "type": "restore",
+          "safetyBackupId": "backup-90044"
+        }
+      }
+    },
+    {
+      "operation": "previewReset",
+      "command": "preview_reset",
+      "args": [
+        {
+          "scope": "progress"
+        }
+      ],
+      "output": {
+        "scope": "progress",
+        "counts": {
+          "decks": 5,
+          "notes": 26,
+          "cards": 30,
+          "reviews": 83
+        },
+        "confirmationPhrase": "RESETUJ POSTĘP",
+        "latestBackupAt": "2026-03-02T08:02:13.300Z",
+        "previewToken": "reset-37-progress"
+      }
+    },
+    {
+      "operation": "resetCollection",
+      "command": "reset_collection",
+      "args": [
+        {
+          "operationId": "contract-31",
+          "previewToken": "reset-37-progress",
+          "safetyBackupId": null,
+          "confirmationPhrase": "RESETUJ POSTĘP"
+        }
+      ],
+      "output": {
+        "jobId": "job-90046",
+        "kind": "reset",
+        "status": "queued",
+        "sequence": 0,
+        "progress": {
+          "done": 0,
+          "total": 4
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": null,
+        "error": null,
+        "result": null
+      }
+    },
+    {
+      "operation": "getJobStatus",
+      "command": "get_job_status",
+      "args": [
+        "job-90046"
+      ],
+      "output": {
+        "jobId": "job-90046",
+        "kind": "reset",
+        "status": "succeeded",
+        "sequence": 4,
+        "progress": {
+          "done": 4,
+          "total": 4
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": "2026-03-02T08:00:13.300Z",
+        "error": null,
+        "result": {
+          "type": "reset",
+          "safetyBackupId": null
+        }
+      }
+    }
+  ],
+  "events": {
+    "job_progress": {
+      "jobId": "job-90013",
+      "kind": "llm",
+      "sequence": 0,
+      "status": "queued",
+      "progress": {
+        "done": 0,
+        "total": 3
+      }
+    },
+    "collection_changed": {
+      "scopes": [
+        "decks"
+      ],
+      "changedAt": "2026-03-02T08:00:00.000Z"
+    }
+  }
+}

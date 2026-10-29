@@ -39,6 +39,7 @@ export function createDemoApi(): { api: MockAppApi; controls: DemoControls; mark
       storeScenario(scenario)
     },
     failNext: (operation, code) => api.failNext(operation, code),
+    failNextSave: (code) => api.failNextSave(code),
     demoFiles: DEMO_FILES,
     pickedFile: (purpose) => api.pickedFile(purpose),
     setPickedFile: (purpose, token) => api.setPickedFile(purpose, token),

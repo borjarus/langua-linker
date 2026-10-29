@@ -1,6 +1,6 @@
 name: E2E baselines
 
-# Regenerates the gallery pixel baselines on the Linux CI image (ui-test-matrix diff rule 6).
+# Regenerates the pixel baselines (gallery and application tour) on the Linux CI image (ui-test-matrix diff rule 6).
 # Download the artifact, review the images and commit them to frontend/e2e/__snapshots__/.
 on:
   workflow_dispatch:
