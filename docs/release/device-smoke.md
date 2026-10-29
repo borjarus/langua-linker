@@ -1,8 +1,8 @@
 # Device smoke checklist
 
-Phase 1: Android emulator and iOS simulator (owner decision 2026-10-12). Phase 6 gate: the same checklist on physical Android and iOS devices; emulator results do not count there.
+Phase 1: Android emulator and iOS simulator (owner decision 2026-10-12). Phase 6 gate: the same checklist on a physical Android device and on the iOS simulator (owner decision 2026-10-29: no iPhone available for testing; the physical iPhone run is carried over), plus rows G1–G8 of [phase6-gate.md](phase6-gate.md#step-7--physical-device-protocol); Android emulator results do not count there.
 
-Step-by-step guide for a run (setup, adb commands, Phase 5 scenarios, cleanup): [emulator-testing.md](emulator-testing.md).
+Step-by-step guides: emulator and simulator — [emulator-testing.md](emulator-testing.md); physical Android device — [android-device-testing.md](android-device-testing.md).
 
 Run with the dev variant, which bundles the demo frontend (`npm --prefix frontend run android:dev` / `android:apk`, `variant -- dev ios dev`); package `com.mila.langualinker.dev`. Record date, device, OS version, build commit and result for each row; attach screenshots in the PR.
 

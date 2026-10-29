@@ -1,11 +1,31 @@
-# AppApi contract v0.5
+# AppApi contract v1.0
 
-Source files (Phase 2: TypeScript is the source; Rust becomes the DTO source in Phase 7):
+Frozen at the Phase 6 gate (2026-10-26). TypeScript is the source until Phase 7 makes Rust the DTO source; the frozen files below are what the Rust commands must answer.
 
 - `frontend/src/api/types.ts` — DTOs, enums, `ERROR_CODES`, `API_VERSION`.
 - `frontend/src/api/appApi.ts` — the `AppApi` interface (operations and their input/result types).
 - `frontend/src/api/operations.ts` — operation catalogue: kind, Tauri command, errors, emitted events, permission, screens, backend phase. Completeness is a compile-time check (`satisfies Record<AppApiOperation, OperationSpec>`).
 - `crates/contracts/src/lib.rs` — Rust `AppInfoDto`, `ErrorDto`, `ErrorCode`; tests assert `API_VERSION` and error codes match the TypeScript side.
+- `crates/contracts/v1/catalogue.json` — the frozen catalogue: per operation `kind`, `command`, `errors`, `emits`, `permission`, plus `errorCodes`. Screens and backend phases are planning data and stay out of it.
+- `crates/contracts/v1/samples.json` — 70 recorded calls covering every callable operation (input, then output or `ErrorDto`) and one payload per event, recorded from the demo adapter on the `happy` collection.
+- [integration-checklist.md](integration-checklist.md) — what each screen needs before its mock is replaced.
+
+## Versioning (v1 and later)
+
+`API_VERSION` is `MAJOR.MINOR`. The freeze is a versioning rule, not a ban on change.
+
+- **Minor** (1.0 → 1.1): additive and safe for an older frontend — a new operation, a new optional input field, a new output field the UI does not need, a new event scope.
+- **Major** (1.x → 2.0): anything an existing caller can trip over — removing or renaming an operation, field or command; changing a type or nullability; a new required input field; a new enum member in an output (exhaustive `switch` in the UI); a new error code an operation may return.
+- A change edits `types.ts`/`operations.ts`, bumps `API_VERSION` on both sides (`types.ts`, `crates/contracts/src/lib.rs`), regenerates the frozen files with `UPDATE_CONTRACT=1 npx vitest run tests/contractV1.test.ts` (from `frontend/`) and adds a "Changes in vX.Y" section here. Without the regeneration `tests/contractV1.test.ts` fails with the bump instruction; without the bump the Rust tests fail on the version.
+
+## Contract tests (dual adapter)
+
+- `frontend/tests/contractV1.test.ts` — the catalogue equals the frozen one; a fresh recording from the mock has the same calls and payload shapes as `samples.json` (same keys, same kinds; `null` matches any kind); every sample follows the transport rules. **Adapter conformance:** the same samples are replayed against `MockAppApi` and against `TauriAppApi` over a stand-in backend that answers each Tauri command with its frozen payload and checks that the adapter sent exactly `{ input }`; events are delivered unchanged.
+- `frontend/tests/adapterSwap.test.ts` — every screen renders through `TauriAppApi` (frozen payloads) with `demo = null` and the `release` profile: content appears, no demo banner, no prototype notice, no `INTERNAL` error. The components are not changed for the swap.
+- `crates/contracts/tests/contract_v1.rs` — the Rust side reads the same files: version, error codes in Rust order, well-formed catalogue (snake_case unique commands, known kinds/events/permissions, jobs emit `job_progress`), a sample for every callable operation with its command, transport rules, error samples deserialize into `ErrorDto` with a declared code and serialize back byte-equal, the `getAppInfo` sample round-trips through `AppInfoDto`.
+- `src-tauri/src/lib.rs` (`get_app_info_matches_the_frozen_v1_sample`) — the one real command answers over IPC with the frozen keys.
+
+Phase 7 extends the Rust side per command: the DTO deserializes its frozen input and serializes an output of the frozen shape (see the checklist).
 
 ## Transport rules (enforced by `frontend/tests/contracts.test.ts`)
 
@@ -17,6 +37,12 @@ Source files (Phase 2: TypeScript is the source; Rust becomes the DTO source in 
 - Errors are `ErrorDto { code, messageKey, retryable, details }`; `messageKey` is `errors.<CODE>` and translated in the UI.
 - Long-running work returns `JobDto`; `job_progress` events carry a monotonic `sequence`; `getJobStatus` is the durable truth.
 - Tauri commands are snake_case and receive a single `input` argument.
+
+## Changes in v1.0 (Phase 6)
+
+- No operation, DTO or error code changed; v1.0 freezes the v0.5 surface (catalogue and samples above).
+- Prototype notices (`Screen` `prototype` / `notice`) render only with demo services (`AppServices.demo !== null`); with the production adapter the same screens show none. The unused `phase` placeholder of `Screen` and `common.phasePlaceholder` are removed. Two strings that described the mock outside a notice are neutral now (`about.noDatabase`, `deck.preset.weightsHint`).
+- Demo controls gain `failNextSave(code)` — the next mutation of any kind fails once; the demo banner has "Fail the next save" so a reviewer can reach save-error and retry flows.
 
 ## Changes in v0.5 (Phase 5)
 
@@ -62,11 +88,11 @@ Phase 4 content (same seeds): deck 4 holds four reversed notes (eight cards), de
 
 Phase 5 content: three backups (automatic, manual, external) with snapshots of the collection, so restoring a listed backup really replaces the demo collection; demo files for the picker — `slowka-niemiecki.csv` (semicolon, BOM, header; 15 rows, 2 duplicates of deck 1, 1 row without a front), `english-phrases.csv` (comma, no header), `Deutsch_A1.apkg` (unsupported), and the backups `…-02-27` (valid), `…uszkodzona` (corrupt), `…-v9` (newer schema), `…przerwana` (validates, then fails while restoring); one backup folder. `newUser` starts with AI consent unset; `quota` reports the AI limit as used up.
 
-`happy`, `newUser`, `empty`, `noCards` (decks without cards), `caughtUp` (cards, nothing due today), `preparing` (one deck finishes preparing in the background and emits `collection_changed`), `loading`, `error`, `offline`, `quota`, `aiErrors` (provider error / invalid output / moderation, failing generation jobs), `ambiguous`, `large` (50 000 browser rows, generated on demand). Deterministic for a given seed and clock; `setScenario` resets all demo memory; `failNext(operation, code)` injects one failure for save-error flows. The mock never touches user files and is excluded from release bundles.
+`happy`, `newUser`, `empty`, `noCards` (decks without cards), `caughtUp` (cards, nothing due today), `preparing` (one deck finishes preparing in the background and emits `collection_changed`), `loading`, `error`, `offline`, `quota`, `aiErrors` (provider error / invalid output / moderation, failing generation jobs), `ambiguous`, `large` (50 000 browser rows, generated on demand). Deterministic for a given seed and clock; `setScenario` resets all demo memory; `failNext(operation, code)` injects one failure for one operation, `failNextSave(code)` for whichever mutation runs next (banner button "Fail the next save"). The mock never touches user files and is excluded from release bundles.
 
-## UI → backend matrix (Phase 5 snapshot)
+## UI → backend matrix (v1.0, Phase 6 gate)
 
-Every operation a screen calls lists that screen in `operations.ts`; `frontend/tests/management.test.ts` (Phase 4) and `frontend/tests/phase5.test.ts` (Phase 5) record the calls of each flow and fail on an operation the catalogue does not assign to the screen (no action without a future backend contract).
+Every operation a screen calls lists that screen in `operations.ts`; `frontend/tests/management.test.ts` (Phase 4) and `frontend/tests/phase5.test.ts` (Phase 5) record the calls of each flow and fail on an operation the catalogue does not assign to the screen (no action without a future backend contract). "Mock status" is the state accepted at the Phase 6 gate; the per-screen steps for replacing the mock are in [integration-checklist.md](integration-checklist.md).
 
 | Screen / route | Operations | Mock status | Rust phase |
 |---|---|---|---|

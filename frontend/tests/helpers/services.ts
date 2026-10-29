@@ -48,6 +48,7 @@ export async function createTestServices(options: TestServicesOptions = {}): Pro
       scenarios: DEMO_SCENARIOS,
       setScenario: (scenario) => mock.setScenario(scenario),
       failNext: (operation, code) => mock.failNext(operation, code),
+      failNextSave: (code) => mock.failNextSave(code),
       demoFiles: DEMO_FILES,
       pickedFile: (purpose) => mock.pickedFile(purpose),
       setPickedFile: (purpose, token) => mock.setPickedFile(purpose, token),

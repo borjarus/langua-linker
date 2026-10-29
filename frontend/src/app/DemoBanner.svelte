@@ -4,7 +4,7 @@
   import { useServices } from './context'
 
   // Type-only demo imports: this component ships in release but renders nothing without `demo`.
-  const { demo, i18n, queries, router } = useServices()
+  const { demo, i18n, queries, router, toasts } = useServices()
   const selectId = $props.id()
   let scenario = $state<DemoScenario>(demo?.scenario ?? 'happy')
   // The mock cannot open a real picker: on file screens the banner chooses what the picker returns.
@@ -21,6 +21,12 @@
     if (!demo || !purpose) return
     demo.setPickedFile(purpose, token || null)
     pickedVersion += 1
+  }
+
+  // Lets a reviewer reach save-error and retry flows (plan Phase 6 step 3) without a test hook.
+  function failNextSave() {
+    demo?.failNextSave('DB_BUSY')
+    toasts.show(i18n.t('demo.failNextSaveArmed'))
   }
 
   function changeScenario(next: DemoScenario) {
@@ -48,6 +54,7 @@
         {/each}
       </select>
     </div>
+    <button type="button" class="btn" onclick={failNextSave}>{i18n.t('demo.failNextSave')}</button>
     {#if purpose && demo}
       <div class="row">
         <label for="{selectId}-file">{i18n.t('demo.file')}</label>
@@ -86,7 +93,8 @@
     font-weight: var(--weight-medium);
   }
 
-  .input {
+  .input,
+  .btn {
     min-height: 2.5rem;
     color: var(--color-text);
   }

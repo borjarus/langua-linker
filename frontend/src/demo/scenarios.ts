@@ -30,6 +30,8 @@ export interface DemoControls {
   /** Resets demo memory to the scenario and remembers the choice for the next start. */
   setScenario(scenario: DemoScenario): void
   failNext(operation: AppApiOperation, code: ErrorCode): void
+  /** The next mutation of any kind fails once with `code` — save-error flows in the demo. */
+  failNextSave(code: ErrorCode): void
   /** Files the demo picker offers per purpose (the mock never opens a real picker). */
   readonly demoFiles: Readonly<Record<FilePurpose, readonly { token: string; name: string }[]>>
   pickedFile(purpose: FilePurpose): string | null

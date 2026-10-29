@@ -44,4 +44,4 @@ iOS run: simulator `iPhone 17` (iOS 26.5, arm64), dev variant, backend reported 
 2. Entry names (`<name>@<service>`) are stored in plaintext. They must stay generic (`llm-api-key`), never user data.
 3. Service is the configured identifier; mobile builds use the base identifier for all variants (Android variants are still isolated by `applicationIdSuffix`; iOS variants share the bundle id until suffixes exist there).
 4. Backup exclusion: Android `SharedPreferences` are included in Auto Backup by default — before Phase 13 stores a real key, exclude `keyring-default.xml` in the backup rules (the Keystore key does not migrate, so a restored ciphertext would be unreadable anyway). iOS Keychain items use the crate's default accessibility; confirm `ThisDeviceOnly` behaviour on devices in Phase 6.
-5. Physical Android/iOS devices at the Phase 6 gate.
+5. Physical Android device at the Phase 6 gate; physical iPhone once one is available (owner decision 2026-10-29).

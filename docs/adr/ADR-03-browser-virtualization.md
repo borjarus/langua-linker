@@ -47,5 +47,5 @@ Use `@tanstack/svelte-virtual` (pinned `3.13.40`) as the engine inside `componen
 - The adapter's store bridge stays until TanStack ships a runes-native adapter; migrating to it is internal to `VirtualList`.
 - Fast flings on a slow CPU drop frames while pages arrive (see the profiling table), in both engines. If the device run confirms this, reduce per-row render cost or prefetch the next page in `onrange` rather than changing the engine.
 - Android check (2026-10-21, emulator, `android:dev`, `large` scenario, 200% text): momentum scrolling through the 50 000 matches is smooth with `onrange` paging, ticking checkboxes works while scrolling, and TalkBack announces the list and the row positions. No frame drops from the profiling table were noticeable.
-- Open: the same check in WKWebView with VoiceOver (iOS simulator or device), and a physical Android device during the Phase 4 device run. Variable-height rows would switch the component to `measureElement`.
+- Open: the same check in WKWebView with VoiceOver (iOS simulator or device), and a physical Android device during the Phase 6 device run (G6); physical iPhone once one is available. Variable-height rows would switch the component to `measureElement`.
 - Phase 11 replaces the offset cursor of the mock with a keyset cursor and a stable tie-break (`card id`), without changing the screen.

@@ -199,6 +199,39 @@ mod tests {
         assert_eq!(response["appName"], "LanguaLinker");
     }
 
+    /// The real command answers in the shape frozen in contract v1, which the frontend's
+    /// adapter conformance test replays (`frontend/tests/contractV1.test.ts`).
+    #[test]
+    fn get_app_info_matches_the_frozen_v1_sample() {
+        let samples = config(include_str!("../../crates/contracts/v1/samples.json"));
+        let sample = samples["calls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|call| call["operation"] == "getAppInfo")
+            .expect("getAppInfo sample");
+        assert_eq!(sample["command"], "get_app_info");
+        let app = app();
+        let response =
+            invoke(&main_window(&app), "get_app_info", serde_json::json!({})).expect("allowed");
+        let keys = |value: &serde_json::Value| {
+            value
+                .as_object()
+                .unwrap()
+                .keys()
+                .cloned()
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(keys(&response), keys(&sample["output"]));
+        assert!(
+            response
+                .as_object()
+                .unwrap()
+                .values()
+                .all(serde_json::Value::is_string)
+        );
+    }
+
     #[test]
     fn commands_outside_the_capability_are_rejected() {
         let app = app();
