@@ -220,7 +220,7 @@ describe('editor', () => {
 
   it('links selected words of a sentence only to a word the user picks', async () => {
     const { services, mock, calls, stop, user } = await open('#/editor?deckId=2')
-    await user.click(await screen.findByRole('radio', { name: /^Sentence/ }))
+    await user.click(await screen.findByRole('radio', { name: /^Sentence(?! and reversed)/ }))
     const front = screen.getByRole('textbox', { name: 'Sentence (German)' }) as HTMLTextAreaElement
     await user.type(front, 'Der Tee ist heiß.')
     await user.type(screen.getByRole('textbox', { name: 'Back (Polish)' }), 'Herbata jest gorąca.')

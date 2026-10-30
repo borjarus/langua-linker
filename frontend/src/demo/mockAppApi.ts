@@ -5,6 +5,7 @@ import {
   DECK_TYPES,
   FSRS_WEIGHT_COUNT,
   RATINGS,
+  isSentenceNoteType,
   type AboutDto,
   type AiProviderOptionDto,
   type AiSettingsDto,
@@ -225,6 +226,7 @@ const NOTE_TYPES: NoteTypeDto[] = [
   { kind: 'Basic', templates: [{ ordinal: 0, direction: 'forward' }] },
   { kind: 'BasicAndReversed', templates: [{ ordinal: 0, direction: 'forward' }, { ordinal: 1, direction: 'reverse' }] },
   { kind: 'Sentence', templates: [{ ordinal: 0, direction: 'forward' }] },
+  { kind: 'SentenceAndReversed', templates: [{ ordinal: 0, direction: 'forward' }, { ordinal: 1, direction: 'reverse' }] },
 ]
 /** Leading articles and particles ignored by the word matcher (`der Tee` matches `Tee`). */
 const ARTICLES = /^(der|die|das|den|dem|des|ein|eine|the|a|an|to)\s+/iu
@@ -1496,7 +1498,7 @@ export class MockAppApi implements AppApi {
       return this.#collection.notes
         .flatMap((note): WordMatchDto[] => {
           const deck = this.#collection.decks.find((candidate) => candidate.id === note.deckId)
-          if (!deck || note.noteTypeKind === 'Sentence' || deck.targetLanguage !== input.targetLanguage) return []
+          if (!deck || isSentenceNoteType(note.noteTypeKind) || deck.targetLanguage !== input.targetLanguage) return []
           const exact = note.front === text || bare(note.front) === text
           if (!exact && wordKey(note.front) !== key) return []
           return [{ noteId: note.id, lemma: note.front, translation: note.back, deckName: deck.name, match: exact ? 'exact' : 'normalized' }]

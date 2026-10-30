@@ -1625,6 +1625,19 @@
                 "direction": "forward"
               }
             ]
+          },
+          {
+            "kind": "SentenceAndReversed",
+            "templates": [
+              {
+                "ordinal": 0,
+                "direction": "forward"
+              },
+              {
+                "ordinal": 1,
+                "direction": "reverse"
+              }
+            ]
           }
         ],
         "tags": [

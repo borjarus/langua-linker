@@ -428,7 +428,7 @@ After Phase 6, all screens exist as accepted GUI. After Phase 10, the first real
 
 ### Step 2 — Editor
 
-4. Front/back/tags/deck/NoteType Basic/Basic-and-reversed/Sentence; live template previews.
+4. Front/back/tags/deck/NoteType Basic/Basic-and-reversed/Sentence/Sentence-and-reversed; live template previews.
 5. Association/tip/link fields driven by capabilities, inline generation, and manual association.
 6. Duplicate warning, field validation, save/save-and-add-next, pending/conflict version.
 7. Phrase selection and match picker; no match never selects a random card.
@@ -704,7 +704,7 @@ Before this gate, do not implement production FSRS/CRUD/LLM. Spikes, IPC transpo
 ### Step 1 — notes/content
 
 1. Create/update/delete Deck/Note and Card generation; text editing does not reset existing schedules.
-2. Basic/Basic-and-reversed/Sentence; type change previews new/archived cards and protects history.
+2. Basic/Basic-and-reversed/Sentence/Sentence-and-reversed; type change previews new/archived cards and protects history.
 3. Duplicate normalization warning, not a block on valid homographs.
 4. Optimistic concurrency Note/preset, draft conflicts, frontend/Rust validation.
 5. Favorite/tip add-edit-delete-reorder transactional; consistent order after crash.

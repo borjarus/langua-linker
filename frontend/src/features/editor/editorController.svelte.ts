@@ -13,6 +13,7 @@ import type {
   WordLinkDraftDto,
   WordMatchDto,
 } from '../../api/types'
+import { isSentenceNoteType } from '../../api/types'
 import { newOperationId } from '../../services/operationId'
 
 export type FieldProblem = 'required' | 'tooLong'
@@ -91,7 +92,7 @@ export class EditorController {
   readonly capabilities = $derived(this.deck?.capabilities ?? NO_CAPABILITIES)
   readonly maxLength = $derived(this.data?.maxFieldLength ?? 2000)
   /** Linking words applies to sentences in decks that show word links. */
-  readonly linksEnabled = $derived(this.noteTypeKind === 'Sentence' && this.capabilities.wordLinks)
+  readonly linksEnabled = $derived(isSentenceNoteType(this.noteTypeKind) && this.capabilities.wordLinks)
 
   readonly problems = $derived.by(() => {
     const check = (value: string): FieldProblem | null => (value.trim() === '' ? 'required' : value.trim().length > this.maxLength ? 'tooLong' : null)

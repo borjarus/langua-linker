@@ -1,6 +1,6 @@
 <script lang="ts">
   import { toErrorDto } from '../../api/errors'
-  import type { AssociationDto, CardDetailsDto, GrammarTipDto, NoteContentChange, NoteDetailsDto, WordLinkDto, WordMatchDto } from '../../api/types'
+  import { isSentenceNoteType, type AssociationDto, type CardDetailsDto, type GrammarTipDto, type NoteContentChange, type NoteDetailsDto, type WordLinkDto, type WordMatchDto } from '../../api/types'
   import { useServices } from '../../app/context'
   import { href } from '../../app/routes'
   import Chip from '../../components/Chip.svelte'
@@ -162,7 +162,7 @@
 <Screen title={i18n.t('routes.card')} back notice={i18n.t('common.prototypeManagement')}>
   <QueryView query={details}>
     {#snippet ready(data)}
-      {@const sentence = data.note.noteTypeKind === 'Sentence'}
+      {@const sentence = isSentenceNoteType(data.note.noteTypeKind)}
       <section class="surface stack note" aria-label={i18n.t('card.note')}>
         <p class="front" lang={data.targetLanguage}>
           {#if sentence && data.capabilities.wordLinks}

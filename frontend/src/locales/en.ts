@@ -570,11 +570,13 @@ export const en = {
       Basic: 'Basic',
       BasicAndReversed: 'Basic and reversed',
       Sentence: 'Sentence',
+      SentenceAndReversed: 'Sentence and reversed',
     },
     noteTypeHints: {
       Basic: 'One card: the front asks, the back answers.',
       BasicAndReversed: 'Two cards with separate schedules: one in each direction.',
       Sentence: 'One card for a sentence; words in it can link to word cards.',
+      SentenceAndReversed: 'Two sentence cards with separate schedules, one in each direction; words in it can link to word cards.',
     },
     content: 'Content',
     front: 'Front ({{language}})',

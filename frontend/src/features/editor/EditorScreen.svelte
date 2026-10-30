@@ -1,7 +1,7 @@
 <script lang="ts">
   import { tick, untrack } from 'svelte'
   import { toErrorDto } from '../../api/errors'
-  import type { EditorDeckOptionDto, ErrorDto, NoteDetailsDto, WordMatchDto } from '../../api/types'
+  import { isSentenceNoteType, type EditorDeckOptionDto, type ErrorDto, type NoteDetailsDto, type WordMatchDto } from '../../api/types'
   import { useServices } from '../../app/context'
   import { href, type Route } from '../../app/routes'
   import Chip from '../../components/Chip.svelte'
@@ -221,7 +221,7 @@
       <section class="surface stack" aria-labelledby="{ids}-content">
         <h2 id="{ids}-content">{i18n.t('editor.content')}</h2>
         <div class="field">
-          <label for="{ids}-front">{i18n.t(editor.noteTypeKind === 'Sentence' ? 'editor.sentence' : 'editor.front', { language })}</label>
+          <label for="{ids}-front">{i18n.t(isSentenceNoteType(editor.noteTypeKind) ? 'editor.sentence' : 'editor.front', { language })}</label>
           <textarea
             id="{ids}-front"
             class="input"
