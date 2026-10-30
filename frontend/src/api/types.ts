@@ -40,7 +40,9 @@ export type CardState = 'New' | 'Learning' | 'Review' | 'Relearning'
 export type QueueState = 'New' | 'Learning' | 'Review' | 'DayLearn' | 'Suspended' | 'SchedBuried' | 'UserBuried'
 export const CARD_FLAGS = ['none', 'red', 'orange', 'green', 'blue', 'pink', 'turquoise', 'purple'] as const
 export type CardFlag = (typeof CARD_FLAGS)[number]
-export type NoteTypeKind = 'Basic' | 'BasicAndReversed' | 'Sentence'
+export type NoteTypeKind = 'Basic' | 'BasicAndReversed' | 'Sentence' | 'SentenceAndReversed'
+/** Note types whose front is a sentence: its words can link to word notes. */
+export const isSentenceNoteType = (kind: NoteTypeKind): boolean => kind === 'Sentence' || kind === 'SentenceAndReversed'
 export type CardDirection = 'forward' | 'reverse'
 
 // ---------------------------------------------------------------- errors

@@ -255,6 +255,23 @@ describe('MockAppApi content management', () => {
     expect(sentence.wordLinks[0]).toMatchObject({ resolution: 'unresolved', wordNoteId: null })
   })
 
+  it('creates two cards for a reversed sentence that keeps its word links', async () => {
+    const api = new MockAppApi()
+    const [tee] = await api.searchWords({ targetLanguage: 'de', text: 'Tee', limit: 1 })
+    if (!tee) throw new Error('fixture has der Tee')
+    const links = [{ startIndex: 4, endIndex: 7, surface: 'Tee', wordNoteId: tee.noteId }]
+    const base = { deckId: '2', front: 'Der Tee ist heiß.', back: 'Herbata jest gorąca.' }
+    const saved = await api.saveNote(note({ ...base, operationId: 'r1', noteTypeKind: 'SentenceAndReversed', wordLinks: links }))
+    expect(saved.cards.map((card) => card.direction)).toEqual(['forward', 'reverse'])
+    expect(saved.wordLinks).toEqual([expect.objectContaining({ surface: 'Tee', wordNoteId: tee.noteId })])
+    // A sentence is never offered as a word to link.
+    expect(await api.searchWords({ targetLanguage: 'de', text: base.front, limit: 10 })).toEqual([])
+    const single = await api.saveNote(note({ ...base, operationId: 'r2', noteId: saved.note.id, expectedVersion: saved.note.version, noteTypeKind: 'Sentence', wordLinks: null }))
+    expect(single.cards.map((card) => card.ordinal)).toEqual([0])
+    expect(single.archivedOrdinals).toEqual([1])
+    expect(single.wordLinks).toHaveLength(1)
+  })
+
   it('previews bulk effects before applying them', async () => {
     const api = new MockAppApi()
     const page = await api.searchCards(search({ deckId: '4' }))

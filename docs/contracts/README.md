@@ -40,6 +40,8 @@ Phase 7 extends the Rust side per command: the DTO deserializes its frozen input
 
 ## Changes in v1.0 (Phase 6)
 
+- Later addition without a version bump (decided 2026-10-30): `NoteTypeKind` gains `SentenceAndReversed` — a sentence note with two cards (`ordinal` 0 forward, 1 reverse) whose words link like a `Sentence`. `EditorDataDto.noteTypes` lists it; `samples.json` is regenerated with it (no other sample changed).
+
 - No operation, DTO or error code changed; v1.0 freezes the v0.5 surface (catalogue and samples above).
 - Prototype notices (`Screen` `prototype` / `notice`) render only with demo services (`AppServices.demo !== null`); with the production adapter the same screens show none. The unused `phase` placeholder of `Screen` and `common.phasePlaceholder` are removed. Two strings that described the mock outside a notice are neutral now (`about.noDatabase`, `deck.preset.weightsHint`).
 - Demo controls gain `failNextSave(code)` — the next mutation of any kind fails once; the demo banner has "Fail the next save" so a reviewer can reach save-error and retry flows.

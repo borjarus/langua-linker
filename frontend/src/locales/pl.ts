@@ -624,11 +624,13 @@ export const pl: LocaleResource = {
       Basic: 'Podstawowa',
       BasicAndReversed: 'Podstawowa i odwrotna',
       Sentence: 'Zdanie',
+      SentenceAndReversed: 'Zdanie i odwrotne',
     },
     noteTypeHints: {
       Basic: 'Jedna karta: przód pyta, tył odpowiada.',
       BasicAndReversed: 'Dwie karty z osobnymi harmonogramami, po jednej w każdym kierunku.',
       Sentence: 'Jedna karta ze zdaniem; jego słowa mogą linkować do kart słów.',
+      SentenceAndReversed: 'Dwie karty zdania z osobnymi harmonogramami, po jednej w każdym kierunku; słowa mogą linkować do kart słów.',
     },
     content: 'Treść',
     front: 'Przód ({{language}})',
