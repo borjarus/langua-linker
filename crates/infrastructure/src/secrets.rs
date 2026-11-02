@@ -14,6 +14,7 @@
 use std::sync::Arc;
 
 use keyring_core::{CredentialStore, Entry, Error as KeyringError};
+use langualinker_application::{AppError, AppResult};
 
 #[derive(Debug, thiserror::Error)]
 pub enum SecretStoreError {
@@ -95,6 +96,35 @@ impl SecretStore {
     }
 }
 
+/// The application port. Platform errors become `PermissionDenied { reason: "secretStore" }`
+/// (store locked or unavailable) or `Internal`; neither carries the secret.
+impl langualinker_application::ports::SecretStore for SecretStore {
+    fn save(&self, name: &str, value: &str) -> AppResult<()> {
+        self.set(name, value).map_err(port_error)
+    }
+
+    fn remove(&self, name: &str) -> AppResult<bool> {
+        self.delete(name).map_err(port_error)
+    }
+
+    fn has(&self, name: &str) -> AppResult<bool> {
+        SecretStore::has(self, name).map_err(port_error)
+    }
+
+    fn read(&self, name: &str) -> AppResult<Option<String>> {
+        self.get(name).map_err(port_error)
+    }
+}
+
+fn port_error(error: SecretStoreError) -> AppError {
+    match error {
+        SecretStoreError::Unsupported | SecretStoreError::NoAccess => AppError::PermissionDenied {
+            reason: "secretStore",
+        },
+        other => AppError::Internal(other.to_string()),
+    }
+}
+
 #[cfg(target_os = "android")]
 fn native_store() -> Result<Arc<CredentialStore>> {
     Ok(android_native_keyring_store::Store::new()?)
@@ -149,6 +179,23 @@ mod tests {
         let secrets = store("test");
         secrets.set("a", "1").unwrap();
         assert!(!secrets.has("b").unwrap());
+    }
+
+    #[test]
+    fn port_saves_checks_and_removes_without_exposing_values() {
+        use langualinker_application::ports::SecretStore as Port;
+        let secrets: Box<dyn Port> = Box::new(store("port"));
+        assert!(!secrets.has("ai.apiKey").unwrap());
+        secrets.save("ai.apiKey", "sk-test-1").unwrap();
+        assert!(secrets.has("ai.apiKey").unwrap());
+        assert_eq!(
+            secrets.read("ai.apiKey").unwrap().as_deref(),
+            Some("sk-test-1")
+        );
+        assert!(secrets.remove("ai.apiKey").unwrap());
+        assert!(!secrets.remove("ai.apiKey").unwrap());
+        let error = port_error(SecretStoreError::NoAccess);
+        assert_eq!(error.code(), "PERMISSION_DENIED");
     }
 
     #[test]

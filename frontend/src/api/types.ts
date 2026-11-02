@@ -8,8 +8,48 @@
  * - Long-running work returns a `JobDto`; events are signals, never durable truth.
  *
  * This file is framework-independent: no Svelte, no Tauri imports.
- * Rust becomes the DTO source in Phase 7 (generated into `src/generated/`).
+ * Rust is the DTO source for the types re-exported from `src/generated/contracts.ts` (Phase 7);
+ * the remaining DTOs move there as their commands become real.
  */
+
+import type {
+  AboutDto,
+  AppInfoDto,
+  CollectionChangedEventDto,
+  CollectionScope,
+  DiagnosticsReportDto,
+  ErrorDto,
+  ImportCountsDto,
+  ImportRowErrorDto,
+  JobDto,
+  JobEventDto,
+  JobKind,
+  JobProgressDto,
+  JobResultDto,
+  JobStatus,
+  LogLevel,
+  LogLineDto,
+  ErrorCode as GeneratedErrorCode,
+} from '../generated/contracts'
+
+export type {
+  AboutDto,
+  AppInfoDto,
+  CollectionChangedEventDto,
+  CollectionScope,
+  DiagnosticsReportDto,
+  ErrorDto,
+  ImportCountsDto,
+  ImportRowErrorDto,
+  JobDto,
+  JobEventDto,
+  JobKind,
+  JobProgressDto,
+  JobResultDto,
+  JobStatus,
+  LogLevel,
+  LogLineDto,
+}
 
 export const API_VERSION = '1.0'
 
@@ -70,62 +110,12 @@ export const ERROR_CODES = [
   'INTERNAL',
 ] as const
 export type ErrorCode = (typeof ERROR_CODES)[number]
-
-export interface ErrorDto {
-  code: ErrorCode
-  /** i18n key; the UI translates this, never raw SQL or stack traces. */
-  messageKey: string
-  retryable: boolean
-  details: Record<string, string | number | boolean | null> | null
-}
+/** Compile-time check: the runtime list equals the Rust `ErrorCode` enum. */
+type SameMembers<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false
+const errorCodesMatchRust: SameMembers<ErrorCode, GeneratedErrorCode> = true
+void errorCodesMatchRust
 
 // ---------------------------------------------------------------- app / jobs / events
-
-export interface AppInfoDto {
-  apiVersion: string
-  appName: string
-  appVersion: string
-  /** Native build variant (`dev` | `beta` | `release`); the in-memory mock reports `demo`. */
-  mode: 'demo' | 'dev' | 'beta' | 'release'
-}
-
-export type JobKind = 'prepareContent' | 'import' | 'export' | 'backup' | 'restore' | 'reset' | 'llm'
-export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
-
-export interface JobProgressDto {
-  done: number
-  total: number
-}
-
-export interface JobDto {
-  jobId: Id
-  kind: JobKind
-  status: JobStatus
-  /** Monotonic per job; consumers drop events with a lower sequence. */
-  sequence: number
-  progress: JobProgressDto | null
-  startedAt: IsoDateTime
-  finishedAt: IsoDateTime | null
-  error: ErrorDto | null
-  /** Set once the job finished (also on some failures, e.g. the safety copy of a failed restore). */
-  result: JobResultDto | null
-}
-
-export interface JobEventDto {
-  jobId: Id
-  kind: JobKind
-  sequence: number
-  status: JobStatus
-  progress: JobProgressDto | null
-}
-
-export type CollectionScope = 'decks' | 'cards' | 'notes' | 'settings' | 'stats' | 'backups'
-
-export interface CollectionChangedEventDto {
-  scopes: CollectionScope[]
-  /** Read signal only: refetch through AppApi. */
-  changedAt: IsoDateTime
-}
 
 export type Unsubscribe = () => void
 
@@ -1016,32 +1006,6 @@ export interface ResetInput {
   confirmationPhrase: string | null
 }
 
-export interface AboutDto {
-  appVersion: string
-  apiVersion: string
-  /** `null` until the database exists (Phase 7). */
-  schemaVersion: number | null
-  fsrsVersion: string
-  contentVersion: string
-  platform: string
-}
-
-export type LogLevel = 'error' | 'warn' | 'info' | 'debug'
-
-export interface LogLineDto {
-  at: IsoDateTime
-  level: LogLevel
-  target: string
-  /** Already redacted by the backend: no card content, prompts or secrets. */
-  message: string
-}
-
-export interface DiagnosticsReportDto {
-  generatedAt: IsoDateTime
-  lines: LogLineDto[]
-  /** Number of values the backend replaced with `[redacted]`. */
-  redactions: number
-}
 
 export interface AttributionDto {
   name: string
@@ -1084,19 +1048,6 @@ export interface ImportInput {
   targetDeckId: Id | null
 }
 
-export interface ImportRowErrorDto {
-  /** 1-based line in the file. */
-  row: number
-  error: ErrorDto
-}
-
-export interface ImportCountsDto {
-  create: number
-  update: number
-  skip: number
-  duplicate: number
-  error: number
-}
 
 /** Dry run: nothing is written until `commitImport` with the same `previewToken`. */
 export interface ImportPreviewDto {
@@ -1181,12 +1132,3 @@ export interface RestoreInput {
   previewToken: string
 }
 
-/** Outcome of a finished job, read with `getJobStatus`; job events never carry it. */
-export type JobResultDto =
-  | ({ type: 'import'; deckId: Id; rowErrors: ImportRowErrorDto[] } & ImportCountsDto)
-  | { type: 'export'; fileName: string; cardCount: number }
-  | { type: 'backup'; backupId: Id }
-  /** Present also on a failed restore: the safety copy made before anything changed. */
-  | { type: 'restore'; safetyBackupId: Id }
-  | { type: 'reset'; safetyBackupId: Id | null }
-  | { type: 'prepareContent'; deckIds: Id[] }

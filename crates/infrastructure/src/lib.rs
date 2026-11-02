@@ -1,5 +1,8 @@
-//! Infrastructure adapters. Domain persistence arrives after GUI acceptance (Phase 7);
-//! diagnostics (logging, crash reports) and the OS secret store are part of the Phase 1 shell.
+//! Infrastructure adapters: SQLite persistence (Phase 7), diagnostics (logging, crash reports),
+//! the OS secret store, and the system clock and randomness.
 
+pub mod diagnostics;
 pub mod logging;
 pub mod secrets;
+pub mod sqlite;
+pub mod system;

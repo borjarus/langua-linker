@@ -1,11 +1,11 @@
 # AppApi contract v1.0
 
-Frozen at the Phase 6 gate (2026-10-26). TypeScript is the source until Phase 7 makes Rust the DTO source; the frozen files below are what the Rust commands must answer.
+Frozen at the Phase 6 gate (2026-10-26). Since Phase 7, Rust is the DTO source for the DTOs in `crates/contracts` (generated into `frontend/src/generated/contracts.ts`); the rest of `types.ts` moves there as its commands become real. The frozen files below are what the Rust commands must answer.
 
 - `frontend/src/api/types.ts` — DTOs, enums, `ERROR_CODES`, `API_VERSION`.
 - `frontend/src/api/appApi.ts` — the `AppApi` interface (operations and their input/result types).
 - `frontend/src/api/operations.ts` — operation catalogue: kind, Tauri command, errors, emitted events, permission, screens, backend phase. Completeness is a compile-time check (`satisfies Record<AppApiOperation, OperationSpec>`).
-- `crates/contracts/src/lib.rs` — Rust `AppInfoDto`, `ErrorDto`, `ErrorCode`; tests assert `API_VERSION` and error codes match the TypeScript side.
+- `crates/contracts/src/lib.rs`, `src/dto.rs` — Rust `AppInfoDto`, `ErrorDto`, `ErrorCode` and the Phase 7 DTOs (jobs, events, about, diagnostics); `tests/generated_typescript.rs` fails when `frontend/src/generated/contracts.ts` differs from what they generate, and `types.ts` re-exports them (a compile-time check keeps `ERROR_CODES` equal to the Rust enum).
 - `crates/contracts/v1/catalogue.json` — the frozen catalogue: per operation `kind`, `command`, `errors`, `emits`, `permission`, plus `errorCodes`. Screens and backend phases are planning data and stay out of it.
 - `crates/contracts/v1/samples.json` — 70 recorded calls covering every callable operation (input, then output or `ErrorDto`) and one payload per event, recorded from the demo adapter on the `happy` collection.
 - [integration-checklist.md](integration-checklist.md) — what each screen needs before its mock is replaced.
@@ -23,7 +23,8 @@ Frozen at the Phase 6 gate (2026-10-26). TypeScript is the source until Phase 7 
 - `frontend/tests/contractV1.test.ts` — the catalogue equals the frozen one; a fresh recording from the mock has the same calls and payload shapes as `samples.json` (same keys, same kinds; `null` matches any kind); every sample follows the transport rules. **Adapter conformance:** the same samples are replayed against `MockAppApi` and against `TauriAppApi` over a stand-in backend that answers each Tauri command with its frozen payload and checks that the adapter sent exactly `{ input }`; events are delivered unchanged.
 - `frontend/tests/adapterSwap.test.ts` — every screen renders through `TauriAppApi` (frozen payloads) with `demo = null` and the `release` profile: content appears, no demo banner, no prototype notice, no `INTERNAL` error. The components are not changed for the swap.
 - `crates/contracts/tests/contract_v1.rs` — the Rust side reads the same files: version, error codes in Rust order, well-formed catalogue (snake_case unique commands, known kinds/events/permissions, jobs emit `job_progress`), a sample for every callable operation with its command, transport rules, error samples deserialize into `ErrorDto` with a declared code and serialize back byte-equal, the `getAppInfo` sample round-trips through `AppInfoDto`.
-- `src-tauri/src/lib.rs` (`get_app_info_matches_the_frozen_v1_sample`) — the one real command answers over IPC with the frozen keys.
+- `src-tauri/src/lib.rs` — every catalogue command is registered and granted; over IPC each answers with a payload or an `ErrorDto` (pending ones `NOT_IMPLEMENTED { operation }`); the real Phase 7 commands answer in the frozen shapes (`get_app_info`, `get_about_info`, `get_diagnostics_report`, `get_job_status`, `cancel_job`).
+- `crates/contracts/tests/contract_v1.rs` also round-trips the frozen outputs of the Phase 7 operations and both events through their Rust DTOs (`deny_unknown_fields`).
 
 Phase 7 extends the Rust side per command: the DTO deserializes its frozen input and serializes an output of the frozen shape (see the checklist).
 
@@ -37,6 +38,13 @@ Phase 7 extends the Rust side per command: the DTO deserializes its frozen input
 - Errors are `ErrorDto { code, messageKey, retryable, details }`; `messageKey` is `errors.<CODE>` and translated in the UI.
 - Long-running work returns `JobDto`; `job_progress` events carry a monotonic `sequence`; `getJobStatus` is the durable truth.
 - Tauri commands are snake_case and receive a single `input` argument.
+
+## Phase 7 additions (no version bump)
+
+- Rust became the DTO source for `ErrorCode`, `ErrorDto`, `AppInfoDto`, jobs (`JobDto`, `JobEventDto`, `JobResultDto`, `ImportCountsDto`, `ImportRowErrorDto`), `CollectionChangedEventDto`, `AboutDto` and the diagnostics DTOs; their TypeScript is generated, shapes unchanged.
+- The backend redaction marker is `[redacted]` (as in the demo), both when logs are written and when `getDiagnosticsReport` re-redacts them.
+- `AboutDto.schemaVersion` is `null` only when the database could not be opened; `contentVersion` is `none` until bundled content is installed (Phase 8).
+- Job ids are decimal strings of the `jobs` row id.
 
 ## Changes in v1.0 (Phase 6)
 
@@ -109,7 +117,7 @@ Every operation a screen calls lists that screen in `operations.ts`; `frontend/t
 | Settings `/settings` | getSettings, updateSettings, listPresets, requestNotificationPermission | complete prototype (UI language, native language, default target language, theme, text size, daily goal, time zone, day cutoff, default preset, notification permission and reminder, TTS on/off, rate and voice check; each change saved on its own with the current version, a conflict reloads) | 12/15 |
 | AI `/settings/ai` | getSettings, updateSettings, setAiApiKey | complete prototype (consent that can be declined, provider/model/HTTPS endpoint, BYOK key that is never shown again, quota) | 12–13 |
 | Privacy `/settings/privacy` | getSettings, updateSettings, previewReset, resetCollection, createBackup, listBackups, job events | complete prototype (telemetry opt-in, off by default; reset progress / delete everything naming scope and reversibility, protected by a fresh safety backup or the typed phrase) | 12 |
-| About `/settings/about` | getAppInfo, getAboutInfo, getDiagnosticsReport | complete prototype (app/contract/schema/FSRS/content/platform, licences link, redacted diagnostic log with copy) | 7/12 |
+| About `/settings/about` | getAppInfo, getAboutInfo, getDiagnosticsReport | backend real (Phase 7): versions with the schema from the database, log read and re-redacted in Rust; device check pending | 7/12 |
 | Transfer `/settings/transfer` | pickFile, getEditorData, previewImport, commitImport, exportDeck, shareFile, job events | complete prototype (file pick, dry run with delimiter, BOM, header, column mapping, target or new deck, skip/update/duplicate, counts and row errors, progress with a cancel that writes nothing, result report, APKG instructions; deck export with share, separate from backup) | 14–15 |
 | Backup `/settings/backup` | listBackups, createBackup, getSettings, updateSettings, pickFile, validateRestore, restoreBackup, shareFile, job events | complete prototype (create with progress, automatic/retention/target folder, list with kind and location, share, restore from a listed backup or a file: validation, preview of now vs after, safety copy, confirmation, reopen; corrupt and newer files rejected before anything changes; a failed restore offers the safety copy) | 12/15 |
 | Attributions `/settings/attributions` | getAttributions | grouped by content/software/fonts/icons | 8/12 |

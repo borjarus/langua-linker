@@ -6,19 +6,19 @@ Step-by-step guides: emulator and simulator — [emulator-testing.md](emulator-t
 
 Run with the dev variant, which bundles the demo frontend (`npm --prefix frontend run android:dev` / `android:apk`, `variant -- dev ios dev`); package `com.mila.langualinker.dev`. Record date, device, OS version, build commit and result for each row; attach screenshots in the PR.
 
-Legend: ☑ pass · ◐ partly verified (see notes) · ☒ fail · ☐ not run. Android column = emulator run of 2026-10-12 (rows 1–10) and 2026-10-16 (rows 11–16) below.
+Legend: ☑ pass · ◐ partly verified (see notes) · ☒ fail · ☐ not run. Android column = physical-device run of 2026-10-30 (Phase 6 gate, all rows passed); the earlier emulator runs of 2026-10-12 (rows 1–10) and 2026-10-16 (rows 11–16) are described in the notes below.
 
 | # | Check | Android | iOS |
 |---|---|---|---|
-| 1 | App starts; demo banner and decks screen visible within 3 s | ☒ | ☑ |
+| 1 | App starts; demo banner and decks screen visible within 3 s | ☑ | ☑ |
 | 2 | Settings → About shows app name, version and contract version (demo build: from the mock; `get_app_info` over IPC checked separately, see notes) | ☑ | ☑ |
 | 3 | Bottom navigation reaches all 5 sections; hardware/gesture back returns to the previous screen | ☑ | ☑ |
 | 4 | `#/gallery`: dialog opens/closes, toast appears above the bottom navigation | ☑ | ☑ |
-| 5 | Search field: on-screen keyboard does not cover the input; layout resizes | ◐ | ◐ |
+| 5 | Search field: on-screen keyboard does not cover the input; layout resizes | ☑ | ◐ |
 | 6 | Safe areas: notch/status bar and home indicator do not overlap content or navigation | ☑ | ☑ |
 | 7 | Rotate to landscape and back: no clipped controls | ☑ | ☑ |
 | 8 | System font size at maximum: text scales, no horizontal page scroll | ☑ | ☑ |
-| 9 | TalkBack / VoiceOver: navigation items and the "Study" button are announced with labels | ◐ | ◐ |
+| 9 | TalkBack / VoiceOver: navigation items and the "Study" button are announced with labels | ☑ | ◐ |
 | 10 | App log file exists in the app log directory and contains no card text (`adb shell "run-as com.mila.langualinker.dev ls logs"` / Xcode container) | ☑ | ☑ |
 | 11 | Phase 3 · Study: "Show answer" moves TalkBack/VoiceOver focus to the answer; rating buttons are announced with their interval; after a rating focus lands on the next question | ☑ | ☐ |
 | 12 | Phase 3 · Study and summary at maximum system font: card, rating row, toolbar and rating distribution are not clipped; no horizontal page scroll | ☑ | ☐ |
@@ -26,16 +26,16 @@ Legend: ☑ pass · ◐ partly verified (see notes) · ☒ fail · ☐ not run. 
 | 14 | Phase 3 · Back during an open session asks "Leave the session?"; Keep studying stays, Leave returns to the decks with "Resume session" | ☑ | ☐ |
 | 15 | Phase 3 · TTS button: iOS speaks with an installed voice; Android WebView shows "Speech is not available on this device" (ADR-12) | ☑ | ☐ |
 | 16 | Phase 3 · Onboarding (demo scenario "New user") → study → End session → summary → decks completes with touch only | ☑ | ☐ |
-| 17 | Phase 5 · Onboarding wizard (native → target → goal → decks → ready): focus/TalkBack on each step title; decks prepared; from Settings it returns there ([guide 4.1](emulator-testing.md#41-onboarding-scenario-nowy-użytkownik), [4.10](emulator-testing.md#410-re-onboarding-from-settings)) | ☐ | ☐ |
-| 18 | Phase 5 · Statistics: filters, every chart with tooltip by touch and a table view, empty and error states; no horizontal scroll at maximum font ([4.2](emulator-testing.md#42-statistics)) | ☐ | ☐ |
-| 19 | Phase 5 · Settings: each change shows "Saved"; language switch reaches navigation and banner; TTS off hides the listen button ([4.3](emulator-testing.md#43-settings)) | ☐ | ☐ |
-| 20 | Phase 5 · AI: consent can be declined and study still works; HTTPS-only endpoint; API key field clears and the key is never shown ([4.4](emulator-testing.md#44-ai-and-associations)) | ☐ | ☐ |
-| 21 | Phase 5 · Privacy: reset needs the phrase or a fresh safety backup; delete everything leads to onboarding; Back does not dismiss the dialog mid-way ([4.5](emulator-testing.md#45-privacy-reset-and-deletion)) | ☐ | ☐ |
-| 22 | Phase 5 · About and licences: versions, redacted diagnostic log; record whether "Copy log" works in the WebView ([4.6](emulator-testing.md#46-about-and-licenses)) | ☐ | ☐ |
-| 23 | Phase 5 · Import & export: dry run counts and row errors, delimiter/mapping/duplicates, import result, APKG instructions, closed picker, export + share ([4.7](emulator-testing.md#47-import-and-export)) | ☐ | ☐ |
-| 24 | Phase 5 · Backup & restore: create, retention, folder, corrupt/newer file rejected, restore with reopen, failed restore offers the safety copy; dialog scrolls at 200% ([4.8](emulator-testing.md#48-backup-and-restore)) | ☐ | ☐ |
-| 25 | Phase 5 · Declined AI, telemetry and notifications do not block a study rating ([4.9](emulator-testing.md#49-declining-ai-telemetry-and-notifications-does-not-block-study)) | ☐ | ☐ |
-| 26 | Phase 5 · All Phase 5 screens in light and dark, at 200% system and in-app text, landscape, with TalkBack/VoiceOver and Back ([section 5](emulator-testing.md#5-criteria-for-each-screen)) | ☐ | ☐ |
+| 17 | Phase 5 · Onboarding wizard (native → target → goal → decks → ready): focus/TalkBack on each step title; decks prepared; from Settings it returns there ([guide 4.1](emulator-testing.md#41-onboarding-scenario-nowy-użytkownik), [4.10](emulator-testing.md#410-re-onboarding-from-settings)) | ☑ | ☐ |
+| 18 | Phase 5 · Statistics: filters, every chart with tooltip by touch and a table view, empty and error states; no horizontal scroll at maximum font ([4.2](emulator-testing.md#42-statistics)) | ☑ | ☐ |
+| 19 | Phase 5 · Settings: each change shows "Saved"; language switch reaches navigation and banner; TTS off hides the listen button ([4.3](emulator-testing.md#43-settings)) | ☑ | ☐ |
+| 20 | Phase 5 · AI: consent can be declined and study still works; HTTPS-only endpoint; API key field clears and the key is never shown ([4.4](emulator-testing.md#44-ai-and-associations)) | ☑ | ☐ |
+| 21 | Phase 5 · Privacy: reset needs the phrase or a fresh safety backup; delete everything leads to onboarding; Back does not dismiss the dialog mid-way ([4.5](emulator-testing.md#45-privacy-reset-and-deletion)) | ☑ | ☐ |
+| 22 | Phase 5 · About and licences: versions, redacted diagnostic log; record whether "Copy log" works in the WebView ([4.6](emulator-testing.md#46-about-and-licenses)) | ☑ | ☐ |
+| 23 | Phase 5 · Import & export: dry run counts and row errors, delimiter/mapping/duplicates, import result, APKG instructions, closed picker, export + share ([4.7](emulator-testing.md#47-import-and-export)) | ☑ | ☐ |
+| 24 | Phase 5 · Backup & restore: create, retention, folder, corrupt/newer file rejected, restore with reopen, failed restore offers the safety copy; dialog scrolls at 200% ([4.8](emulator-testing.md#48-backup-and-restore)) | ☑ | ☐ |
+| 25 | Phase 5 · Declined AI, telemetry and notifications do not block a study rating ([4.9](emulator-testing.md#49-declining-ai-telemetry-and-notifications-does-not-block-study)) | ☑ | ☐ |
+| 26 | Phase 5 · All Phase 5 screens in light and dark, at 200% system and in-app text, landscape, with TalkBack/VoiceOver and Back ([section 5](emulator-testing.md#5-criteria-for-each-screen)) | ☑ | ☐ |
 
 ## How the checks were performed
 
@@ -49,7 +49,26 @@ Legend: ☑ pass · ◐ partly verified (see notes) · ☒ fail · ☐ not run. 
 |---|---|---|---|---|
 | 2026-10-12 | Android Emulator `Medium_Phone_API_36.1` (x86_64, Play Store image), WebView 134.0.6998.135 | Android 16 (API 36.1) | `8ee33b0` + uncommitted changes | See Android notes below. |
 | 2026-10-16 | Android Emulator `Medium_Phone_API_36.1` (x86_64, Play Store image), WebView 134.0.6998.135, TalkBack (Android Accessibility Suite) | Android 16 (API 36.1) | `144f051` (dev debug APK, x86_64) | Phase 3 rows 11–16, see notes below. Screenshots `docs/release/screenshots/android-phase3-*.png`. |
+| 2026-10-30 | Physical Android device (Phase 6 gate, step 7) | — | `33c44e0` (dev build) | Rows 1–26 and G1–G8 passed, reported by the product owner; device details not recorded here. |
+| 2026-11-02 | Android Emulator `Medium_Phone_API_36.1` (x86_64, Play Store image), WebView 155.0.8059.43 | Android 16 | `33c44e0` + uncommitted Phase 7 changes (dev debug APK, x86_64) | Phase 7 backend: P1–P8 below. Screenshot `docs/release/screenshots/android-phase7-start.png`. |
 | 2026-10-13 | iOS Simulator `iPhone 17` (arm64), WKWebView / MobileSafari | iOS 26.5 | `001aaf3` | See iOS notes below. Screenshots in `docs/release/screenshots/`. |
+
+### Phase 7 Android emulator run (2026-11-02)
+
+Checks of the SQLite backend ([ADR-09](../adr/ADR-09-sqlite-persistence.md)). The dev frontend still runs on the demo mock, so the backend was driven over real IPC (`__TAURI_INTERNALS__.invoke` via DevTools); the database file was pulled with `adb exec-out run-as … cat`, edited on the PC with Python `sqlite3` and put back with `adb push` + `run-as cp` (piping into `run-as sh -c 'cat > …'` corrupts binaries from Windows). An emulator run does not count as the physical device run.
+
+| # | Check | Result |
+|---|---|---|
+| P1 | Fresh install creates `collection.sqlite` in the app data directory (`/data/user/0/com.mila.langualinker.dev`) in WAL mode; log `migration applied schema_version=1`, then `status="current"` on later starts | ☑ `-wal`/`-shm` next to the file; after a fresh start the main file is 4 KB and the schema sits in the 309 KB WAL until a checkpoint |
+| P2 | `get_app_info` / `get_about_info` / `get_diagnostics_report` over IPC; a v1 command without a backend answers `NOT_IMPLEMENTED`; `plugin:window\|close` rejected by the ACL | ☑ `schemaVersion: 1`, `platform: "android"`; `get_dashboard` → `NOT_IMPLEMENTED { operation: "getDashboard" }` |
+| P3 | SecretStore (`probe_secret_store`, dev only): write, read back, overwrite, delete | ☑ all 10 steps ok on Android SharedPreferences/KeyStore |
+| P4 | Jobs left `running`/`queued` by a killed process (rows injected, app force-stopped) are failed at startup | ☑ log `jobs interrupted by the previous run count=2`; both jobs `failed`, `INTERNAL { reason: "interrupted" }`, sequence raised by 1, progress kept; `cancel_job` on a finished job leaves it unchanged; unknown id → `NOT_FOUND`, malformed → `VALIDATION_FAILED` |
+| P5 | Newer schema (`schema_migrations` v2, `user_version` 2) | ☑ data commands → `SCHEMA_TOO_NEW { found: 2, supported: 1 }`; file byte-identical after start (SHA-256), no WAL created; `get_about_info` answers with `schemaVersion: null` |
+| P6 | Changed checksum of an applied migration | ☑ collection refused (`INTERNAL`, no text over IPC; log `collection could not be opened code="INTERNAL"`) |
+| P7 | Infrastructure tests on device storage: release test binaries for `x86_64-linux-android` run from `/data/local/tmp` | ☑ 86 + 6 passed, including `upgrade_of_a_file_writes_a_safety_copy_first` (`VACUUM INTO`) and `uncommitted_work_is_gone_after_reopening_the_file` |
+| P8 | Due query, 50 000 cards / 500 000 logs (`due_query_budget_on_the_plan_collection`, release) | ☑ worst of 20: 17.3, 27.5, 25.4 ms (3 runs) against 50 ms; seeding 7.0–8.1 s |
+
+Start time (debug APK): `am start -W` TotalTime 1.6–2.3 s over 5 cold starts; opening the collection takes 0.22–0.28 s after `app started` (fresh install including migration v1: 0.28 s). Carried over: due query and start time on a physical device, iOS simulator.
 
 ### Notes for the 2026-10-13 iOS simulator run:
 

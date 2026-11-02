@@ -1,6 +1,6 @@
 # LanguaLinker
 
-Rust/Tauri 2 desktop and mobile shell with Svelte 5 + TypeScript frontend. The repository covers phases 0–2 of the implementation plan: toolchain, design system, contracts, mock API and routing. It deliberately contains no flashcard domain behavior yet — every screen runs on demo data.
+Rust/Tauri 2 desktop and mobile shell with Svelte 5 + TypeScript frontend. The repository covers phases 0–7 of the implementation plan: the complete GUI on demo data (accepted at the Phase 6 gate) and the Rust core underneath it — domain, SQLite schema and migrations, IPC. Screens still run on demo data until their backend phases (8–15) connect them; in the production profile, commands without a backend answer `NOT_IMPLEMENTED`.
 
 ## Phase status
 
@@ -10,8 +10,9 @@ Rust/Tauri 2 desktop and mobile shell with Svelte 5 + TypeScript frontend. The r
 - Phase 3 (prototype on demo data, no FSRS/SQLite): Dashboard → Study → Summary flow, contract v0.3 (`updateStudySession`, `getNoteContent`, `startStudy.cardIds`), demo scenarios `noCards`, `caughtUp`, `preparing`, `aiErrors`, Playwright learning-flow E2E. Device rows 11–16 in [device-smoke.md](docs/release/device-smoke.md) are still open.
 - Phase 4 (prototype on demo data): card details, note editor, card browser and deck overview, contract v0.4 (presets, `updateNoteContent`, `deleteNote`, `searchWords`, `previewBulkAction`, note-type templates), ADR-03 (browser virtualization on `@tanstack/svelte-virtual`, accepted), Playwright management E2E. Mobile device runs of these screens are still open.
 - Phase 5 (prototype on demo data): statistics, settings, AI, privacy, about, licences, onboarding, import & export, backup & restore; contract v0.5; Playwright Phase 5 E2E. Device runs of these screens are still open.
-- Phase 6 (GUI acceptance gate, open): contract v1.0 frozen in [crates/contracts/v1](crates/contracts/v1) with dual-adapter tests (mock and Tauri adapter replay the same samples; Rust checks the same files), per-screen [integration checklist](docs/contracts/integration-checklist.md), acceptance scenarios and application tour in Playwright, prototype notices only in the demo profile. Owner review and the device run (physical Android, iOS simulator — no iPhone for now) are pending: [docs/release/phase6-gate.md](docs/release/phase6-gate.md).
-- Not done yet: iOS build, the iOS simulator smoke checklist and the open Android emulator rows 1, 5, 9 ([device-smoke.md](docs/release/device-smoke.md)), physical Android smoke tests (Phase 6 gate; guide: [android-device-testing.md](docs/release/android-device-testing.md)), physical iPhone tests (no device yet), running the notification, TTS, file and share probes on the emulator/simulator (probes are on `#/diagnostics`; WebView and SecretStore spikes are done, see ADR-12 and ADR-07), Playwright/visual snapshots. ADR-01/02/05 were accepted on 2026-10-12. See the status notes in [the plan](docs/Detailed-Implementation-Plan.md).
+- Phase 6 (GUI acceptance gate, complete): contract v1.0 frozen in [crates/contracts/v1](crates/contracts/v1) with dual-adapter tests (mock and Tauri adapter replay the same samples; Rust checks the same files), per-screen [integration checklist](docs/contracts/integration-checklist.md), acceptance scenarios and application tour in Playwright, prototype notices only in the demo profile. Gate passed 2026-10-30 (physical Android run, owner acceptance); the iOS simulator run and pixel baselines are carried over: [docs/release/phase6-gate.md](docs/release/phase6-gate.md).
+- Phase 7 (Rust core, SQLite, IPC; device run pending): domain models and ports, schema v1 with checksummed migrations and a pre-upgrade safety copy, SQLite on a worker thread, durable jobs, every v1 command registered (`get_about_info`, `get_diagnostics_report`, `get_job_status`, `cancel_job` real; the rest answer `NOT_IMPLEMENTED`), TypeScript DTOs generated from Rust into `frontend/src/generated/`. See [ADR-09](docs/adr/ADR-09-sqlite-persistence.md).
+- Not done yet: iOS build, the iOS simulator smoke checklist and physical iPhone tests (no device yet), running the notification, TTS, file and share probes on the emulator/simulator (probes are on `#/diagnostics`; WebView and SecretStore spikes are done, see ADR-12 and ADR-07), Playwright/visual snapshots. ADR-01/02/05 were accepted on 2026-10-12. See the status notes in [the plan](docs/Detailed-Implementation-Plan.md).
 
 ## Nix environment
 
@@ -91,14 +92,15 @@ npm --prefix frontend run lint:i18n
 npm --prefix frontend test
 npm --prefix frontend run build
 npm --prefix frontend run verify:release
+cargo bench -p langualinker-infrastructure --bench due_query   # 50 000 cards / 500 000 logs
 ```
 
 ## Repository layout
 
-- `crates/domain`: future business rules; no Tauri, SQL, or network dependency.
-- `crates/application`: future use cases and ports.
-- `crates/infrastructure`: future adapter implementations.
-- `crates/contracts`: IPC DTOs and error contract.
+- `crates/domain`: entities, persistence codes and validation; no Tauri, SQL, or network dependency.
+- `crates/application`: ports, repositories/unit of work, errors and the job runtime.
+- `crates/infrastructure`: SQLite (schema in `migrations/`), logging and diagnostics, secret store, clock/RNG.
+- `crates/contracts`: IPC DTOs and error contract; Rust-owned DTOs generate `frontend/src/generated/contracts.ts` (`UPDATE_CONTRACT=1 cargo test -p langualinker-contracts --test generated_typescript`).
 - `src-tauri`: Tauri composition root and commands.
 - `frontend`: Svelte 5 + TypeScript SPA.
 - `docs/migration`: KMP migration evidence and decisions ([kmp-manifest.md](docs/migration/kmp-manifest.md)).

@@ -8,3 +8,5 @@ license.workspace = true
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+# TypeScript generation for Rust-owned DTOs (plan step 28); no runtime cost.
+ts-rs = "=12.0.1"

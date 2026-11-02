@@ -2,7 +2,7 @@
 //!
 //! Policy (plan §3, §5): logs never contain card content, prompts or secrets. Structured fields
 //! are written only when their *name* is on [`ALLOWED_FIELDS`]; every other field value is
-//! replaced by `<redacted>`. Messages must be static text — put variable data into fields.
+//! replaced by `[redacted]`. Messages must be static text — put variable data into fields.
 //! Telemetry is not part of this module and stays disabled by default.
 
 use std::fmt;
@@ -34,7 +34,7 @@ pub const ALLOWED_FIELDS: &[&str] = &[
     "status",
 ];
 
-pub const REDACTED: &str = "<redacted>";
+pub const REDACTED: &str = "[redacted]";
 pub const LOG_FILE_PREFIX: &str = "langualinker";
 pub const CRASH_REPORT_FILE: &str = "last-crash.json";
 const MAX_LOG_FILES: usize = 7;
@@ -226,6 +226,9 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("ll-crash-test-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let default_hook = std::panic::take_hook();
+        // The crash hook chains to the previous one; keep that silent so the expected panic does
+        // not print its message and backtrace into the test output.
+        std::panic::set_hook(Box::new(|_| {}));
         install_crash_hook(dir.clone(), "9.9.9-test");
         let outcome = std::panic::catch_unwind(|| panic!("secret card text: zażółć"));
         let _ = std::panic::take_hook();

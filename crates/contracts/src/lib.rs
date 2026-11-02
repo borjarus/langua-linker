@@ -1,19 +1,26 @@
 //! IPC transport contract shared with `frontend/src/api/types.ts`.
-//! Until Phase 7 generates TypeScript from these types, both sides are kept aligned by tests.
-//! Contract v1 is frozen in `v1/catalogue.json` and `v1/samples.json` (see `tests/contract_v1.rs`).
+//! Rust-owned DTOs (this file and [`dto`]) generate `frontend/src/generated/contracts.ts`
+//! (`tests/generated_typescript.rs`); the remaining TypeScript DTOs move here as their commands
+//! become real. Contract v1 is frozen in `v1/catalogue.json` and `v1/samples.json`
+//! (see `tests/contract_v1.rs`).
+
+pub mod dto;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
+use ts_rs::TS;
 
 /// Contract version; must equal `API_VERSION` in `frontend/src/api/types.ts`.
 pub const API_VERSION: &str = "1.0";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AppInfoDto {
     pub api_version: String,
     pub app_name: String,
     pub app_version: String,
+    /// Native build variant (`dev` | `beta` | `release`); the in-memory mock reports `demo`.
+    #[ts(type = "'demo' | 'dev' | 'beta' | 'release'")]
     pub mode: String,
 }
 
@@ -54,7 +61,7 @@ pub struct ProbeStepDto {
 }
 
 /// Error codes from plan §14.3; serialized as SCREAMING_SNAKE_CASE strings.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ErrorCode {
     ValidationFailed,
@@ -103,6 +110,11 @@ impl ErrorCode {
         Self::Internal,
     ];
 
+    /// Parses a code produced by the application layer (`AppError::code`).
+    pub fn parse(code: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|known| known.as_str() == code)
+    }
+
     pub fn as_str(self) -> &'static str {
         match self {
             Self::ValidationFailed => "VALIDATION_FAILED",
@@ -143,12 +155,14 @@ impl ErrorCode {
 }
 
 /// User-facing error: the UI translates `message_key`; raw SQL or stack traces never cross IPC.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ErrorDto {
     pub code: ErrorCode,
+    /// i18n key; the UI translates this, never raw SQL or stack traces.
     pub message_key: String,
     pub retryable: bool,
+    #[ts(type = "Record<string, string | number | boolean | null> | null")]
     pub details: Option<Map<String, Value>>,
 }
 
