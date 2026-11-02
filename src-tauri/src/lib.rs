@@ -1,7 +1,12 @@
 //! Tauri composition root. Desktop (`main.rs`) and mobile (`mobile_entry_point`) both call `run()`.
 
+mod backend;
+mod commands;
 mod diagnostics;
 
+use std::path::PathBuf;
+
+use backend::Backend;
 use diagnostics::SecretService;
 use langualinker_contracts::{API_VERSION, AppInfoDto};
 use langualinker_infrastructure::logging;
@@ -36,12 +41,8 @@ fn announce_ready<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
 /// File logs and crash reports live in the app log directory. Failure is reported on stderr and
 /// never prevents the app from starting.
 fn start_diagnostics<R: Runtime>(app: &tauri::App<R>) {
-    let dir = match app.path().app_log_dir() {
-        Ok(dir) => dir,
-        Err(error) => {
-            eprintln!("diagnostics disabled: {error}");
-            return;
-        }
+    let Some(dir) = log_dir(app) else {
+        return;
     };
     logging::install_crash_hook(dir.clone(), APP_VERSION);
     match logging::init_file_logging(&dir) {
@@ -58,23 +59,62 @@ fn start_diagnostics<R: Runtime>(app: &tauri::App<R>) {
     }
 }
 
+fn log_dir<R: Runtime>(app: &tauri::App<R>) -> Option<PathBuf> {
+    app.path()
+        .app_log_dir()
+        .inspect_err(|error| eprintln!("diagnostics disabled: {error}"))
+        .ok()
+}
+
+/// The collection lives in the variant's app data directory, so dev/beta/release never share it.
+fn open_backend<R: Runtime>(app: &tauri::App<R>) -> Backend {
+    let log_dir = log_dir(app);
+    match app.path().app_data_dir() {
+        Ok(data_dir) => Backend::open(app.handle(), data_dir, log_dir),
+        Err(error) => {
+            tracing::error!("app data directory unavailable");
+            Backend {
+                collection: Err(langualinker_application::AppError::Internal(
+                    error.to_string(),
+                )),
+                log_dir,
+            }
+        }
+    }
+}
+
+type BackendFactory<R> = fn(&tauri::App<R>) -> Backend;
+
 /// Registers commands and setup on any runtime, so tests can use the mock runtime.
-fn configure<R: Runtime>(builder: Builder<R>, diagnostics: bool) -> Builder<R> {
+fn configure<R: Runtime>(
+    builder: Builder<R>,
+    diagnostics: bool,
+    backend: BackendFactory<R>,
+) -> Builder<R> {
+    let generated: fn(tauri::ipc::Invoke<R>) -> bool = tauri::generate_handler![
+        get_app_info,
+        commands::get_about_info,
+        commands::get_diagnostics_report,
+        commands::get_job_status,
+        commands::cancel_job,
+        diagnostics::probe_secret_store,
+        diagnostics::probe_file_open,
+        diagnostics::probe_file_save
+    ];
     builder
         .setup(move |app| {
             if diagnostics {
                 start_diagnostics(app);
             }
             app.manage(SecretService(app.config().identifier.clone()));
+            app.manage(backend(app));
             announce_ready(app.handle())?;
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![
-            get_app_info,
-            diagnostics::probe_secret_store,
-            diagnostics::probe_file_open,
-            diagnostics::probe_file_save
-        ])
+        .invoke_handler(move |invoke| match commands::reject_pending(invoke) {
+            Some(invoke) => generated(invoke),
+            None => true,
+        })
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -86,7 +126,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init());
-    configure(builder, true)
+    configure(builder, true, open_backend)
         .run(tauri::generate_context!())
         .expect("error while running LanguaLinker");
 }
@@ -94,8 +134,16 @@ pub fn run() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::mpsc;
+    use std::sync::{Arc, mpsc};
     use std::time::Duration;
+
+    use langualinker_application::jobs::{JobKind, NewJob};
+    use langualinker_contracts::dto::{
+        AboutDto, DiagnosticsReportDto, JobDto, JobEventDto, JobResultDto, JobStatus,
+    };
+    use langualinker_contracts::{ErrorCode, ErrorDto};
+    use langualinker_infrastructure::sqlite::SqliteDatabase;
+    use langualinker_infrastructure::system::SystemClock;
     use tauri::ipc::{CallbackFn, InvokeBody};
     use tauri::test::{INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder};
     use tauri::webview::InvokeRequest;
@@ -108,10 +156,25 @@ mod tests {
         "tauri://localhost"
     };
 
+    fn in_memory_backend(app: &tauri::App<MockRuntime>) -> Backend {
+        let clock = Arc::new(SystemClock);
+        let db = SqliteDatabase::open_in_memory(clock.as_ref())
+            .expect("in-memory collection")
+            .database;
+        let events = Arc::new(backend::TauriEvents(app.handle().clone()));
+        Backend {
+            collection: backend::Collection::start(Arc::new(db), events, clock),
+            log_dir: None,
+        }
+    }
+
     fn app() -> tauri::App<MockRuntime> {
-        configure(mock_builder(), false)
+        let app = configure(mock_builder(), false, in_memory_backend)
             .build(tauri::generate_context!(test = true))
-            .expect("mock app builds")
+            .expect("mock app builds");
+        // The mock runtime does not run `setup` before the first event-loop iteration.
+        app.manage(in_memory_backend(&app));
+        app
     }
 
     fn main_window(app: &tauri::App<MockRuntime>) -> WebviewWindow<MockRuntime> {
@@ -262,18 +325,180 @@ mod tests {
         assert_eq!(payload, "\"ready\"");
     }
 
+    /// Every callable operation of the frozen catalogue as `(operation, command)`.
+    fn catalogue_commands() -> Vec<(String, String)> {
+        let catalogue = config(include_str!("../../crates/contracts/v1/catalogue.json"));
+        catalogue["operations"]
+            .as_object()
+            .unwrap()
+            .iter()
+            .filter(|(_, spec)| spec["kind"] != "subscription")
+            .map(|(operation, spec)| {
+                let command = spec["command"].as_str().unwrap().to_owned();
+                (operation.clone(), command)
+            })
+            .collect()
+    }
+
     #[test]
-    fn capability_grants_only_the_minimal_permission_set() {
-        let capability: serde_json::Value =
-            serde_json::from_str(include_str!("../capabilities/default.json")).unwrap();
+    fn capability_grants_exactly_the_contract_commands() {
+        let capability = config(include_str!("../capabilities/default.json"));
         let permissions: Vec<&str> = capability["permissions"]
             .as_array()
             .unwrap()
             .iter()
             .map(|permission| permission.as_str().unwrap())
             .collect();
-        assert_eq!(permissions, ["core:event:default", "allow-get-app-info"]);
+        let mut commands: Vec<String> = catalogue_commands()
+            .into_iter()
+            .map(|(_, command)| format!("allow-{}", command.replace('_', "-")))
+            .collect();
+        commands.sort();
+        let mut granted: Vec<String> = permissions[1..].iter().map(|p| (*p).to_owned()).collect();
+        granted.sort();
+        assert_eq!(permissions[0], "core:event:default");
+        assert_eq!(granted, commands);
         assert_eq!(capability["windows"], serde_json::json!(["main"]));
+    }
+
+    /// The `input` of the first frozen sample of `command`, as the Tauri adapter sends it.
+    fn sample_body(command: &str) -> serde_json::Value {
+        let samples = config(include_str!("../../crates/contracts/v1/samples.json"));
+        samples["calls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|call| call["command"] == command)
+            .and_then(|call| call["args"].as_array()?.first().cloned())
+            .map_or_else(
+                || serde_json::json!({}),
+                |input| serde_json::json!({ "input": input }),
+            )
+    }
+
+    fn error_code(error: serde_json::Value) -> ErrorCode {
+        serde_json::from_value::<ErrorDto>(error.clone())
+            .unwrap_or_else(|_| panic!("not an ErrorDto: {error}"))
+            .code
+    }
+
+    /// Integration checklist rule 1: every v1 command is registered and answers with a payload
+    /// or an `ErrorDto`; pending ones answer `NOT_IMPLEMENTED` naming their operation.
+    #[test]
+    fn every_contract_command_answers_with_a_payload_or_an_error_dto() {
+        let app = app();
+        let window = main_window(&app);
+        for (operation, command) in catalogue_commands() {
+            let pending = commands::pending().iter().any(|(name, _)| *name == command);
+            match invoke(&window, &command, sample_body(&command)) {
+                Ok(_) => assert!(!pending, "{command} answered although it is pending"),
+                Err(error) => {
+                    let dto: ErrorDto = serde_json::from_value(error.clone())
+                        .unwrap_or_else(|_| panic!("{command}: not an ErrorDto: {error}"));
+                    if pending {
+                        assert_eq!(dto.code, ErrorCode::NotImplemented, "{command}");
+                        assert_eq!(dto.details.unwrap()["operation"], operation.as_str());
+                    } else {
+                        assert_ne!(dto.code, ErrorCode::NotImplemented, "{command}");
+                    }
+                }
+            }
+        }
+        assert_eq!(
+            commands::pending().len() + commands::IMPLEMENTED.len(),
+            catalogue_commands().len(),
+            "every implemented command is a catalogue command"
+        );
+    }
+
+    #[test]
+    fn about_info_and_diagnostics_answer_in_the_frozen_shape() {
+        let app = app();
+        let window = main_window(&app);
+        let about = invoke(&window, "get_about_info", serde_json::json!({})).unwrap();
+        let about: AboutDto = serde_json::from_value(about).unwrap();
+        assert_eq!(about.schema_version, Some(1));
+        assert_eq!(about.api_version, API_VERSION);
+        assert_eq!(
+            (about.fsrs_version.as_str(), about.content_version.as_str()),
+            ("FSRS-6", "none")
+        );
+        let report = invoke(&window, "get_diagnostics_report", serde_json::json!({})).unwrap();
+        let report: DiagnosticsReportDto = serde_json::from_value(report).unwrap();
+        assert!(report.lines.is_empty());
+        assert_eq!(report.generated_at.len(), 24);
+    }
+
+    #[test]
+    fn job_status_is_read_from_the_database_and_events_reach_listeners() {
+        let app = app();
+        let window = main_window(&app);
+        let (sender, receiver) = mpsc::channel();
+        app.listen_any(backend::JOB_PROGRESS_EVENT, move |event| {
+            sender.send(event.payload().to_owned()).unwrap();
+        });
+        let jobs = app.state::<Backend>().collection().unwrap().jobs.clone();
+        let job = jobs
+            .start(
+                NewJob {
+                    kind: JobKind::Export,
+                    operation_id: Some("op-ipc".into()),
+                    total: Some(1),
+                },
+                Box::new(|ctx| {
+                    ctx.progress(1, 1)?;
+                    Ok(Some(
+                        r#"{"type":"export","fileName":"x.csv","cardCount":1}"#.into(),
+                    ))
+                }),
+            )
+            .unwrap();
+        let next = || -> JobEventDto {
+            let payload = receiver.recv_timeout(Duration::from_secs(2)).unwrap();
+            serde_json::from_str(&payload).unwrap()
+        };
+        let first = next();
+        assert_eq!(
+            (first.job_id.as_str(), first.sequence),
+            (job.id.0.as_str(), 0)
+        );
+        let mut last = first;
+        while last.status != JobStatus::Succeeded {
+            last = next();
+        }
+        let status = invoke(
+            &window,
+            "get_job_status",
+            serde_json::json!({ "input": job.id.0 }),
+        );
+        let status: JobDto = serde_json::from_value(status.unwrap()).unwrap();
+        assert_eq!(
+            status.sequence, last.sequence,
+            "the stored state equals the last event"
+        );
+        assert!(matches!(
+            status.result,
+            Some(JobResultDto::Export { card_count: 1, .. })
+        ));
+    }
+
+    #[test]
+    fn malformed_and_unknown_job_ids_are_error_dtos() {
+        let app = app();
+        let window = main_window(&app);
+        let code = |input: serde_json::Value| {
+            let body = serde_json::json!({ "input": input });
+            error_code(invoke(&window, "get_job_status", body).unwrap_err())
+        };
+        assert_eq!(code(serde_json::json!("123456")), ErrorCode::NotFound);
+        assert_eq!(code(serde_json::json!(7)), ErrorCode::ValidationFailed);
+        assert_eq!(code(serde_json::json!("")), ErrorCode::ValidationFailed);
+        assert_eq!(
+            code(serde_json::json!("x".repeat(65))),
+            ErrorCode::ValidationFailed
+        );
+        let cancel = invoke(&window, "cancel_job", serde_json::json!({ "input": "99" }));
+        assert_eq!(error_code(cancel.unwrap_err()), ErrorCode::NotFound);
     }
 
     #[test]

@@ -7,7 +7,12 @@
 
 use std::collections::{BTreeSet, HashSet};
 
+use langualinker_contracts::dto::{
+    AboutDto, CollectionChangedEventDto, DiagnosticsReportDto, JobDto, JobEventDto,
+};
 use langualinker_contracts::{API_VERSION, AppInfoDto, ErrorCode, ErrorDto};
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 use serde_json::{Map, Value};
 
 const CATALOGUE: &str = include_str!("../v1/catalogue.json");
@@ -243,4 +248,68 @@ fn app_info_sample_round_trips_through_the_rust_dto() {
     let dto: AppInfoDto = serde_json::from_value(call["output"].clone()).expect("AppInfoDto");
     assert_eq!(dto.api_version, API_VERSION);
     assert_eq!(serde_json::to_value(&dto).unwrap(), call["output"]);
+}
+
+/// Checklist rule 2: the Rust output DTO reads every frozen output of the command and writes the
+/// same JSON back (`deny_unknown_fields` makes a renamed or extra field fail here).
+fn round_trips<T: DeserializeOwned + Serialize>(operation: &str) -> usize {
+    let samples = samples();
+    let mut count = 0;
+    for call in samples["calls"].as_array().expect("calls") {
+        if call["operation"] != operation || call.get("output").is_none() {
+            continue;
+        }
+        let dto: T = serde_json::from_value(call["output"].clone())
+            .unwrap_or_else(|error| panic!("{operation}: {error}"));
+        assert_eq!(
+            serde_json::to_value(&dto).unwrap(),
+            call["output"],
+            "{operation}"
+        );
+        count += 1;
+    }
+    count
+}
+
+#[test]
+fn phase7_outputs_round_trip_through_their_rust_dtos() {
+    assert!(
+        round_trips::<JobDto>("getJobStatus") >= 6,
+        "every job result variant"
+    );
+    assert!(round_trips::<JobDto>("cancelJob") >= 1);
+    assert_eq!(round_trips::<AboutDto>("getAboutInfo"), 1);
+    assert_eq!(
+        round_trips::<DiagnosticsReportDto>("getDiagnosticsReport"),
+        1
+    );
+}
+
+#[test]
+fn phase7_inputs_are_a_bare_job_id() {
+    let samples = samples();
+    for call in samples["calls"].as_array().expect("calls") {
+        if call["operation"] == "getJobStatus" || call["operation"] == "cancelJob" {
+            let args = call["args"].as_array().expect("args");
+            assert_eq!(args.len(), 1);
+            let _: String = serde_json::from_value(args[0].clone()).expect("job id string");
+        }
+    }
+}
+
+#[test]
+fn event_samples_round_trip_through_their_rust_dtos() {
+    let samples = samples();
+    let job: JobEventDto =
+        serde_json::from_value(samples["events"]["job_progress"].clone()).unwrap();
+    assert_eq!(
+        serde_json::to_value(&job).unwrap(),
+        samples["events"]["job_progress"]
+    );
+    let changed: CollectionChangedEventDto =
+        serde_json::from_value(samples["events"]["collection_changed"].clone()).unwrap();
+    assert_eq!(
+        serde_json::to_value(&changed).unwrap(),
+        samples["events"]["collection_changed"]
+    );
 }
