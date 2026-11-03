@@ -38,6 +38,20 @@ android {
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
     }
+    // Release signing comes from the environment (CI secrets, see .github/workflows/release.yml);
+    // the keystore never lives in the repository. Without it the release APK falls back to the
+    // local debug key: installable for testing, but not upgradable across machines or for stores.
+    val releaseKeystore = System.getenv("ANDROID_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
     buildTypes {
         getByName("debug") {
             applicationIdSuffix = ".dev"
@@ -53,6 +67,7 @@ android {
         }
         getByName("release") {
             applicationIdSuffix = if (appVariant == "release") null else ".$appVariant"
+            signingConfig = signingConfigs.getByName(if (releaseKeystore != null) "release" else "debug")
             isMinifyEnabled = true
             proguardFiles(
                 *fileTree(".") { include("**/*.pro") }
