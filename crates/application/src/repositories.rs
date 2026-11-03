@@ -220,7 +220,7 @@ mod tests {
 
     /// Compile-time check: the unit of work hands out `&mut dyn Repositories`, so every port must
     /// stay object safe, and the blanket impl must cover a `dyn Repositories` itself.
-    #[allow(dead_code)]
+    #[allow(dead_code, clippy::too_many_arguments)]
     fn ports_are_object_safe(
         decks: &mut dyn DeckRepository,
         configs: &mut dyn DeckConfigRepository,
