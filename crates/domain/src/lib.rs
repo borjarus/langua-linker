@@ -9,6 +9,7 @@ pub mod deck;
 pub mod ids;
 pub mod note;
 pub mod review;
+pub mod text;
 pub mod validation;
 
 pub use ids::{

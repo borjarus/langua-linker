@@ -94,6 +94,8 @@ export function createTauriAppApi(invokeFn: InvokeFn = invoke, listenFn: ListenF
     pickFile: call('pickFile'),
     previewImport: call('previewImport'),
     commitImport: call('commitImport'),
+    previewDeckImport: call('previewDeckImport'),
+    commitDeckImport: call('commitDeckImport'),
     exportDeck: call('exportDeck'),
     shareFile: call('shareFile'),
     listBackups: call('listBackups'),

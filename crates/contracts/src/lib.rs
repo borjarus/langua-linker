@@ -11,7 +11,7 @@ use serde_json::{Map, Value};
 use ts_rs::TS;
 
 /// Contract version; must equal `API_VERSION` in `frontend/src/api/types.ts`.
-pub const API_VERSION: &str = "1.0";
+pub const API_VERSION: &str = "1.2";
 
 #[derive(Debug, Clone, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

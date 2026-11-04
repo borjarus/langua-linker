@@ -35,11 +35,18 @@ impl Migration {
 }
 
 /// The production migration list; versions start at 1 and have no gaps.
-pub const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    name: "initial",
-    sql: include_str!("../../migrations/0001_initial.sql"),
-}];
+pub const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        name: "initial",
+        sql: include_str!("../../migrations/0001_initial.sql"),
+    },
+    Migration {
+        version: 2,
+        name: "bundled_content",
+        sql: include_str!("../../migrations/0002_bundled_content.sql"),
+    },
+];
 
 /// Highest schema version this build understands.
 pub fn latest_version(migrations: &[Migration]) -> i64 {
@@ -192,6 +199,9 @@ fn write_safety_copy(conn: &Connection, path: &Path, target: i64) -> AppResult<P
 mod tests {
     use super::*;
 
+    /// Schema v1 only; the synthetic v2 migrations below build on it.
+    const BASE: &[Migration] = &[MIGRATIONS[0]];
+
     fn memory() -> Connection {
         let conn = Connection::open_in_memory().unwrap();
         conn.pragma_update(None, "foreign_keys", true).unwrap();
@@ -225,22 +235,23 @@ mod tests {
     #[test]
     fn fresh_database_reaches_the_latest_version() {
         let mut conn = memory();
+        let latest = latest_version(MIGRATIONS);
         let report = migrate(&mut conn, None, MIGRATIONS, 1).unwrap();
-        assert_eq!((report.from_version, report.to_version), (0, 1));
-        assert_eq!(applied_version(&conn).unwrap(), 1);
+        assert_eq!((report.from_version, report.to_version), (0, latest));
+        assert_eq!(applied_version(&conn).unwrap(), latest);
         let user_version: i64 = conn
             .pragma_query_value(None, "user_version", |r| r.get(0))
             .unwrap();
-        assert_eq!(user_version, 1);
+        assert_eq!(user_version, latest);
         // Idempotent: a second run changes nothing.
         let again = migrate(&mut conn, None, MIGRATIONS, 2).unwrap();
-        assert_eq!((again.from_version, again.to_version), (1, 1));
+        assert_eq!((again.from_version, again.to_version), (latest, latest));
     }
 
     #[test]
     fn upgrade_keeps_existing_rows() {
         let mut conn = memory();
-        migrate(&mut conn, None, MIGRATIONS, 1).unwrap();
+        migrate(&mut conn, None, BASE, 1).unwrap();
         insert_deck(&conn);
         migrate(&mut conn, None, &[MIGRATIONS[0], V2_OK], 2).unwrap();
         let (name, color): (String, Option<String>) = conn
@@ -254,7 +265,7 @@ mod tests {
     #[test]
     fn failed_migration_rolls_back_to_the_previous_version() {
         let mut conn = memory();
-        migrate(&mut conn, None, MIGRATIONS, 1).unwrap();
+        migrate(&mut conn, None, BASE, 1).unwrap();
         insert_deck(&conn);
         let error = migrate(&mut conn, None, &[MIGRATIONS[0], V2_FAILS], 2).unwrap_err();
         assert!(matches!(error, AppError::Internal(_)), "{error:?}");
@@ -272,7 +283,7 @@ mod tests {
     fn newer_database_is_refused_and_untouched() {
         let mut conn = memory();
         migrate(&mut conn, None, &[MIGRATIONS[0], V2_OK], 1).unwrap();
-        let error = migrate(&mut conn, None, MIGRATIONS, 2).unwrap_err();
+        let error = migrate(&mut conn, None, BASE, 2).unwrap_err();
         assert_eq!(
             error,
             AppError::SchemaTooNew {
@@ -286,7 +297,7 @@ mod tests {
     #[test]
     fn edited_migration_is_detected() {
         let mut conn = memory();
-        migrate(&mut conn, None, MIGRATIONS, 1).unwrap();
+        migrate(&mut conn, None, BASE, 1).unwrap();
         let edited = Migration {
             sql: "-- edited\nSELECT 1;",
             ..MIGRATIONS[0]
@@ -314,7 +325,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("collection.sqlite");
         let mut conn = Connection::open(&path).unwrap();
-        migrate(&mut conn, Some(&path), MIGRATIONS, 1).unwrap();
+        migrate(&mut conn, Some(&path), BASE, 1).unwrap();
         insert_deck(&conn);
         // A failing upgrade still leaves the original database and the copy intact.
         assert!(migrate(&mut conn, Some(&path), &[MIGRATIONS[0], V2_FAILS], 2).is_err());
@@ -330,5 +341,49 @@ mod tests {
         let report = migrate(&mut conn, Some(&path), &[MIGRATIONS[0], V2_OK], 3).unwrap();
         assert_eq!(report.safety_copy.as_deref(), Some(copy.as_path()));
         assert_eq!(applied_version(&conn).unwrap(), 2);
+    }
+
+    /// Fixture: a v1 collection with a deck, note and card upgrades to v2 without losing rows;
+    /// the new provenance table follows its note on delete.
+    #[test]
+    fn v1_collection_upgrades_to_bundled_content_provenance() {
+        let mut conn = memory();
+        migrate(&mut conn, None, BASE, 1).unwrap();
+        insert_deck(&conn);
+        conn.execute_batch(
+            "INSERT INTO notes (id, guid, note_type_id, fields, sort_field, created_at, updated_at)
+                 VALUES (7, 'n7', 1, '{\"front\":\"Hund\",\"back\":\"pies\"}', 'hund', 0, 0);
+             INSERT INTO cards (guid, note_id, deck_id, template_ordinal, created_at, updated_at)
+                 SELECT 'c7', 7, id, 0, 0, 0 FROM decks WHERE guid = 'd1';",
+        )
+        .unwrap();
+        let report = migrate(&mut conn, None, MIGRATIONS, 2).unwrap();
+        assert_eq!((report.from_version, report.to_version), (1, 2));
+        let cards: i64 = conn
+            .query_row("SELECT COUNT(*) FROM cards WHERE note_id = 7", [], |r| {
+                r.get(0)
+            })
+            .unwrap();
+        assert_eq!(cards, 1);
+        conn.execute(
+            "INSERT INTO bundled_notes (note_id, deck_guid, content_version) VALUES (7, 'd1', '2026.11.04')",
+            [],
+        )
+        .unwrap();
+        // Archiving by import requires a removal version.
+        assert!(
+            conn.execute(
+                "UPDATE bundled_notes SET archived_by_import = 1 WHERE note_id = 7",
+                []
+            )
+            .is_err()
+        );
+        conn.execute("DELETE FROM cards WHERE note_id = 7", [])
+            .unwrap();
+        conn.execute("DELETE FROM notes WHERE id = 7", []).unwrap();
+        let left: i64 = conn
+            .query_row("SELECT COUNT(*) FROM bundled_notes", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(left, 0);
     }
 }

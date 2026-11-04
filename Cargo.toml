@@ -1,6 +1,8 @@
 [workspace]
 members = [
+    "crates/anki",
     "crates/application",
+    "crates/content",
     "crates/contracts",
     "crates/domain",
     "crates/infrastructure",
@@ -19,7 +21,10 @@ chrono = { version = "0.4.45", default-features = false, features = ["std", "clo
 rusqlite = { version = "=0.41.1", features = ["bundled"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
+sha2 = "0.10.9"
 thiserror = "2.0.12"
 tracing = "=0.1.44"
+# NFC normalization shared by the domain, the importer and the content linter (plan §14.1).
+unicode-normalization = "0.1.24"
 tracing-appender = "=0.2.5"
 tracing-subscriber = { version = "=0.3.23", features = ["env-filter", "fmt"] }

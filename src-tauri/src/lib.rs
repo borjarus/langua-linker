@@ -2,7 +2,9 @@
 
 mod backend;
 mod commands;
+mod content;
 mod diagnostics;
+mod files;
 
 use std::path::PathBuf;
 
@@ -97,6 +99,13 @@ fn configure<R: Runtime>(
         commands::get_diagnostics_report,
         commands::get_job_status,
         commands::cancel_job,
+        commands::get_attributions,
+        commands::get_onboarding_state,
+        commands::complete_onboarding,
+        commands::get_dashboard,
+        commands::pick_file,
+        commands::preview_deck_import,
+        commands::commit_deck_import,
         diagnostics::probe_secret_store,
         diagnostics::probe_file_open,
         diagnostics::probe_file_save
@@ -108,6 +117,7 @@ fn configure<R: Runtime>(
             }
             app.manage(SecretService(app.config().identifier.clone()));
             app.manage(backend(app));
+            app.manage(files::PickedFiles::default());
             announce_ready(app.handle())?;
             Ok(())
         })
@@ -174,6 +184,7 @@ mod tests {
             .expect("mock app builds");
         // The mock runtime does not run `setup` before the first event-loop iteration.
         app.manage(in_memory_backend(&app));
+        app.manage(files::PickedFiles::default());
         app
     }
 
@@ -417,7 +428,7 @@ mod tests {
         let window = main_window(&app);
         let about = invoke(&window, "get_about_info", serde_json::json!({})).unwrap();
         let about: AboutDto = serde_json::from_value(about).unwrap();
-        assert_eq!(about.schema_version, Some(1));
+        assert_eq!(about.schema_version, Some(2));
         assert_eq!(about.api_version, API_VERSION);
         assert_eq!(
             (about.fsrs_version.as_str(), about.content_version.as_str()),
@@ -427,6 +438,209 @@ mod tests {
         let report: DiagnosticsReportDto = serde_json::from_value(report).unwrap();
         assert!(report.lines.is_empty());
         assert_eq!(report.generated_at.len(), 24);
+    }
+
+    /// Phase 8 over IPC: onboarding installs the bundled decks through the prepare job, and the
+    /// dashboard and licences read them back in the contract shapes.
+    #[test]
+    fn onboarding_installs_bundled_decks_and_the_dashboard_lists_them() {
+        use langualinker_contracts::dto::{AttributionDto, DashboardDto, OnboardingStateDto};
+        let app = app();
+        let window = main_window(&app);
+        let state: OnboardingStateDto = serde_json::from_value(
+            invoke(&window, "get_onboarding_state", serde_json::json!({})).unwrap(),
+        )
+        .unwrap();
+        assert!(!state.completed);
+        assert_eq!(state.available_decks.len(), 4);
+        let guids: Vec<String> = state
+            .available_decks
+            .iter()
+            .map(|deck| deck.guid.clone())
+            .collect();
+        let input = serde_json::json!({ "input": {
+            "operationId": "op-onboarding", "nativeLanguage": "pl", "targetLanguages": ["de", "en"],
+            "dailyGoal": 30, "deckGuids": guids,
+        }});
+        let job: JobDto =
+            serde_json::from_value(invoke(&window, "complete_onboarding", input).unwrap()).unwrap();
+        let mut status = job.clone();
+        for _ in 0..400 {
+            status = serde_json::from_value(
+                invoke(
+                    &window,
+                    "get_job_status",
+                    serde_json::json!({ "input": job.job_id }),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+            if matches!(status.status, JobStatus::Succeeded | JobStatus::Failed) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert!(
+            matches!(status.result, Some(JobResultDto::PrepareContent { created: 113, ref deck_ids, .. }) if deck_ids.len() == 4),
+            "{status:?}"
+        );
+        let dashboard: DashboardDto = serde_json::from_value(
+            invoke(&window, "get_dashboard", serde_json::json!({})).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(dashboard.decks.len(), 4);
+        assert_eq!(dashboard.daily_goal, 30);
+        assert_eq!(
+            dashboard
+                .decks
+                .iter()
+                .map(|deck| deck.counts.new)
+                .sum::<u32>(),
+            202
+        );
+        let state: OnboardingStateDto = serde_json::from_value(
+            invoke(&window, "get_onboarding_state", serde_json::json!({})).unwrap(),
+        )
+        .unwrap();
+        assert!(state.completed);
+        assert_eq!(state.installed_deck_guids.len(), 4);
+        let licences: Vec<AttributionDto> = serde_json::from_value(
+            invoke(&window, "get_attributions", serde_json::json!({})).unwrap(),
+        )
+        .unwrap();
+        assert!(
+            licences
+                .iter()
+                .any(|item| item.license.contains("rights audit pending"))
+        );
+        let error = invoke(
+            &window,
+            "complete_onboarding",
+            serde_json::json!({ "input": { "operationId": "op-bad", "nativeLanguage": "pl",
+                "targetLanguages": ["de"], "dailyGoal": 0, "deckGuids": [] } }),
+        )
+        .unwrap_err();
+        assert_eq!(error_code(error), ErrorCode::ValidationFailed);
+    }
+
+    /// A package as `apkg-convert` writes it: one note with review progress and history.
+    fn tiny_package() -> Vec<u8> {
+        let body = concat!(
+            r#"{"guid":"anki-tiny-1","front":"das Fenster","back":"okno","#,
+            r#""cards":[{"ordinal":0,"state":"review","queue":"review","dueAtMs":1800000000000,"position":null,"scheduledDays":6,"stability":6.5,"difficulty":4.0,"ease":2500,"reps":3,"lapses":0,"lastReviewAtMs":1770000000000,"flag":0}],"#,
+            r#""reviews":[{"ordinal":0,"reviewedAtMs":1770000000000,"rating":3,"kind":"review","scheduledDays":6,"ease":2500,"durationMs":4000}]}"#,
+            "\n"
+        );
+        let manifest = serde_json::json!({
+            "schemaVersion": 2, "source": "import", "deckGuid": "anki-deck-tiny", "contentVersion": "2026.11.04",
+            "name": "Tiny", "description": "Import z Anki: tiny.apkg", "level": "A1", "nativeLanguage": "pl",
+            "targetLanguage": "de", "deckType": "Linguistic", "noteType": "Basic", "contentKind": "words",
+            "notesFile": "notes.ndjson", "sha256": langualinker_content::reader::sha256_hex(body.as_bytes()),
+            "expectedNotes": 1, "expectedCards": 1,
+            "license": {"name": "Personal", "attribution": null, "url": null, "rightsConfirmed": false},
+            "review": {"status": "pending", "reviewer": null, "reviewedAt": null}
+        });
+        let mut package =
+            serde_json::to_vec(&serde_json::json!({ "package": 1, "manifest": manifest })).unwrap();
+        package.push(b'\n');
+        package.extend_from_slice(body.as_bytes());
+        package
+    }
+
+    /// Contract 1.2 over IPC: a picked package is previewed, imported with its progress and
+    /// history, and a stale or foreign file is refused.
+    #[test]
+    fn deck_packages_are_previewed_and_imported_with_progress() {
+        use langualinker_contracts::dto::{DashboardDto, DeckImportPreviewDto};
+        let app = app();
+        let window = main_window(&app);
+        let files = app.state::<files::PickedFiles>();
+        let picked = files.register("tiny.ndjson".into(), tiny_package());
+        let preview: DeckImportPreviewDto = serde_json::from_value(
+            invoke(
+                &window,
+                "preview_deck_import",
+                serde_json::json!({ "input": { "fileToken": picked.token } }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            (preview.notes, preview.scheduled_cards, preview.reviews),
+            (1, 1, 1)
+        );
+        assert_eq!(preview.existing_deck_id, None);
+        let job: JobDto = serde_json::from_value(
+            invoke(
+                &window,
+                "commit_deck_import",
+                serde_json::json!({ "input": { "operationId": "op-deck", "previewToken": preview.preview_token } }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let mut status = job.clone();
+        for _ in 0..400 {
+            status = serde_json::from_value(
+                invoke(
+                    &window,
+                    "get_job_status",
+                    serde_json::json!({ "input": job.job_id }),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+            if matches!(status.status, JobStatus::Succeeded | JobStatus::Failed) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        assert!(
+            matches!(status.result, Some(JobResultDto::Import { create: 1, .. })),
+            "{status:?}"
+        );
+        let dashboard: DashboardDto = serde_json::from_value(
+            invoke(&window, "get_dashboard", serde_json::json!({})).unwrap(),
+        )
+        .unwrap();
+        let deck = dashboard
+            .decks
+            .iter()
+            .find(|deck| deck.name == "Tiny")
+            .expect("imported deck");
+        assert!(!deck.bundled);
+        assert_eq!(
+            (deck.counts.total, deck.counts.new),
+            (1, 0),
+            "the card arrives with its progress"
+        );
+
+        let stale = invoke(
+            &window,
+            "commit_deck_import",
+            serde_json::json!({ "input": { "operationId": "op-other", "previewToken": "nope" } }),
+        )
+        .unwrap_err();
+        assert_eq!(error_code(stale), ErrorCode::PreviewStale);
+        let zip = files.register("deck.apkg".into(), b"PK\x03\x04rest".to_vec());
+        let unsupported = invoke(
+            &window,
+            "preview_deck_import",
+            serde_json::json!({ "input": { "fileToken": zip.token } }),
+        )
+        .unwrap_err();
+        assert_eq!(
+            error_code(unsupported.clone()),
+            ErrorCode::UnsupportedFormat
+        );
+        assert_eq!(unsupported["details"]["format"], "apkg");
+        let missing = invoke(
+            &window,
+            "preview_deck_import",
+            serde_json::json!({ "input": { "fileToken": "gone" } }),
+        )
+        .unwrap_err();
+        assert_eq!(error_code(missing), ErrorCode::NotFound);
     }
 
     #[test]

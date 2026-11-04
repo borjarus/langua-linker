@@ -14,6 +14,7 @@ import type {
   CardPageDto,
   CollectionChangedEventDto,
   CommitImportInput,
+  CommitDeckImportInput,
   CompleteOnboardingInput,
   CreateDeckInput,
   DashboardDto,
@@ -37,6 +38,8 @@ import type {
   NoteContentDto,
   NoteDetailsDto,
   OnboardingStateDto,
+  PreviewDeckImportInput,
+  DeckImportPreviewDto,
   PickFileInput,
   PresetDto,
   PreviewInput,
@@ -148,6 +151,10 @@ export interface AppApi {
   pickFile(input: PickFileInput): Promise<FileHandleDto | null>
   previewImport(input: ImportInput): Promise<ImportPreviewDto>
   commitImport(input: CommitImportInput): Promise<JobDto>
+  /** Dry run of a deck package (e.g. converted from Anki by apkg-convert); nothing is written. */
+  previewDeckImport(input: PreviewDeckImportInput): Promise<DeckImportPreviewDto>
+  /** Imports the previewed package with its progress and review history (job `import`). */
+  commitDeckImport(input: CommitDeckImportInput): Promise<JobDto>
   exportDeck(input: ExportDeckInput): Promise<JobDto>
   /** Opens the platform share sheet for a backup or a finished export. */
   shareFile(input: ShareFileInput): Promise<ShareResultDto>

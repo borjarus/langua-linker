@@ -453,6 +453,7 @@ export const DEMO_FILES: Record<'import' | 'restore' | 'backupFolder', DemoFile[
     { token: 'demo-import-csv', name: 'slowka-niemiecki.csv', sizeBytes: 1_284 },
     { token: 'demo-import-comma', name: 'english-phrases.csv', sizeBytes: 214 },
     { token: 'demo-import-apkg', name: 'Deutsch_A1.apkg', sizeBytes: 2_406_118 },
+    { token: 'demo-import-deck', name: 'moje-slowka.ndjson', sizeBytes: 3_912 },
   ],
   restore: [
     { token: 'demo-restore-ok', name: 'langualinker-2026-02-27.llbackup', sizeBytes: 182_000 },

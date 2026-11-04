@@ -104,6 +104,14 @@ cargo bench -p langualinker-infrastructure --bench due_query   # 50 000 cards / 
 - `src-tauri`: Tauri composition root and commands.
 - `frontend`: Svelte 5 + TypeScript SPA.
 - `docs/migration`: KMP migration evidence and decisions ([kmp-manifest.md](docs/migration/kmp-manifest.md)).
-- `content/decks`: bundled deck sources (from KMP, rights pending — see [content/PROVENANCE.md](content/PROVENANCE.md)).
+- `content/decks`: bundled decks in format v2 (catalog, manifests, NDJSON; [ADR-14](docs/adr/ADR-14-bundled-content.md)); lint with `cargo run -p langualinker-content --bin content-lint -- content/decks [--release]`. Rights and native review pending — see [content/PROVENANCE.md](content/PROVENANCE.md).
+- `crates/anki`: `apkg-convert`, converts an Anki `.apkg` export into a deck package with due dates, FSRS state and review history, imported in the app under Settings → Import & export. List what is inside first, then convert (German on the back in Anki → swap the fields):
+
+  ```sh
+  cargo run -p langualinker-anki --bin apkg-convert -- deck.apkg --list
+  cargo run -p langualinker-anki --bin apkg-convert -- deck.apkg --language de --kind sentences --reverse \
+      --front-field Back --back-field Front --name "Niemiecki — zdania" -o zdania.ndjson
+  cargo run -p langualinker-content --bin content-lint -- zdania.ndjson
+  ```
 - `tests/fixtures`: KMP schema/APKG reference fixtures and FSRS specification; checksums in `scripts/fixtures.lock.json` (`node scripts/verify-fixtures.mjs`).
 - `docs/adr`, `docs/contracts`, `docs/frontend`, `docs/testing`: decisions, contract rules and UI→backend matrix, frontend patterns, test matrix.

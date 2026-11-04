@@ -27,6 +27,7 @@ import {
   type CardState,
   type CollectionChangedEventDto,
   type CollectionScope,
+  type CommitDeckImportInput,
   type CommitImportInput,
   type CompleteOnboardingInput,
   type CreateDeckInput,
@@ -35,6 +36,7 @@ import {
   type DeckCountsDto,
   type DeckOverviewDto,
   type DeckSummaryDto,
+  type DeckImportPreviewDto,
   type DeckType,
   type DeleteDeckInput,
   type DeleteDeckResultDto,
@@ -62,6 +64,7 @@ import {
   type NoteTypeDto,
   type OnboardingStateDto,
   type PickFileInput,
+  type PreviewDeckImportInput,
   type PresetConfigDto,
   type PresetDto,
   type PreviewInput,
@@ -234,6 +237,17 @@ const PRESET_VERSION = 1
 const CUTOFF_HOUR = 4
 const EMPTY_COLLECTION = (): Collection => ({ decks: [], notes: [], cards: [], associations: [], tips: [], wordLinks: [], logs: [] })
 
+/** The deck package the demo picker offers (`demo-import-deck`): converted from Anki with progress. */
+const DEMO_DECK_PACKAGE = {
+  token: 'demo-import-deck',
+  deckGuid: 'anki-deck-demo-moje-slowka',
+  name: 'Niemiecki — moje słówka z Anki',
+  notes: [
+    { guid: 'anki-demo-1', front: 'das Fenster', back: 'okno', state: 'Review' as const, suspended: false, dueInDays: 3, intervalDays: 6, reps: 4 },
+    { guid: 'anki-demo-2', front: 'die Tür', back: 'drzwi', state: 'New' as const, suspended: false, dueInDays: 0, intervalDays: 0, reps: 0 },
+    { guid: 'anki-demo-3', front: 'der Tisch', back: 'stół', state: 'Review' as const, suspended: true, dueInDays: 12, intervalDays: 20, reps: 5 },
+  ],
+}
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 const normalizeText = (text: string): string => text.normalize('NFC').trim().toLocaleLowerCase('pl')
 /** Word-matcher key: no article, no parenthetical sense label, case and diacritics folded. */
@@ -274,6 +288,7 @@ export class MockAppApi implements AppApi {
   #backupSerial = 0
   #previewSerial = 0
   #importPlan: ImportPlan | null = null
+  #deckImportPlan: { token: string; revision: number } | null = null
   #restorePlan: RestorePlan | null = null
   #resetPlan: ResetPlan | null = null
   /** Held only here, like the SecretStore: no operation ever returns it. */
@@ -1949,11 +1964,13 @@ export class MockAppApi implements AppApi {
       return this.#startJob('prepareContent', Math.max(2, input.deckGuids.length + 1), () => {
         const source = this.#pendingCollection ?? createCollection({ seed: this.#options.seed, nowMs: this.#nowMs, ambiguousLinks: false })
         const installed = new Set(this.#collection.decks.map((deck) => deck.guid))
+        const notesBefore = this.#collection.notes.length
         const deckIds = this.#installDecks(source, input.deckGuids.filter((guid) => !installed.has(guid)))
+        const created = this.#collection.notes.length - notesBefore
         this.#pendingCollection = null
         this.#onboardingCompleted = true
         this.#settings = { ...this.#settings, dailyGoal: input.dailyGoal, defaultTargetLanguage: input.targetLanguages[0] ?? 'de', version: this.#settings.version + 1 }
-        return { result: { type: 'prepareContent', deckIds } }
+        return { result: { type: 'prepareContent', deckIds, created, updated: 0, unchanged: 0, kept: 0, archived: 0, warnings: [] } }
       }, ['decks', 'cards', 'settings'])
     })
   }
@@ -2163,6 +2180,79 @@ export class MockAppApi implements AppApi {
           })
         }
         return { result: { type: 'import', deckId, ...confirmed.counts, rowErrors: confirmed.rowErrors } }
+      }, ['decks', 'cards', 'notes'])
+    })
+  }
+
+  previewDeckImport(input: PreviewDeckImportInput) {
+    return this.#query('previewDeckImport', (): DeckImportPreviewDto => {
+      if (input.fileToken === 'demo-import-apkg') fail('UNSUPPORTED_FORMAT', { format: 'apkg' })
+      if (input.fileToken !== DEMO_DECK_PACKAGE.token) {
+        if (DEMO_CSV_FILES[input.fileToken]) fail('UNSUPPORTED_FORMAT', { format: 'unknown' })
+        fail('NOT_FOUND', { entity: 'file' })
+      }
+      const existingDeck = this.#collection.decks.find((deck) => deck.guid === DEMO_DECK_PACKAGE.deckGuid) ?? null
+      const known = new Set(this.#collection.notes.map((note) => note.guid))
+      const existingNotes = DEMO_DECK_PACKAGE.notes.filter((note) => known.has(note.guid)).length
+      const token = `deck-preview-${this.#revision}-${this.#nextId()}`
+      this.#deckImportPlan = { token, revision: this.#revision }
+      return {
+        fileName: 'moje-slowka.ndjson',
+        deckGuid: DEMO_DECK_PACKAGE.deckGuid,
+        name: DEMO_DECK_PACKAGE.name,
+        description: 'Import z Anki: moje-slowka.apkg',
+        targetLanguage: 'de',
+        deckType: 'Linguistic',
+        noteType: 'Basic',
+        contentKind: 'words',
+        level: 'A1',
+        origin: { kind: 'apkg', fileName: 'moje-slowka.apkg', convertedOn: '2026-03-01', tool: 'apkg-convert 0.1.0' },
+        notes: DEMO_DECK_PACKAGE.notes.length,
+        cards: DEMO_DECK_PACKAGE.notes.length,
+        scheduledCards: DEMO_DECK_PACKAGE.notes.filter((note) => note.state !== 'New').length,
+        suspendedCards: DEMO_DECK_PACKAGE.notes.filter((note) => note.suspended).length,
+        reviews: DEMO_DECK_PACKAGE.notes.reduce((sum, note) => sum + note.reps, 0),
+        newNotes: DEMO_DECK_PACKAGE.notes.length - existingNotes,
+        existingNotes,
+        existingDeckId: existingDeck?.id ?? null,
+        warnings: [{ code: 'front.homograph', line: 4 }],
+        previewToken: token,
+      }
+    })
+  }
+
+  commitDeckImport(input: CommitDeckImportInput) {
+    return this.#mutate('commitDeckImport', input.operationId, [], (): JobDto => {
+      const plan = this.#deckImportPlan
+      if (!plan || plan.token !== input.previewToken || plan.revision !== this.#revision) fail('PREVIEW_STALE')
+      this.#deckImportPlan = null
+      return this.#startJob('import', 3, () => {
+        let deck = this.#collection.decks.find((item) => item.guid === DEMO_DECK_PACKAGE.deckGuid)
+        if (!deck) {
+          deck = {
+            id: this.#nextId(), guid: DEMO_DECK_PACKAGE.deckGuid, name: DEMO_DECK_PACKAGE.name, parentId: null, targetLanguage: 'de', deckType: 'Linguistic',
+            description: 'Import z Anki: moje-slowka.apkg', bundled: false, presetId: this.#settings.defaultPresetId, version: 1,
+          }
+          this.#collection.decks.push(deck)
+        }
+        const deckId = deck.id
+        const known = new Set(this.#collection.notes.map((note) => note.guid))
+        let create = 0
+        for (const item of DEMO_DECK_PACKAGE.notes) {
+          if (known.has(item.guid)) continue
+          create += 1
+          const noteId = this.#nextId()
+          this.#collection.notes.push({ id: noteId, guid: item.guid, deckId, noteTypeKind: 'Basic', front: item.front, back: item.back, tags: ['anki'], version: 1, createdAtMs: this.#nowMs, updatedAtMs: this.#nowMs })
+          const scheduled = item.state !== 'New'
+          this.#collection.cards.push({
+            id: this.#nextId(), noteId, deckId, ordinal: 0, state: item.state, queue: item.suspended ? 'Suspended' : item.state === 'New' ? 'New' : 'Review', flag: 'none',
+            dueAtMs: scheduled ? this.#nowMs + item.dueInDays * DAY_MS : null, intervalSeconds: item.intervalDays * 86_400,
+            stability: scheduled ? item.intervalDays * 1.1 : null, difficulty: scheduled ? 5 : null, reps: item.reps, lapses: 0, version: 1, deleted: false, archived: false,
+            position: scheduled ? null : this.#nextPosition(),
+          })
+        }
+        const skip = DEMO_DECK_PACKAGE.notes.length - create
+        return { result: { type: 'import', deckId, create, update: 0, skip, duplicate: 0, error: 0, rowErrors: [] } }
       }, ['decks', 'cards', 'notes'])
     })
   }

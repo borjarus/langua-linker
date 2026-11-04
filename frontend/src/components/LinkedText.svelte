@@ -1,5 +1,6 @@
 <script lang="ts" module>
   import type { WordLinkDto } from '../api/types'
+  import { utf16Slice } from '../services/text'
 
   export type TextSegment = { kind: 'text'; text: string } | { kind: 'link'; text: string; link: WordLinkDto }
 
@@ -12,11 +13,7 @@
     const segments: TextSegment[] = []
     let cursor = 0
     for (const link of [...links].sort((a, b) => a.startIndex - b.startIndex)) {
-      const valid =
-        link.startIndex >= cursor &&
-        link.endIndex <= normalized.length &&
-        link.startIndex < link.endIndex &&
-        normalized.slice(link.startIndex, link.endIndex) === link.surface.normalize('NFC')
+      const valid = link.startIndex >= cursor && utf16Slice(normalized, link.startIndex, link.endIndex) === link.surface.normalize('NFC')
       if (!valid) continue
       if (link.startIndex > cursor) segments.push({ kind: 'text', text: normalized.slice(cursor, link.startIndex) })
       segments.push({ kind: 'link', text: link.surface, link })

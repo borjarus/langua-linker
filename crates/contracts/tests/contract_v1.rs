@@ -286,6 +286,59 @@ fn phase7_outputs_round_trip_through_their_rust_dtos() {
 }
 
 #[test]
+fn phase8_outputs_round_trip_through_their_rust_dtos() {
+    use langualinker_contracts::dto::{AttributionDto, DashboardDto, OnboardingStateDto};
+    assert!(round_trips::<OnboardingStateDto>("getOnboardingState") >= 1);
+    assert!(round_trips::<DashboardDto>("getDashboard") >= 1);
+    assert!(round_trips::<Vec<AttributionDto>>("getAttributions") >= 1);
+    assert!(round_trips::<JobDto>("completeOnboarding") >= 1);
+}
+
+#[test]
+fn deck_import_samples_round_trip_through_their_rust_dtos() {
+    use langualinker_contracts::dto::{
+        CommitDeckImportInput, DeckImportPreviewDto, FileHandleDto, PickFileInput,
+        PreviewDeckImportInput,
+    };
+    assert!(round_trips::<DeckImportPreviewDto>("previewDeckImport") >= 1);
+    assert!(round_trips::<JobDto>("commitDeckImport") >= 1);
+    assert!(round_trips::<Option<FileHandleDto>>("pickFile") >= 1);
+    let samples = samples();
+    for call in samples["calls"].as_array().expect("calls") {
+        let input = call["args"][0].clone();
+        let back = match call["operation"].as_str() {
+            Some("pickFile") => serde_json::to_value(
+                serde_json::from_value::<PickFileInput>(input.clone()).unwrap(),
+            ),
+            Some("previewDeckImport") => serde_json::to_value(
+                serde_json::from_value::<PreviewDeckImportInput>(input.clone()).unwrap(),
+            ),
+            Some("commitDeckImport") => serde_json::to_value(
+                serde_json::from_value::<CommitDeckImportInput>(input.clone()).unwrap(),
+            ),
+            _ => continue,
+        };
+        assert_eq!(back.unwrap(), input);
+    }
+}
+
+#[test]
+fn phase8_inputs_deserialize_into_their_rust_dtos() {
+    use langualinker_contracts::dto::CompleteOnboardingInput;
+    let samples = samples();
+    let mut seen = 0;
+    for call in samples["calls"].as_array().expect("calls") {
+        if call["operation"] == "completeOnboarding" {
+            let input = call["args"][0].clone();
+            let dto: CompleteOnboardingInput = serde_json::from_value(input.clone()).unwrap();
+            assert_eq!(serde_json::to_value(&dto).unwrap(), input);
+            seen += 1;
+        }
+    }
+    assert!(seen >= 1);
+}
+
+#[test]
 fn phase7_inputs_are_a_bare_job_id() {
     let samples = samples();
     for call in samples["calls"].as_array().expect("calls") {

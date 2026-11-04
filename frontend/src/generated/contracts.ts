@@ -42,7 +42,15 @@ row: number, error: ErrorDto, };
 
 export type ImportCountsDto = { create: number, update: number, skip: number, duplicate: number, error: number, };
 
-export type JobResultDto = { "type": "import", deckId: string, rowErrors: Array<ImportRowErrorDto>, create: number, update: number, skip: number, duplicate: number, error: number, } | { "type": "export", fileName: string, cardCount: number, } | { "type": "backup", backupId: string, } | { "type": "restore", safetyBackupId: string, } | { "type": "reset", safetyBackupId: string | null, } | { "type": "prepareContent", deckIds: Array<string>, };
+export type JobResultDto = { "type": "import", deckId: string, rowErrors: Array<ImportRowErrorDto>, create: number, update: number, skip: number, duplicate: number, error: number, } | { "type": "export", fileName: string, cardCount: number, } | { "type": "backup", backupId: string, } | { "type": "restore", safetyBackupId: string, } | { "type": "reset", safetyBackupId: string | null, } | { "type": "prepareContent", deckIds: Array<string>, created: number, updated: number, unchanged: number, 
+/**
+ * Removed from the bundled content but kept: the learner has progress or edits.
+ */
+kept: number, 
+/**
+ * Removed from the bundled content without progress: cards archived, history intact.
+ */
+archived: number, warnings: Array<ContentWarningDto>, };
 
 export type CollectionScope = "decks" | "cards" | "notes" | "settings" | "stats" | "backups";
 
@@ -71,3 +79,115 @@ export type DiagnosticsReportDto = { generatedAt: string, lines: Array<LogLineDt
  * Number of values the backend replaced with `[redacted]`.
  */
 redactions: number, };
+
+export type ContentWarningCode = "overrideConflict" | "deckDeleted";
+
+export type ContentWarningDto = { code: ContentWarningCode, deckGuid: string, noteGuid: string | null, 
+/**
+ * The field kept for the learner (`front`, `back`, `tags`, `association:<guid>`, ...).
+ */
+field: string | null, };
+
+export type NativeLanguage = "pl";
+
+export type TargetLanguage = "de" | "en";
+
+export type DeckType = "Simple" | "TextWithAssociations" | "Linguistic";
+
+export type DeckCapabilitiesDto = { associations: boolean, grammarTips: boolean, wordLinks: boolean, tts: boolean, };
+
+export type DeckCountsDto = { new: number, learning: number, review: number, overdue: number, total: number, };
+
+export type ContentState = "ready" | "preparing";
+
+export type DeckSummaryDto = { id: string, guid: string, name: string, parentId: string | null, targetLanguage: TargetLanguage, nativeLanguage: NativeLanguage, deckType: DeckType, capabilities: DeckCapabilitiesDto, counts: DeckCountsDto, 
+/**
+ * Share of mature cards, 0..1.
+ */
+progress: number, bundled: boolean, contentState: ContentState, version: number, };
+
+export type ResumableStatus = "active" | "paused";
+
+export type ResumableSessionDto = { sessionId: string, 
+/**
+ * `null` = a session over all decks.
+ */
+deckId: string | null, deckName: string | null, status: ResumableStatus, reviewedCount: number, remaining: number, };
+
+export type DashboardDto = { decks: Array<DeckSummaryDto>, streakDays: number, studiedToday: number, dueToday: number, dailyGoal: number, resumable: ResumableSessionDto | null, 
+/**
+ * Earliest future due date over all decks; lets "nothing due today" say when the next review is.
+ */
+nextDueAt: string | null, generatedAt: string, };
+
+export type BundledDeckDto = { guid: string, name: string, description: string, targetLanguage: TargetLanguage, deckType: DeckType, noteCount: number, cardCount: number, level: string, };
+
+export type OnboardingStep = "nativeLanguage" | "targetLanguage" | "goal" | "decks" | "ready";
+
+export type OnboardingStateDto = { completed: boolean, step: OnboardingStep, availableDecks: Array<BundledDeckDto>, 
+/**
+ * Bundled decks already in the collection; onboarding again only adds the missing ones.
+ */
+installedDeckGuids: Array<string>, nativeLanguage: NativeLanguage, targetLanguages: Array<TargetLanguage>, dailyGoal: number, };
+
+export type CompleteOnboardingInput = { operationId: string, nativeLanguage: NativeLanguage, targetLanguages: Array<TargetLanguage>, dailyGoal: number, 
+/**
+ * May be empty: the user can start without bundled decks.
+ */
+deckGuids: Array<string>, };
+
+export type AttributionScope = "dependency" | "content" | "font" | "icon";
+
+export type AttributionDto = { name: string, license: string, url: string | null, scope: AttributionScope, };
+
+export type FilePurpose = "import" | "restore" | "backupFolder";
+
+export type PickFileInput = { purpose: FilePurpose, };
+
+export type FileHandleDto = { token: string, name: string, sizeBytes: number, };
+
+export type NoteTypeKind = "Basic" | "BasicAndReversed" | "Sentence" | "SentenceAndReversed";
+
+export type DeckContentKind = "words" | "sentences";
+
+export type DeckImportOriginDto = { 
+/**
+ * `apkg` for Anki.
+ */
+kind: string, fileName: string, 
+/**
+ * Date of the conversion, `YYYY-MM-DD`.
+ */
+convertedOn: string, tool: string, };
+
+export type DeckImportWarningDto = { 
+/**
+ * Content-rule code, e.g. `front.homograph`.
+ */
+code: string, 
+/**
+ * Line in the package file.
+ */
+line: number | null, };
+
+export type PreviewDeckImportInput = { fileToken: string, };
+
+export type DeckImportPreviewDto = { fileName: string, deckGuid: string, name: string, description: string, targetLanguage: TargetLanguage, deckType: DeckType, noteType: NoteTypeKind, contentKind: DeckContentKind, level: string, origin: DeckImportOriginDto | null, notes: number, cards: number, 
+/**
+ * Cards that arrive with progress (not new).
+ */
+scheduledCards: number, suspendedCards: number, 
+/**
+ * Past reviews imported as history.
+ */
+reviews: number, newNotes: number, 
+/**
+ * Notes already in the collection: kept with their progress, content updated unless edited.
+ */
+existingNotes: number, 
+/**
+ * The deck this package updates, when it was imported before.
+ */
+existingDeckId: string | null, warnings: Array<DeckImportWarningDto>, previewToken: string, };
+
+export type CommitDeckImportInput = { operationId: string, previewToken: string, };

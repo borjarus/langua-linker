@@ -102,8 +102,9 @@ fn file_database_uses_wal_foreign_keys_and_records_the_collection() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("data").join(DATABASE_FILE);
     let opened = SqliteDatabase::open(&path, &FixedClock(T0.0)).unwrap();
-    assert_eq!(opened.migration.to_version, 1);
-    assert_eq!(opened.database.schema_version(), 1);
+    let latest = super::migrations::latest_version(super::MIGRATIONS);
+    assert_eq!(opened.migration.to_version, latest);
+    assert_eq!(opened.database.schema_version(), latest);
     let (mode, fk, created): (String, bool, i64) = opened
         .database
         .with_connection(|conn| {
@@ -123,7 +124,7 @@ fn file_database_uses_wal_foreign_keys_and_records_the_collection() {
     drop(opened);
     // Reopening later keeps the original creation time and migrates nothing.
     let again = SqliteDatabase::open(&path, &FixedClock(T0.0 + 1)).unwrap();
-    assert_eq!(again.migration.from_version, 1);
+    assert_eq!(again.migration.from_version, latest);
     let created: i64 = again
         .database
         .with_connection(|conn| {

@@ -9,9 +9,9 @@
 
 | Artifact | KMP path | Copy in this repo | Use |
 |---|---|---|---|
-| Content manifest | `shared/src/commonMain/composeResources/files/decks/manifest.json` | `content/decks/manifest.json` | Phase 8 input (to be upgraded to the plan's manifest format) |
-| 4 deck headers | `…/decks/{de,en}_{words,sentences}_a1.json` | `content/decks/*.json` | Phase 8 input |
-| 4 deck bodies, 113 records | `…/decks/*.ndjson` (DE words 43, DE sentences 12, EN words 46, EN sentences 12) | `content/decks/*.ndjson` | Phase 8 input; Phase 2 mock may adopt texts |
+| Content manifest | `shared/src/commonMain/composeResources/files/decks/manifest.json` | `tests/fixtures/kmp/content/manifest.json` (original, unchanged) | Converted to format v2 in Phase 8: `content/decks/catalog.json` (ADR-14) |
+| 4 deck headers | `…/decks/{de,en}_{words,sentences}_a1.json` | `tests/fixtures/kmp/content/*.json` (original) | Converted to v2 manifests `content/decks/*.json` |
+| 4 deck bodies, 113 records | `…/decks/*.ndjson` (DE words 43, DE sentences 12, EN words 46, EN sentences 12) | `tests/fixtures/kmp/content/*.ndjson` (original) | Converted to v2 records `content/decks/*.ndjson` (GUIDs, UTF-16 ranges, word GUIDs, candidate associations) |
 | SQLDelight schema (8 tables) | `shared/src/commonMain/sqldelight/com/mila/langualinker/database/*.sq` | `tests/fixtures/kmp/schema/*.sq` | Design reference for Phase 7 |
 | Migration v1→v2 | `…/database/1.sqm` | `tests/fixtures/kmp/schema/1.sqm` | Historical reference only (ADR-08) |
 | APKG sample | `shared/src/commonMain/assets/sample_german_a1_sentences.apkg` | `tests/fixtures/kmp/apkg/` | Phase 14 interoperability fixture (test-only, see provenance) |

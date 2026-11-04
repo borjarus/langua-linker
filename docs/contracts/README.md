@@ -39,6 +39,19 @@ Phase 7 extends the Rust side per command: the DTO deserializes its frozen input
 - Long-running work returns `JobDto`; `job_progress` events carry a monotonic `sequence`; `getJobStatus` is the durable truth.
 - Tauri commands are snake_case and receive a single `input` argument.
 
+## Changes in v1.2 (Phase 8, Anki converter)
+
+- Minor (additive): new operations `previewDeckImport` (query, `preview_deck_import`, input `{ fileToken }` → `DeckImportPreviewDto`) and `commitDeckImport` (job, `commit_deck_import`, input `{ operationId, previewToken }` → `JobDto` kind `import`, result `JobResultDto::Import`). Errors: `UNSUPPORTED_FORMAT` (`format: "apkg"` for an unconverted Anki file), `VALIDATION_FAILED` (`field: "content"`, `reason`: lint code), `NOT_FOUND` (file token), `DELETED`, `PREVIEW_STALE`, `STORAGE_FULL`, `DB_BUSY`.
+- Rust became the DTO source for `FilePurpose`, `PickFileInput`, `FileHandleDto` and `NoteTypeKind` (shapes unchanged). `pickFile` is real for `purpose: "import"` (Phase 8); restore and backup folders answer `NOT_IMPLEMENTED` until Phase 12.
+- Transfer screen: a Deck package panel above the CSV import; the CSV panel's APKG notice points to the converter.
+
+## Changes in v1.1 (Phase 8)
+
+- Minor (additive): `JobResultDto` `prepareContent` gains `created`, `updated`, `unchanged`, `kept`, `archived` and `warnings: ContentWarningDto[]` (`code` `overrideConflict` | `deckDeleted`, `deckGuid`, `noteGuid`, `field`). A 1.0 result with only `deckIds` still deserializes (Rust `#[serde(default)]`).
+- Rust became the DTO source for `OnboardingStateDto`, `CompleteOnboardingInput`, `BundledDeckDto`, `AttributionDto`, `DashboardDto` (with `DeckSummaryDto`, `DeckCountsDto`, `DeckCapabilitiesDto`, `ResumableSessionDto`) and the enums `NativeLanguage`, `TargetLanguage`, `DeckType`, `ContentState`, `OnboardingStep`, `AttributionScope`; their TypeScript is generated, shapes unchanged. `DECK_TYPES` and `ONBOARDING_STEPS` stay runtime lists with a compile-time equality check against the generated unions.
+- Real in Rust: `getOnboardingState`, `completeOnboarding` (job `prepareContent`), `getAttributions`, `getDashboard` (counts from stored card state; `resumable` stays `null` and the study day uses the collection cutoff in UTC until Phases 9–10). Invalid bundled content fails the job with `VALIDATION_FAILED { field: "content", reason: <lint code> }`.
+- `AboutDto.schemaVersion` is 2 (migration `0002_bundled_content`); `contentVersion` is the newest installed bundled version (`YYYY.MM.DD`).
+
 ## Phase 7 additions (no version bump)
 
 - Rust became the DTO source for `ErrorCode`, `ErrorDto`, `AppInfoDto`, jobs (`JobDto`, `JobEventDto`, `JobResultDto`, `ImportCountsDto`, `ImportRowErrorDto`), `CollectionChangedEventDto`, `AboutDto` and the diagnostics DTOs; their TypeScript is generated, shapes unchanged.
@@ -106,7 +119,7 @@ Every operation a screen calls lists that screen in `operations.ts`; `frontend/t
 
 | Screen / route | Operations | Mock status | Rust phase |
 |---|---|---|---|
-| Dashboard `/home` | getDashboard, startStudy, createDeck | complete prototype (resume, new deck, refresh, no-cards / caught-up / preparing states) | 10–11 |
+| Dashboard `/home` | getDashboard, startStudy, createDeck | getDashboard real (Phase 8): decks, counts from stored card state, preparing state, streak/studied today from logs; resume and scheduler counts pending (Phases 9–10) | 8/10–11 |
 | Deck `/deck/:id` | getDeck, getEditorData, startStudy, updateDeck, deleteDeck, listPresets, savePreset | complete prototype (counters, study/browse/add, subdeck tree with collapse, rename/move without cycles, type change that hides and restores, delete with scope, preset picker with dependents, preset editor with validation, shared-preset warning and clone) | 10–11 |
 | Study `/study/:deckId?session=` | resumeStudy, updateStudySession, getRatingPreview, rateCard, undoReview, applyCardAction, getNoteContent, resolveWordLink, generateAssociation, setFavoriteAssociation, job events | complete prototype (pause/end, leave guard, recovery, card actions, word sheet, association states, TTS states) | 10–11/13/15 |
 | Summary `/summary/:sessionId` | getSessionSummary, startStudy, getSettings, updateSettings | complete prototype (distribution, time, Again list, next steps, reminder offer) | 10/12/15 |
@@ -118,8 +131,8 @@ Every operation a screen calls lists that screen in `operations.ts`; `frontend/t
 | AI `/settings/ai` | getSettings, updateSettings, setAiApiKey | complete prototype (consent that can be declined, provider/model/HTTPS endpoint, BYOK key that is never shown again, quota) | 12–13 |
 | Privacy `/settings/privacy` | getSettings, updateSettings, previewReset, resetCollection, createBackup, listBackups, job events | complete prototype (telemetry opt-in, off by default; reset progress / delete everything naming scope and reversibility, protected by a fresh safety backup or the typed phrase) | 12 |
 | About `/settings/about` | getAppInfo, getAboutInfo, getDiagnosticsReport | backend real (Phase 7): versions with the schema from the database, log read and re-redacted in Rust; device check pending | 7/12 |
-| Transfer `/settings/transfer` | pickFile, getEditorData, previewImport, commitImport, exportDeck, shareFile, job events | complete prototype (file pick, dry run with delimiter, BOM, header, column mapping, target or new deck, skip/update/duplicate, counts and row errors, progress with a cancel that writes nothing, result report, APKG instructions; deck export with share, separate from backup) | 14–15 |
+| Transfer `/settings/transfer` | pickFile, previewDeckImport, commitDeckImport, getEditorData, previewImport, commitImport, exportDeck, shareFile, job events | deck packages (Anki via `apkg-convert`) real from Phase 8 with progress and history; CSV and export: complete prototype (file pick, dry run with delimiter, BOM, header, column mapping, target or new deck, skip/update/duplicate, counts and row errors, progress with a cancel that writes nothing, result report, APKG instructions; deck export with share, separate from backup) | 14–15 |
 | Backup `/settings/backup` | listBackups, createBackup, getSettings, updateSettings, pickFile, validateRestore, restoreBackup, shareFile, job events | complete prototype (create with progress, automatic/retention/target folder, list with kind and location, share, restore from a listed backup or a file: validation, preview of now vs after, safety copy, confirmation, reopen; corrupt and newer files rejected before anything changes; a failed restore offers the safety copy) | 12/15 |
-| Attributions `/settings/attributions` | getAttributions | grouped by content/software/fonts/icons | 8/12 |
-| Onboarding `/onboarding?from=` | getOnboardingState, completeOnboarding, job events | complete prototype (native language → target languages → daily goal → bundled decks → ready, focus moves to each step, prepare job; from the settings it shows installed decks, adds only missing ones and returns there) | 8/10/12 |
+| Attributions `/settings/attributions` | getAttributions | backend real (Phase 8): deck licences from the bundled manifests plus the main dependencies; generated full list with the release audit | 8/16–17 |
+| Onboarding `/onboarding?from=` | getOnboardingState, completeOnboarding, job events | backend real (Phase 8): catalog from the bundled manifests, answers in SQLite, prepare job with the streaming importer, resumed after a kill; device check pending | 8/12 |
 | Shell | getAppInfo, onCollectionChanged | demo banner, nav | 7 |

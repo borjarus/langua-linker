@@ -1,10 +1,11 @@
-//! Composition of the Phase 7 backend: the SQLite collection, the job runtime and the Tauri
-//! event sink, plus the mapping from application types to contract DTOs.
+//! Composition of the backend: the SQLite collection, the job runtime, bundled content (Phase 8)
+//! and the Tauri event sink, plus the mapping from application types to contract DTOs.
 
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use chrono::{DateTime, SecondsFormat};
+use langualinker_application::content::ContentService;
 use langualinker_application::jobs::{
     JobDetail, JobEvent, JobKind, JobRecord, JobService, JobStatus,
 };
@@ -14,7 +15,7 @@ use langualinker_contracts::dto::{self, JobDto, JobEventDto, JobProgressDto, Job
 use langualinker_contracts::{ErrorCode, ErrorDto};
 use langualinker_domain::TimestampMs;
 use langualinker_infrastructure::sqlite::{DATABASE_FILE, SqliteDatabase};
-use langualinker_infrastructure::system::SystemClock;
+use langualinker_infrastructure::system::{OsRng, SystemClock};
 use serde_json::{Map, Value};
 use tauri::{AppHandle, Emitter, Runtime};
 
@@ -31,6 +32,7 @@ pub struct Backend {
 pub struct Collection {
     pub db: Arc<SqliteDatabase>,
     pub jobs: JobService<SqliteDatabase>,
+    pub content: ContentService<SqliteDatabase>,
 }
 
 impl Backend {
@@ -59,8 +61,17 @@ impl Backend {
                     clock,
                 )
             });
-        if let Err(error) = &collection {
-            tracing::error!(code = error.code(), "collection could not be opened");
+        match &collection {
+            Err(error) => tracing::error!(code = error.code(), "collection could not be opened"),
+            // A preparation cut short by a kill, or a newer bundled version, continues now in
+            // the background; the first screen does not wait for it.
+            Ok(collection) => match collection.content.resume() {
+                Ok(Some(job)) => {
+                    tracing::info!(job_id = %job.id, "bundled content preparation resumed")
+                }
+                Ok(None) => {}
+                Err(error) => tracing::error!(code = error.code(), "bundled content not resumed"),
+            },
         }
         Self {
             collection,
@@ -79,12 +90,24 @@ impl Collection {
         events: Arc<dyn EventSink>,
         clock: Arc<dyn Clock>,
     ) -> Result<Self, AppError> {
-        let jobs = JobService::new(db.clone(), events, clock);
+        let jobs = JobService::new(db.clone(), events.clone(), clock.clone());
         let interrupted = jobs.recover_interrupted()?;
         if interrupted > 0 {
             tracing::warn!(count = interrupted, "jobs interrupted by the previous run");
         }
-        Ok(Self { db, jobs })
+        let content = ContentService::new(
+            db.clone(),
+            Arc::new(crate::content::BUNDLED),
+            jobs.clone(),
+            events,
+            clock,
+            Arc::new(OsRng),
+            langualinker_application::content::ResultEncoders {
+                prepare: crate::content::encode_outcome,
+                import: crate::content::encode_import,
+            },
+        );
+        Ok(Self { db, jobs, content })
     }
 }
 
@@ -262,6 +285,7 @@ mod tests {
                 reason: "secretStore",
             },
             AppError::PreviewStale,
+            AppError::UnsupportedFormat { format: "apkg" },
             AppError::Cancelled,
             AppError::NotImplemented {
                 operation: "getDashboard",

@@ -75,6 +75,9 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - run: cargo test --workspace --locked
+      # Bundled content gate (plan Phase 8 step 14). The release gate (`--release`: native review
+      # and rights audit recorded) runs before a beta/release build once D-04 is closed.
+      - run: cargo run --locked -q -p langualinker-content --bin content-lint -- content/decks
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-audit

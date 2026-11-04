@@ -13,7 +13,8 @@ use langualinker_domain::deck::{Deck, DeckConfig, DeckConfigOptions, NewDeck};
 use langualinker_domain::note::{CardTemplate, NewNote, Note, NoteType, NoteTypeKind};
 use langualinker_domain::review::ReviewLog;
 use langualinker_domain::{
-    AssociationId, CardId, DeckConfigId, DeckId, Guid, NoteId, NoteTypeId, TimestampMs,
+    AssociationId, CardId, DeckConfigId, DeckId, GrammarTipId, Guid, NoteId, NoteTypeId,
+    TimestampMs,
 };
 
 use crate::AppResult;
@@ -149,6 +150,101 @@ pub trait JobRepository {
     fn unfinished_jobs(&mut self) -> AppResult<Vec<JobRecord>>;
 }
 
+/// Provenance of a note installed from bundled content (`bundled_notes`, schema v2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BundledNote {
+    pub note_id: NoteId,
+    pub deck_guid: String,
+    /// Last content version that shipped the note.
+    pub content_version: String,
+    /// Content version that no longer ships it.
+    pub removed_in_version: Option<String>,
+    /// The importer archived the note's cards when it was removed; a re-add restores them.
+    pub archived_by_import: bool,
+}
+
+/// What the bundled-content importer needs beyond the entity repositories (Phase 8).
+pub trait BundledContentRepository {
+    /// Any deck with this GUID, including a soft-deleted one.
+    fn deck_by_guid(&mut self, guid: &Guid) -> AppResult<Option<Deck>>;
+    fn bundled_note(&mut self, note: NoteId) -> AppResult<Option<BundledNote>>;
+    fn put_bundled_note(&mut self, note: &BundledNote) -> AppResult<()>;
+    /// Bundled notes of a deck whose note is not soft-deleted, with the note GUID.
+    fn bundled_notes_of_deck(&mut self, deck_guid: &str) -> AppResult<Vec<(Guid, BundledNote)>>;
+    /// Fields of a note the user edited (`front`, `back`, `tags`, `noteType`, `wordLinks`,
+    /// `association:<guid>`, `tip:<guid>`); a content update leaves them alone.
+    fn content_overrides(&mut self, note: NoteId) -> AppResult<Vec<String>>;
+    fn put_content_override(
+        &mut self,
+        note: NoteId,
+        field: &str,
+        original_content_version: &str,
+        at: TimestampMs,
+    ) -> AppResult<()>;
+    /// Any association with this GUID, including a soft-deleted one.
+    fn association_by_guid(&mut self, guid: &Guid) -> AppResult<Option<Association>>;
+    fn update_association_text(
+        &mut self,
+        id: AssociationId,
+        text: &str,
+        at: TimestampMs,
+    ) -> AppResult<()>;
+    /// Any grammar tip with this GUID, including a soft-deleted one.
+    fn grammar_tip_by_guid(&mut self, guid: &Guid) -> AppResult<Option<GrammarTip>>;
+    fn update_grammar_tip_text(
+        &mut self,
+        id: GrammarTipId,
+        text: &str,
+        at: TimestampMs,
+    ) -> AppResult<()>;
+    /// Archives (`Some`) or restores (`None`) every active card of a note; scheduling columns
+    /// are not touched. Returns the number of cards changed.
+    fn set_note_cards_archived(
+        &mut self,
+        note: NoteId,
+        archived_at: Option<TimestampMs>,
+        at: TimestampMs,
+    ) -> AppResult<u64>;
+    /// A card of the note was ever reviewed (reps or a review log).
+    fn note_has_progress(&mut self, note: NoteId) -> AppResult<bool>;
+    /// Changes whenever a deck, note or card changes; a preview made against another value is
+    /// stale.
+    fn collection_fingerprint(&mut self) -> AppResult<String>;
+}
+
+/// Card counts of one deck (its own cards, not its subdecks).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct DeckCardCounts {
+    pub new: u32,
+    pub learning: u32,
+    pub review: u32,
+    pub overdue: u32,
+    pub total: u32,
+    /// Cards with an interval of at least 21 days.
+    pub mature: u32,
+}
+
+/// Read models of the dashboard.
+pub trait DashboardQueries {
+    /// Counts per deck that has live cards. Learning and review cards count when due before
+    /// `day_end`; review cards due before `day_start` are also overdue. Suspended, buried,
+    /// archived and deleted cards only count in `total` (suspended/buried) or not at all.
+    fn deck_card_counts(
+        &mut self,
+        day_start: TimestampMs,
+        day_end: TimestampMs,
+    ) -> AppResult<Vec<(DeckId, DeckCardCounts)>>;
+    /// Minutes after midnight at which a study day starts (`collection.day_cutoff_minutes`).
+    fn day_cutoff_minutes(&mut self) -> AppResult<u32>;
+    /// Valid (not invalidated) reviews at or after `since`.
+    fn reviews_since(&mut self, since: TimestampMs) -> AppResult<u32>;
+    /// Distinct study days with a valid review, newest first, as day numbers since the epoch
+    /// shifted by the cutoff; at most `limit`.
+    fn review_days(&mut self, cutoff_minutes: u32, limit: u32) -> AppResult<Vec<i64>>;
+    /// Earliest due time after `after` of a scheduled, studyable card.
+    fn next_due_after(&mut self, after: TimestampMs) -> AppResult<Option<TimestampMs>>;
+}
+
 /// Result of a mutation recorded under its `operationId`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordedOperation {
@@ -179,6 +275,8 @@ pub trait Repositories:
     + SettingsRepository
     + JobRepository
     + IdempotencyRepository
+    + BundledContentRepository
+    + DashboardQueries
 {
 }
 
@@ -193,6 +291,8 @@ impl<T> Repositories for T where
         + SettingsRepository
         + JobRepository
         + IdempotencyRepository
+        + BundledContentRepository
+        + DashboardQueries
 {
 }
 
