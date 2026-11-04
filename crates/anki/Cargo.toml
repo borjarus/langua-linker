@@ -18,7 +18,7 @@ sha2.workspace = true
 tempfile = "3.23.0"
 thiserror.workspace = true
 # .apkg is a ZIP (deflate); collection.anki21b and media are zstd-compressed (Anki 2.1.50+).
-zip = { version = "2", default-features = false, features = ["deflate"] }
+zip = { version = "9", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 zstd = "0.13"
 
 [[bin]]
