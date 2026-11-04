@@ -1,15 +1,31 @@
 {
-  "schemaVersion": 1,
-  "contentVersion": 1,
+  "schemaVersion": 2,
+  "deckGuid": "bundled-en-sentences-a1",
+  "contentVersion": "2026.11.04",
   "name": "Angielski A1 — zdania",
-  "language": "en",
-  "sourceLanguage": "pl",
+  "description": "Proste zdania angielskie A1 z linkami do słówek i wskazówkami gramatycznymi.",
+  "level": "A1",
+  "nativeLanguage": "pl",
+  "targetLanguage": "en",
   "deckType": "Linguistic",
-  "cardType": "sentence",
-  "cardsFile": "en_sentences_a1.ndjson",
-  "wordDeckRef": "en_words_a1",
+  "noteType": "Sentence",
+  "contentKind": "sentences",
+  "dependsOn": [
+    "bundled-en-words-a1"
+  ],
+  "notesFile": "en_sentences_a1.ndjson",
+  "sha256": "6ff7737c79b79de24e4ecdb5129adbc77d5addd4ea2363e8a3abf4dc722f50c8",
+  "expectedNotes": 12,
+  "expectedCards": 12,
   "license": {
-    "source": "original",
-    "attribution": null
+    "name": "Original LanguaLinker content — rights audit pending (D-04)",
+    "attribution": null,
+    "url": null,
+    "rightsConfirmed": false
+  },
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "reviewedAt": null
   }
 }

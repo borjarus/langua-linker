@@ -249,7 +249,7 @@ In Phases 2–6, functional tests may use mocks, but mobile smoke tests use the 
 | 5 | Statistics, settings, onboarding, transfer/backup GUI | Mock |
 | 6 | Complete GUI and contract acceptance | Mock; gate |
 | 7 | Rust domain/data, schema, migrations, IPC/secrets | Yes |
-| 8 | Bundled content, importer, linter | Yes |
+| 8 | Bundled content, importer, linter, Anki converter | Yes |
 | 9 | FSRS-6 and scheduler, conformance | Yes |
 | 10 | Real learning flow on existing screens | Yes |
 | 11 | CRUD, browser, links, hierarchy/presets | Yes |
@@ -624,12 +624,23 @@ Before this gate, do not implement production FSRS/CRUD/LLM. Spikes, IPC transpo
 16. Note count and generated card count are separate; include broken fixtures.
 17. Import 5k in under 5 s; measure peak memory and GUI responsiveness.
 
+### Step 4 — Anki converter and deck package import (owner decision 2026-11-04)
+
+18. `apkg-convert` (desktop CLI): `.apkg` (anki21b/zstd and legacy schema 11) → import package; options for deck kind (words/sentences, reversed), L2, name, deck type, level, source deck and fields.
+19. Carry the Anki scheduling state (due, interval, ease, reps, lapses, queue incl. suspended/buried, flags, FSRS S/D) and the review history; report everything not carried.
+20. Import packages in the app from the existing Transfer screen: real `pickFile` for imports, `previewDeckImport` dry run, `commitDeckImport` job (contract 1.2).
+21. Progress applies only to cards the import creates; a repeated import never overwrites progress made in the app and never duplicates history.
+22. Same content rules for packages as for bundled decks, minus the bundled-only requirements; bundled content never carries progress.
+
 ### Tests and DoD
 
-- [ ] Fresh offline install contains four approved decks/links.
-- [ ] Second import is idempotent; update +50 preserves progress/overrides.
-- [ ] Kill per deck leaves no partial product; restart completes preparation.
-- [ ] Linter blocks invalid content; attribution appears in the existing GUI.
+- [ ] Fresh offline install contains four approved decks/links. *(Four decks with resolved links install offline from the embedded content; they are candidates, not approved — D-04 and the native review are open, and `content-lint --release` blocks them.)*
+- [x] Second import is idempotent; update +50 preserves progress/overrides.
+- [x] Kill per deck leaves no partial product; restart completes preparation. *(Kill simulated by a source that fails inside the deck transaction plus a reopened file, as in ADR-09; device run pending.)*
+- [x] Linter blocks invalid content; attribution appears in the existing GUI. *(Licences screen reads `getAttributions`; device check pending.)*
+- [x] An Anki export converts and imports with due dates, FSRS state and review history; a second import keeps app progress. *(Real fixture export: 432 notes, 5 329 reviews; device run of the picker pending.)*
+
+> **Status 2026-11-04 — engineering implemented; content approval and device run pending.** Step 1: format v2 ([ADR-14](adr/ADR-14-bundled-content.md)) — `content/decks/catalog.json`, one manifest per deck (schema/deck GUID/content version/L1-L2/deck and note type/content kind/dependencies/licence with `rightsConfirmed`/review/SHA-256/expected notes and cards) and NDJSON note records with note GUIDs, associations, tips and word links by word GUID with UTF-16 NFC half-open ranges; the 113 KMP records were converted without rewording (originals kept byte-identical in `tests/fixtures/kmp/content`), and 89 candidate associations were written with the versioned prompt `content/tools/prompts/association-candidates-v1.md` (pending native review, [PROVENANCE.md](../content/PROVENANCE.md)). Unicode rule shared by `crates/domain/src/text.rs` and `frontend/src/services/text.ts`, both tested on `tests/fixtures/unicode/ranges.json`. D-04 (size 800–1 200 words / 300–500 sentences per language, authors, rights, reviewer) remains an owner decision. Step 2: `crates/application/src/content.rs` — pending list in settings, validation of every pending deck before writing, one transaction per deck that also leaves the pending list, resume at startup, GUID/(note, template) idempotence, no scheduling writes, `content_overrides` kept with `overrideConflict` warnings, keep (progress/edits) or archive (no progress) for removed notes via the new `bundled_notes` table (migration `0002_bundled_content`), relink of installed sentence decks when their word deck arrives; job result with counts and warnings (contract 1.1). `getOnboardingState`, `completeOnboarding`, `getAttributions` and `getDashboard` are real; content is embedded in the binary. Step 3: `crates/content` + `content-lint` (dev gate in CI, `--release` gate for beta/release, `--update-manifests`); 22 broken-content cases; import of 5 000 notes / 10 000 cards in 2.6 s (release, development PC, `imports_five_thousand_notes_within_budget`). Evidence: Rust tests (content 37, importer integration 7 + 1 budget, shell IPC onboarding→dashboard), clippy `-D warnings`, rustfmt; frontend svelte-check 0/0, ESLint, 309 Vitest tests. **Addendum 2026-11-04 — Anki converter (step 4).** `crates/anki` with `apkg-convert` (schema 18 zstd and schema 11, HTML → text, due/queue/FSRS/revlog mapping, loss report; not linked into the app); import packages in format v2 (`source: "import"`, `cards[]`, `reviews[]`, package lint); `pickFile` (imports), `previewDeckImport` and `commitDeckImport` real with a new Deck package panel on the Transfer screen (contract 1.2, PL/EN); import applies progress only to cards it creates and writes imported review logs (`fsrs_version = "import"`, not undoable). Evidence: converter 11 tests incl. the real 432-note export, importer 10 integration tests, IPC test, Vitest flow tests of the panel. APKG reading inside the app stays v1.1 (ADR-11). Open: native review and rights (D-04, release-blocking), Android/iOS run of the first start (onboarding → preparing → dashboard, kill during preparation, peak memory and responsiveness on the device), scheduler-based dashboard counts and time zones (Phases 9–10).
 
 ## PHASE 9 — FSRS-6 port, scheduler, and conformance
 
@@ -1090,7 +1101,7 @@ D-01–D-08 originate from the input plan; D-09–D-14 arise from the stack/cont
 | ADR-11 | APKG scope | 0/14 | CSV+legacy export v1; import/new formats v1.1 | Supported matrix/loss report |
 | ADR-12 | Native plugins | 1/15 | PROPOSED: WebView spike done on the Android emulator and iOS simulator, no plugin needed; notifications/TTS/files pending — [ADR-12](adr/ADR-12-native-capabilities.md) | Device permissions/deep link/TTS |
 | ADR-13 | Telemetry/crash | 0/16 | Opt-in/minimal/EU-self-host after audit | No content/secrets/symbols |
-| ADR-14 | Content/license | 0/8 | Candidates+native review+rights audit | Linter/attribution/manual acceptance |
+| ADR-14 | Content/license | 0/8 | PROPOSED: format v2, shared lint/import checks, per-deck transactions, keep/archive policy, release gate on review+rights — [ADR-14](adr/ADR-14-bundled-content.md) | Linter/attribution/manual acceptance |
 
 D-02 versus the old plan’s recommended hybrid requires a conscious choice: the Tauri frontend does not provide its own server/proxy billing/abuse protection. If hybrid is selected for v1, Phase 13 includes separate deployment/maintenance and added effort. [file:2]
 
@@ -1260,7 +1271,7 @@ flashcards/
 │   ├── application/            # use cases/ports/transactions
 │   ├── infrastructure/         # SQLite/migrations/LLM/files/backup
 │   ├── contracts/              # DTOs/errors/TS generation
-│   └── content-tools/          # lint/fixtures
+│   └── content/                # format v2, reader, lint (`content-lint`)
 ├── plugins/                    # custom Tauri mobile plugins if needed
 ├── content/
 │   ├── schema/

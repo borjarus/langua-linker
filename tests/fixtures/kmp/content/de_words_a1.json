@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": 1,
+  "name": "Niemiecki A1 — słowa",
+  "language": "de",
+  "sourceLanguage": "pl",
+  "deckType": "Linguistic",
+  "cardType": "word",
+  "cardsFile": "de_words_a1.ndjson",
+  "license": {
+    "source": "original",
+    "attribution": null
+  }
+}

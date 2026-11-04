@@ -1,46 +1,46 @@
-{"front": "I", "back": "ja", "tags": ["pronoun", "A1"]}
-{"front": "you", "back": "ty / wy", "tags": ["pronoun", "A1"]}
-{"front": "we", "back": "my", "tags": ["pronoun", "A1"]}
-{"front": "it", "back": "to / ono", "tags": ["pronoun", "A1"]}
-{"front": "me", "back": "mnie", "tags": ["pronoun", "A1"]}
-{"front": "my", "back": "mój", "tags": ["pronoun", "A1"]}
-{"front": "your", "back": "twój", "tags": ["pronoun", "A1"]}
-{"front": "this", "back": "to / ten", "tags": ["pronoun", "A1"]}
-{"front": "the", "back": "ten / ta / to (rodzajnik określony)", "tags": ["article", "A1"]}
-{"front": "a", "back": "jakiś (rodzajnik nieokreślony)", "tags": ["article", "A1"]}
-{"front": "to", "back": "do (kierunek)", "tags": ["preposition", "A1"]}
-{"front": "from", "back": "z (pochodzenie)", "tags": ["preposition", "A1"]}
-{"front": "on", "back": "w (o dniach) / na", "tags": ["preposition", "A1"]}
-{"front": "for", "back": "od / przez (czas)", "tags": ["preposition", "A1"]}
-{"front": "I am", "back": "jestem", "tags": ["phrase", "A1"]}
-{"front": "do not", "back": "nie (operator przeczenia)", "tags": ["phrase", "A1"]}
-{"front": "to be", "back": "być", "tags": ["verb", "A1"]}
-{"front": "to go", "back": "iść / jechać", "tags": ["verb", "A1"]}
-{"front": "to come", "back": "przychodzić / pochodzić", "tags": ["verb", "A1"]}
-{"front": "to want", "back": "chcieć", "tags": ["verb", "A1"]}
-{"front": "to do", "back": "robić", "tags": ["verb", "A1"]}
-{"front": "to cost", "back": "kosztować", "tags": ["verb", "A1"]}
-{"front": "to understand", "back": "rozumieć", "tags": ["verb", "A1"]}
-{"front": "to help", "back": "pomagać", "tags": ["verb", "A1"]}
-{"front": "to learn", "back": "uczyć się", "tags": ["verb", "A1"]}
-{"front": "to meet", "back": "spotykać", "tags": ["verb", "A1"]}
-{"front": "can", "back": "móc / umieć", "tags": ["verb", "A1"]}
-{"front": "cinema", "back": "kino", "tags": ["noun", "A1"]}
-{"front": "name", "back": "imię / nazwa", "tags": ["noun", "A1"]}
-{"front": "sister", "back": "siostra", "tags": ["noun", "A1"]}
-{"front": "station", "back": "dworzec / stacja", "tags": ["noun", "A1"]}
-{"front": "coffee", "back": "kawa", "tags": ["noun", "A1"]}
-{"front": "weather", "back": "pogoda", "tags": ["noun", "A1"]}
-{"front": "day", "back": "dzień", "tags": ["noun", "A1"]}
-{"front": "Monday", "back": "poniedziałek", "tags": ["noun", "A1"]}
-{"front": "Poland", "back": "Polska", "tags": ["noun", "A1"]}
-{"front": "English", "back": "angielski (język)", "tags": ["noun", "A1"]}
-{"front": "today", "back": "dzisiaj", "tags": ["adverb", "A1"]}
-{"front": "tonight", "back": "dzisiaj wieczorem", "tags": ["adverb", "A1"]}
-{"front": "where", "back": "gdzie", "tags": ["adverb", "A1"]}
-{"front": "what", "back": "co / jaki", "tags": ["adverb", "A1"]}
-{"front": "how", "back": "jak", "tags": ["adverb", "A1"]}
-{"front": "much", "back": "dużo", "tags": ["adverb", "A1"]}
-{"front": "please", "back": "proszę", "tags": ["adverb", "A1"]}
-{"front": "every", "back": "każdy", "tags": ["adjective", "A1"]}
-{"front": "nice", "back": "ładny / miły", "tags": ["adjective", "A1"]}
+{"guid": "enw-de9a3323640a", "front": "I", "back": "ja", "tags": ["pronoun", "A1"], "associations": [{"guid": "enw-de9a3323640a-a1", "text": "I piszemy zawsze wielką literą – bo ja jestem ważny! Czytaj „aj”.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-94c1dd9b6d6e", "front": "you", "back": "ty / wy", "tags": ["pronoun", "A1"], "associations": [{"guid": "enw-94c1dd9b6d6e-a1", "text": "Ty, już! – you brzmi jak „ju”, jakbyś kogoś poganiał: ty!", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-45b1efaa4947", "front": "we", "back": "my", "tags": ["pronoun", "A1"], "associations": [{"guid": "enw-45b1efaa4947-a1", "text": "Zjeżdżamy razem na zjeżdżalni i krzyczymy „łiii!” – we to my (nie „wy”!).", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-5ff15dde8890", "front": "it", "back": "to / ono", "tags": ["pronoun", "A1"], "associations": [{"guid": "enw-5ff15dde8890-a1", "text": "it wygląda jak skrót IT: informatyk mówi o komputerze „it” – to, ono.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-fe3e87befa79", "front": "me", "back": "mnie", "tags": ["pronoun", "A1"], "associations": [{"guid": "enw-fe3e87befa79-a1", "text": "me brzmi prawie jak polskie „mi”: give me – daj mi, daj mnie.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-d872d901f8df", "front": "my", "back": "mój", "tags": ["pronoun", "A1"], "associations": [{"guid": "enw-d872d901f8df-a1", "text": "Pułapka: angielskie my to nie „my”, tylko „mój”. Czytaj „maj” – mój maj, mój ulubiony miesiąc.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-84182d343252", "front": "your", "back": "twój", "tags": ["pronoun", "A1"], "associations": [{"guid": "enw-84182d343252-a1", "text": "your to you z doczepionym r: ty i coś twojego – your coffee, twoja kawa.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-eac9ed049034", "front": "this", "back": "to / ten", "tags": ["pronoun", "A1"], "associations": [{"guid": "enw-eac9ed049034-a1", "text": "Wskazujesz palcem rzecz tuż obok ciebie: this – ten, to tutaj.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-76d8c7be91fb", "front": "the", "back": "ten / ta / to (rodzajnik określony)", "tags": ["article", "A1"], "associations": [{"guid": "enw-76d8c7be91fb-a1", "text": "the mówisz o konkretnej, znanej rzeczy: the cinema – to kino, o którym już rozmawialiśmy.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-2e0c62e9c2c4", "front": "a", "back": "jakiś (rodzajnik nieokreślony)", "tags": ["article", "A1"], "associations": [{"guid": "enw-2e0c62e9c2c4-a1", "text": "Jedna litera – jakaś jedna rzecz: a coffee, jakaś kawa, dowolna z wielu.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-3d881b61b41d", "front": "to", "back": "do (kierunek)", "tags": ["preposition", "A1"], "associations": [{"guid": "enw-3d881b61b41d-a1", "text": "Pułapka: to brzmi „tu”, ale znaczy „do”: idę do kina – to the cinema.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-0fe0c0469619", "front": "from", "back": "z (pochodzenie)", "tags": ["preposition", "A1"], "associations": [{"guid": "enw-0fe0c0469619-a1", "text": "I am from Poland – jestem z Polski. from wskazuje, skąd ktoś przyjechał.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-088423d6d585", "front": "on", "back": "w (o dniach) / na", "tags": ["preposition", "A1"], "associations": [{"guid": "enw-088423d6d585-a1", "text": "Nie myl z polskim „on”: on Monday – w poniedziałek, a kubek stoi on the table – na stole.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-f9692e9c3f6f", "front": "for", "back": "od / przez (czas)", "tags": ["preposition", "A1"], "associations": [{"guid": "enw-f9692e9c3f6f-a1", "text": "Daję ci fory na dwie minuty – for two minutes, przez dwie minuty.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-bd2b6849f758", "front": "I am", "back": "jestem", "tags": ["phrase", "A1"], "associations": [{"guid": "enw-bd2b6849f758-a1", "text": "„Aj, jem!” – I am brzmi „aj em”: jestem tu i właśnie jem.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-44c5a29f4169", "front": "do not", "back": "nie (operator przeczenia)", "tags": ["phrase", "A1"], "associations": [{"guid": "enw-44c5a29f4169-a1", "text": "do not to stanowcze „nie”: I do not know – nie wiem. Skrót don't widzisz na tabliczkach z zakazem.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-34874860970f", "front": "to be", "back": "być", "tags": ["verb", "A1"], "associations": [{"guid": "enw-34874860970f-a1", "text": "Chcę tu być! – to be brzmi „tu bi”, a znaczy być.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-81953ef2569f", "front": "to go", "back": "iść / jechać", "tags": ["verb", "A1"], "associations": [{"guid": "enw-81953ef2569f-a1", "text": "Go! – okrzyk na starcie wyścigu i wszyscy ruszają. to go = iść, jechać.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-68621ce2bcc8", "front": "to come", "back": "przychodzić / pochodzić", "tags": ["verb", "A1"], "associations": [{"guid": "enw-68621ce2bcc8-a1", "text": "Come here! – „kam hir”: wołasz psa, a on przychodzi, merdając ogonem.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-4414f20ea2f8", "front": "to want", "back": "chcieć", "tags": ["verb", "A1"], "associations": [{"guid": "enw-4414f20ea2f8-a1", "text": "Chcę do wanny! – want brzmi jak początek słowa „wanna”.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-8266345717e8", "front": "to do", "back": "robić", "tags": ["verb", "A1"], "associations": [{"guid": "enw-8266345717e8-a1", "text": "Lista to-do to rzeczy do zrobienia. to do = robić.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-e2be621e5e89", "front": "to cost", "back": "kosztować", "tags": ["verb", "A1"], "associations": [{"guid": "enw-e2be621e5e89-a1", "text": "cost brzmi jak „koszt”: ile to kosztuje? How much does it cost?", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-f60810548c79", "front": "to understand", "back": "rozumieć", "tags": ["verb", "A1"], "associations": [{"guid": "enw-f60810548c79-a1", "text": "understand: stoisz pod (under) tablicą, patrzysz długo i w końcu wszystko rozumiesz.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-8df541b8c21d", "front": "to help", "back": "pomagać", "tags": ["verb", "A1"], "associations": [{"guid": "enw-8df541b8c21d-a1", "text": "„Help!” – wołanie o pomoc znane z filmów. to help = pomagać.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-f7f18c4c0f69", "front": "to learn", "back": "uczyć się", "tags": ["verb", "A1"], "associations": [{"guid": "enw-f7f18c4c0f69-a1", "text": "learn jak w „e-learning”, czyli nauka przez internet. to learn = uczyć się.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-beef05fdb10f", "front": "to meet", "back": "spotykać", "tags": ["verb", "A1"], "associations": [{"guid": "enw-beef05fdb10f-a1", "text": "Mityng lekkoatletyczny to spotkanie sportowców. to meet – „mit” – spotykać.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-5cc35e203a86", "front": "can", "back": "móc / umieć", "tags": ["verb", "A1"], "associations": [{"guid": "enw-5cc35e203a86-a1", "text": "Umiesz pływać kanu? – I can! can brzmi „ken” i znaczy móc, umieć.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-c399bb881ed9", "front": "cinema", "back": "kino", "tags": ["noun", "A1"], "associations": [{"guid": "enw-c399bb881ed9-a1", "text": "cinema – „sinema”, jak w słowie „kinematografia”. To po prostu kino.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-e843f536ed64", "front": "name", "back": "imię / nazwa", "tags": ["noun", "A1"], "associations": [{"guid": "enw-e843f536ed64-a1", "text": "Na mnie mówią Ola – my name is Ola. name = imię.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-39d7c7a1ee24", "front": "sister", "back": "siostra", "tags": ["noun", "A1"], "associations": [{"guid": "enw-39d7c7a1ee24-a1", "text": "sister i „siostra” mają w środku to samo s-t-r. sister = siostra.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-8bf2b6c3a4b0", "front": "station", "back": "dworzec / stacja", "tags": ["noun", "A1"], "associations": [{"guid": "enw-8bf2b6c3a4b0-a1", "text": "station brzmi prawie jak „stacja” – pociąg właśnie wjeżdża na dworzec.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-14043cf8ef97", "front": "coffee", "back": "kawa", "tags": ["noun", "A1"], "associations": [{"guid": "enw-14043cf8ef97-a1", "text": "coffee – „kofi”, jak w „kafejka”: siedzisz przy kawie.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-91c130d7043c", "front": "weather", "back": "pogoda", "tags": ["noun", "A1"], "associations": [{"guid": "enw-91c130d7043c-a1", "text": "weather – „łeder”: patrzysz przez okno, pada i wieje. Jaka dziś pogoda?", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-f11399f0851b", "front": "day", "back": "dzień", "tags": ["noun", "A1"], "associations": [{"guid": "enw-f11399f0851b-a1", "text": "Dej mi jeden wolny dzień! – day brzmi „dej”.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-078cd96b3d93", "front": "Monday", "back": "poniedziałek", "tags": ["noun", "A1"], "associations": [{"guid": "enw-078cd96b3d93-a1", "text": "Monday – „mandej”: w poniedziałek rano marudzisz w łóżku: jeszcze pięć minut!", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-155635f5496e", "front": "Poland", "back": "Polska", "tags": ["noun", "A1"], "associations": [{"guid": "enw-155635f5496e-a1", "text": "Poland – Pol + land: wyobraź sobie ląd pełen pól. To Polska.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-4111f372de0b", "front": "English", "back": "angielski (język)", "tags": ["noun", "A1"], "associations": [{"guid": "enw-4111f372de0b-a1", "text": "English – „inglisz”: język z Anglii, czyli angielski.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-ddedd156ed1c", "front": "today", "back": "dzisiaj", "tags": ["adverb", "A1"], "associations": [{"guid": "enw-ddedd156ed1c-a1", "text": "today – „tudej”: to + day, ten dzień – czyli dzisiaj.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-5afa0a323513", "front": "tonight", "back": "dzisiaj wieczorem", "tags": ["adverb", "A1"], "associations": [{"guid": "enw-5afa0a323513-a1", "text": "tonight – to + night (noc): ta noc, czyli dzisiaj wieczorem.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-ccff9453ce8e", "front": "where", "back": "gdzie", "tags": ["adverb", "A1"], "associations": [{"guid": "enw-ccff9453ce8e-a1", "text": "Gubisz klucze i jęczysz: „łeee… gdzie one są?” – where brzmi „łer”.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-6ad7aa1dd67f", "front": "what", "back": "co / jaki", "tags": ["adverb", "A1"], "associations": [{"guid": "enw-6ad7aa1dd67f-a1", "text": "„Łot? Co?!” – what wypowiadasz ze zdziwieniem, gdy czegoś nie dosłyszysz.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-082ae6e4c656", "front": "how", "back": "jak", "tags": ["adverb", "A1"], "associations": [{"guid": "enw-082ae6e4c656-a1", "text": "How? – „hau!”: pies przechyla głowę, jakby pytał: jak?", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-c9a49b2a7fdb", "front": "much", "back": "dużo", "tags": ["adverb", "A1"], "associations": [{"guid": "enw-c9a49b2a7fdb-a1", "text": "Na meczu jest dużo kibiców – much brzmi „macz”.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-b54457e9f8c7", "front": "please", "back": "proszę", "tags": ["adverb", "A1"], "associations": [{"guid": "enw-b54457e9f8c7-a1", "text": "Potoczne polskie „plis” to właśnie please – proszę.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-2b5d0c6d6eea", "front": "every", "back": "każdy", "tags": ["adjective", "A1"], "associations": [{"guid": "enw-2b5d0c6d6eea-a1", "text": "every – „ewri”: Ewa ma każdy dzień zaplanowany co do minuty.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "enw-898f563f1e62", "front": "nice", "back": "ładny / miły", "tags": ["adjective", "A1"], "associations": [{"guid": "enw-898f563f1e62-a1", "text": "Potoczne polskie „najs!” to właśnie nice – ładny, miły.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}

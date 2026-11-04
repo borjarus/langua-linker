@@ -118,10 +118,8 @@ impl SentenceWordLink {
     }
 }
 
-/// Number of UTF-16 code units of `text`, the unit of word-link ranges and of JavaScript strings.
-pub fn utf16_len(text: &str) -> u32 {
-    text.encode_utf16().count() as u32
-}
+/// Number of UTF-16 code units of `text`; kept here for existing callers (see [`crate::text`]).
+pub use crate::text::utf16_len;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Media {

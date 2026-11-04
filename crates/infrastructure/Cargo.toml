@@ -34,6 +34,9 @@ windows-native-keyring-store = { version = "=1.1.0", default-features = false }
 
 [dev-dependencies]
 criterion = { version = "0.5.1", default-features = false }
+chrono.workspace = true
+langualinker-anki = { path = "../anki" }
+langualinker-content = { path = "../content" }
 tempfile = "3.23.0"
 
 [[bench]]

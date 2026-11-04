@@ -1,14 +1,29 @@
 {
-  "schemaVersion": 1,
-  "contentVersion": 1,
+  "schemaVersion": 2,
+  "deckGuid": "bundled-en-words-a1",
+  "contentVersion": "2026.11.04",
   "name": "Angielski A1 — słowa",
-  "language": "en",
-  "sourceLanguage": "pl",
+  "description": "Podstawowe słownictwo angielskie A1 ze skojarzeniami i obiema stronami karty.",
+  "level": "A1",
+  "nativeLanguage": "pl",
+  "targetLanguage": "en",
   "deckType": "Linguistic",
-  "cardType": "word",
-  "cardsFile": "en_words_a1.ndjson",
+  "noteType": "BasicAndReversed",
+  "contentKind": "words",
+  "dependsOn": [],
+  "notesFile": "en_words_a1.ndjson",
+  "sha256": "b06c5100a8adba1df8f32f34378878163483976135fd864038e4956ebb4fde5c",
+  "expectedNotes": 46,
+  "expectedCards": 92,
   "license": {
-    "source": "original",
-    "attribution": null
+    "name": "Original LanguaLinker content — rights audit pending (D-04)",
+    "attribution": null,
+    "url": null,
+    "rightsConfirmed": false
+  },
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "reviewedAt": null
   }
 }

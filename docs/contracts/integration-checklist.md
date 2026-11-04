@@ -18,9 +18,9 @@ Tick a screen when all its operations are real in the production build and its c
 
 | Screen | Operations (phase) | Before switching the screen | Done |
 |---|---|---|---|
-| Shell | getAppInfo (1), onCollectionChanged (7), getSettings (12), getOnboardingState (10) | `collection_changed` emitted by every mutation; the first start routes to onboarding from the real `getOnboardingState` | ☐ |
-| Onboarding | getOnboardingState, completeOnboarding (10); getJobStatus, cancelJob, onJobEvent (7); updateSettings (12) | bundled decks installed by the importer (Phase 8); the prepare job reports progress and survives leaving the screen | ☐ |
-| Dashboard `/home` | getDashboard, startStudy, resumeStudy (10); createDeck (11) | counts from the scheduler, study day with zone and cutoff; resumable session read from SQLite | ☐ |
+| Shell | getAppInfo (1), onCollectionChanged (7), getSettings (12), getOnboardingState (8) | `collection_changed` emitted by every mutation; the first start routes to onboarding from the real `getOnboardingState` | ☐ |
+| Onboarding | getOnboardingState, completeOnboarding (8); getJobStatus, cancelJob, onJobEvent (7); updateSettings (12) | bundled decks installed by the importer (Phase 8); the prepare job reports progress and survives leaving the screen | ☐ |
+| Dashboard `/home` | getDashboard (8, scheduler counts 10), startStudy, resumeStudy (10); createDeck (11) | counts from the scheduler, study day with zone and cutoff; resumable session read from SQLite | ☐ |
 | Study | resumeStudy, updateStudySession, getRatingPreview, rateCard, undoReview, applyCardAction (10); getNoteContent, resolveWordLink, setFavoriteAssociation (11); generateAssociation (13); getJobStatus, onJobEvent (7); getSettings (12) | durable session (pause/resume after restart); the rating commits in one transaction before the next card; `PREVIEW_STALE` after a preset change; undo checks later mutations; TTS stays a platform adapter (15) | ☐ |
 | Summary | getSessionSummary, startStudy (10); getSettings, updateSettings (12) | summary from review logs, not from the session object | ☐ |
 | Deck `/deck/:id` | getDeck, createDeck, updateDeck, deleteDeck, listPresets, savePreset, getEditorData (11); startStudy (10) | no cycles on move; type change hides and restores; a preset change applies to every dependent deck and refreshes previews | ☐ |
@@ -33,7 +33,7 @@ Tick a screen when all its operations are real in the production build and its c
 | Privacy | getSettings, updateSettings, previewReset, resetCollection, createBackup, listBackups (12); onJobEvent, getJobStatus (7) | reset requires a backup newer than the preview or the phrase; `everything` keeps backups | ☐ |
 | About | getAppInfo (1); getAboutInfo, getDiagnosticsReport (7) | schema version from the database; log lines redacted in Rust before IPC | ☐ |
 | Licences | getAttributions (8) | generated from the bundled-content manifest and dependency licences | ☐ |
-| Import & export | pickFile, previewImport, commitImport, exportDeck (14); shareFile (15); getEditorData (11); job events (7) | streaming CSV preview; commit all-or-nothing, cancel writes nothing; picker returns opaque tokens only (ADR-12) | ☐ |
+| Import & export | pickFile, previewDeckImport, commitDeckImport (8); previewImport, commitImport, exportDeck (14); shareFile (15); getEditorData (11); job events (7) | streaming CSV preview; commit all-or-nothing, cancel writes nothing; picker returns opaque tokens only (ADR-12) | ☐ |
 | Backup & restore | listBackups, createBackup, validateRestore, restoreBackup, getSettings, updateSettings (12); pickFile (14); shareFile (15); job events (7) | safety copy before any change; corrupt and newer files rejected before anything changes; reopen clears every cached read | ☐ |
 
 ## Evidence per switched screen

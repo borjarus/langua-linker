@@ -1,5 +1,5 @@
 //! AppApi commands (contract v1). Every command of `crates/contracts/v1/catalogue.json` is
-//! registered (integration checklist rule 1): the ones implemented in Phase 7 are below; every
+//! registered (integration checklist rule 1): the ones implemented in Phases 7–8 are below; every
 //! other one answers `NOT_IMPLEMENTED` until its phase arrives — never demo data and never
 //! "command not found" (which would reach the UI as `INTERNAL`).
 
@@ -7,9 +7,14 @@ use std::collections::HashSet;
 use std::sync::OnceLock;
 
 use langualinker_application::AppError;
+use langualinker_application::content::OnboardingInput;
 use langualinker_application::jobs::JobId;
 use langualinker_application::repositories::UnitOfWork;
-use langualinker_contracts::dto::{AboutDto, DiagnosticsReportDto, JobDto, LogLevel, LogLineDto};
+use langualinker_contracts::dto::{
+    AboutDto, AttributionDto, CommitDeckImportInput, CompleteOnboardingInput, DashboardDto,
+    DeckImportPreviewDto, DiagnosticsReportDto, FileHandleDto, FilePurpose, JobDto, LogLevel,
+    LogLineDto, OnboardingStateDto, PickFileInput, PreviewDeckImportInput,
+};
 use langualinker_contracts::{API_VERSION, ErrorCode, ErrorDto};
 use langualinker_domain::ValidationError;
 use langualinker_domain::validation::MAX_PAYLOAD_BYTES;
@@ -17,10 +22,11 @@ use langualinker_infrastructure::diagnostics;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tauri::ipc::Invoke;
-use tauri::{Runtime, State};
+use tauri::{AppHandle, Runtime, State};
 
 use crate::APP_VERSION;
 use crate::backend::{Backend, error_dto, iso, job_dto};
+use crate::files::PickedFiles;
 
 const CATALOGUE: &str = include_str!("../../crates/contracts/v1/catalogue.json");
 
@@ -34,6 +40,13 @@ pub const IMPLEMENTED: &[&str] = &[
     "get_diagnostics_report",
     "get_job_status",
     "cancel_job",
+    "get_attributions",
+    "get_onboarding_state",
+    "complete_onboarding",
+    "get_dashboard",
+    "pick_file",
+    "preview_deck_import",
+    "commit_deck_import",
 ];
 
 /// Lines returned by the diagnostic report.
@@ -116,6 +129,158 @@ pub async fn cancel_job(backend: State<'_, Backend>, input: Value) -> Result<Job
     let jobs = backend.collection()?.jobs.clone();
     blocking(move || {
         jobs.cancel(&id)
+            .map_err(|error| error_dto(&error))
+            .and_then(|job| job_dto(&job))
+    })
+    .await
+}
+
+fn operation_id(value: &str) -> Result<(), ErrorDto> {
+    if value.is_empty() || value.len() > 128 {
+        return Err(error_dto(
+            &ValidationError::new("operationId", "format").into(),
+        ));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn get_attributions(
+    backend: State<'_, Backend>,
+) -> Result<Vec<AttributionDto>, ErrorDto> {
+    // Dependencies are listed even when the collection cannot be opened.
+    let content = match &backend.collection {
+        Ok(collection) => collection
+            .content
+            .content_licences()
+            .map_err(|error| error_dto(&error))?,
+        Err(_) => Vec::new(),
+    };
+    Ok(crate::content::attributions(content))
+}
+
+#[tauri::command]
+pub async fn get_onboarding_state(
+    backend: State<'_, Backend>,
+) -> Result<OnboardingStateDto, ErrorDto> {
+    let content = backend.collection()?.content.clone();
+    blocking(move || {
+        content
+            .onboarding_state()
+            .map(crate::content::onboarding_dto)
+            .map_err(|error| error_dto(&error))
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn complete_onboarding(
+    backend: State<'_, Backend>,
+    input: Value,
+) -> Result<JobDto, ErrorDto> {
+    let input: CompleteOnboardingInput = parse_input(input)?;
+    operation_id(&input.operation_id)?;
+    if input.deck_guids.len() > 64 {
+        return Err(error_dto(
+            &ValidationError::new("deckGuids", "tooMany").into(),
+        ));
+    }
+    let content = backend.collection()?.content.clone();
+    blocking(move || {
+        let input = OnboardingInput {
+            operation_id: input.operation_id,
+            native_language: langualinker_domain::deck::NativeLanguage::Pl,
+            target_languages: input
+                .target_languages
+                .into_iter()
+                .map(crate::content::domain_target_language)
+                .collect(),
+            daily_goal: input.daily_goal,
+            deck_guids: input.deck_guids,
+        };
+        content
+            .complete_onboarding(input)
+            .map_err(|error| error_dto(&error))
+            .and_then(|job| job_dto(&job))
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn get_dashboard(backend: State<'_, Backend>) -> Result<DashboardDto, ErrorDto> {
+    let collection = backend.collection()?;
+    let (db, content) = (collection.db.clone(), collection.content.clone());
+    blocking(move || {
+        let pending = content.pending().map_err(|error| error_dto(&error))?;
+        let now = langualinker_application::ports::Clock::now(
+            &langualinker_infrastructure::system::SystemClock,
+        );
+        db.read(move |tx| langualinker_application::dashboard::dashboard(tx, now, &pending))
+            .map(crate::content::dashboard_dto)
+            .map_err(|error| error_dto(&error))
+    })
+    .await
+}
+
+/// System file picker. Only `import` is real so far; restore and backup folders arrive with
+/// backups (Phase 12).
+#[tauri::command]
+pub async fn pick_file<R: Runtime>(
+    app: AppHandle<R>,
+    files: State<'_, PickedFiles>,
+    input: Value,
+) -> Result<Option<FileHandleDto>, ErrorDto> {
+    let input: PickFileInput = parse_input(input)?;
+    if input.purpose != FilePurpose::Import {
+        return Err(error_dto(&AppError::NotImplemented {
+            operation: "pickFile",
+        }));
+    }
+    let picked =
+        blocking(move || crate::files::pick_import_file(&app).map_err(|error| error_dto(&error)))
+            .await?;
+    Ok(picked.map(|(name, bytes)| {
+        let size = u32::try_from(bytes.len()).unwrap_or(u32::MAX);
+        let file = files.register(name, bytes);
+        FileHandleDto {
+            token: file.token,
+            name: file.name,
+            size_bytes: size,
+        }
+    }))
+}
+
+#[tauri::command]
+pub async fn preview_deck_import(
+    backend: State<'_, Backend>,
+    files: State<'_, PickedFiles>,
+    input: Value,
+) -> Result<DeckImportPreviewDto, ErrorDto> {
+    let input: PreviewDeckImportInput = parse_input(input)?;
+    let file = files
+        .get(&input.file_token)
+        .ok_or_else(|| error_dto(&AppError::NotFound { entity: "file" }))?;
+    let content = backend.collection()?.content.clone();
+    blocking(move || {
+        content
+            .preview_package(&file.name, &file.bytes)
+            .map(crate::content::deck_import_preview_dto)
+            .map_err(|error| error_dto(&error))
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn commit_deck_import(
+    backend: State<'_, Backend>,
+    input: Value,
+) -> Result<JobDto, ErrorDto> {
+    let input: CommitDeckImportInput = parse_input(input)?;
+    operation_id(&input.operation_id)?;
+    let content = backend.collection()?.content.clone();
+    blocking(move || {
+        content
+            .commit_package(input.operation_id, &input.preview_token)
             .map_err(|error| error_dto(&error))
             .and_then(|job| job_dto(&job))
     })

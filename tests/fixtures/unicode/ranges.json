@@ -1,0 +1,117 @@
+{
+  "comment": "Plan \u00a714.1: UTF-16 code units over the NFC text, half-open [start, end). Read by crates/domain (text.rs tests) and frontend/tests/unicodeRanges.test.ts; slice null = the range is invalid (empty, reversed, out of bounds or splitting a surrogate pair).",
+  "cases": [
+    {
+      "name": "multiword phrase",
+      "text": "Ich gehe heute Abend ins Kino.",
+      "nfc": "Ich gehe heute Abend ins Kino.",
+      "start": 9,
+      "end": 20,
+      "slice": "heute Abend"
+    },
+    {
+      "name": "polish diacritics",
+      "text": "za\u017c\u00f3\u0142\u0107 g\u0119\u015bl\u0105 ja\u017a\u0144",
+      "nfc": "za\u017c\u00f3\u0142\u0107 g\u0119\u015bl\u0105 ja\u017a\u0144",
+      "start": 7,
+      "end": 12,
+      "slice": "g\u0119\u015bl\u0105"
+    },
+    {
+      "name": "decomposed input is compared after NFC",
+      "text": "zaz\u0307o\u0301\u0142c\u0301 ge\u0328s\u0301la\u0328 jaz\u0301n\u0301",
+      "nfc": "za\u017c\u00f3\u0142\u0107 g\u0119\u015bl\u0105 ja\u017a\u0144",
+      "start": 13,
+      "end": 17,
+      "slice": "ja\u017a\u0144"
+    },
+    {
+      "name": "emoji ZWJ sequence counts its surrogates",
+      "text": "\ud83d\udc69\u200d\ud83d\udcbb programuje",
+      "nfc": "\ud83d\udc69\u200d\ud83d\udcbb programuje",
+      "start": 0,
+      "end": 5,
+      "slice": "\ud83d\udc69\u200d\ud83d\udcbb"
+    },
+    {
+      "name": "text after an emoji",
+      "text": "\ud83d\udc69\u200d\ud83d\udcbb programuje",
+      "nfc": "\ud83d\udc69\u200d\ud83d\udcbb programuje",
+      "start": 6,
+      "end": 16,
+      "slice": "programuje"
+    },
+    {
+      "name": "sharp s is one unit",
+      "text": "Die Stra\u00dfe ist lang.",
+      "nfc": "Die Stra\u00dfe ist lang.",
+      "start": 4,
+      "end": 10,
+      "slice": "Stra\u00dfe"
+    },
+    {
+      "name": "combining acute composes to one unit",
+      "text": "cafe\u0301 au lait",
+      "nfc": "caf\u00e9 au lait",
+      "start": 5,
+      "end": 7,
+      "slice": "au"
+    },
+    {
+      "name": "typographic apostrophe",
+      "text": "Let\u2019s go, it\u2019s late.",
+      "nfc": "Let\u2019s go, it\u2019s late.",
+      "start": 10,
+      "end": 14,
+      "slice": "it\u2019s"
+    },
+    {
+      "name": "newline inside a sentence",
+      "text": "Zeile eins\nZeile zwei",
+      "nfc": "Zeile eins\nZeile zwei",
+      "start": 17,
+      "end": 21,
+      "slice": "zwei"
+    },
+    {
+      "name": "starts inside a surrogate pair",
+      "text": "\ud83d\udc69\u200d\ud83d\udcbb programuje",
+      "nfc": "\ud83d\udc69\u200d\ud83d\udcbb programuje",
+      "start": 1,
+      "end": 5,
+      "slice": null
+    },
+    {
+      "name": "ends inside a surrogate pair",
+      "text": "\ud83d\udc69\u200d\ud83d\udcbb programuje",
+      "nfc": "\ud83d\udc69\u200d\ud83d\udcbb programuje",
+      "start": 0,
+      "end": 4,
+      "slice": null
+    },
+    {
+      "name": "empty range",
+      "text": "Kino",
+      "nfc": "Kino",
+      "start": 2,
+      "end": 2,
+      "slice": null
+    },
+    {
+      "name": "reversed range",
+      "text": "Kino",
+      "nfc": "Kino",
+      "start": 3,
+      "end": 1,
+      "slice": null
+    },
+    {
+      "name": "past the end",
+      "text": "Kino",
+      "nfc": "Kino",
+      "start": 2,
+      "end": 5,
+      "slice": null
+    }
+  ]
+}

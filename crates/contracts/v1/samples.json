@@ -1,12 +1,12 @@
 {
-  "apiVersion": "1.0",
+  "apiVersion": "1.2",
   "calls": [
     {
       "operation": "getAppInfo",
       "command": "get_app_info",
       "args": [],
       "output": {
-        "apiVersion": "1.0",
+        "apiVersion": "1.2",
         "appName": "LanguaLinker",
         "appVersion": "0.1.0",
         "mode": "demo"
@@ -55,7 +55,7 @@
       "args": [],
       "output": {
         "appVersion": "0.1.0",
-        "apiVersion": "1.0",
+        "apiVersion": "1.2",
         "schemaVersion": null,
         "fsrsVersion": "FSRS-6",
         "contentVersion": "2026.02-demo",
@@ -3047,7 +3047,13 @@
         "error": null,
         "result": {
           "type": "prepareContent",
-          "deckIds": []
+          "deckIds": [],
+          "created": 0,
+          "updated": 0,
+          "unchanged": 0,
+          "kept": 0,
+          "archived": 0,
+          "warnings": []
         }
       }
     },
@@ -3367,18 +3373,127 @@
       }
     },
     {
+      "operation": "pickFile",
+      "command": "pick_file",
+      "args": [
+        {
+          "purpose": "import"
+        }
+      ],
+      "output": {
+        "token": "demo-import-deck",
+        "name": "moje-slowka.ndjson",
+        "sizeBytes": 3912
+      }
+    },
+    {
+      "operation": "previewDeckImport",
+      "command": "preview_deck_import",
+      "args": [
+        {
+          "fileToken": "demo-import-deck"
+        }
+      ],
+      "output": {
+        "fileName": "moje-slowka.ndjson",
+        "deckGuid": "anki-deck-demo-moje-slowka",
+        "name": "Niemiecki — moje słówka z Anki",
+        "description": "Import z Anki: moje-slowka.apkg",
+        "targetLanguage": "de",
+        "deckType": "Linguistic",
+        "noteType": "Basic",
+        "contentKind": "words",
+        "level": "A1",
+        "origin": {
+          "kind": "apkg",
+          "fileName": "moje-slowka.apkg",
+          "convertedOn": "2026-03-01",
+          "tool": "apkg-convert 0.1.0"
+        },
+        "notes": 3,
+        "cards": 3,
+        "scheduledCards": 2,
+        "suspendedCards": 1,
+        "reviews": 9,
+        "newNotes": 3,
+        "existingNotes": 0,
+        "existingDeckId": null,
+        "warnings": [
+          {
+            "code": "front.homograph",
+            "line": 4
+          }
+        ],
+        "previewToken": "deck-preview-29-90041"
+      }
+    },
+    {
+      "operation": "commitDeckImport",
+      "command": "commit_deck_import",
+      "args": [
+        {
+          "operationId": "contract-26",
+          "previewToken": "deck-preview-29-90041"
+        }
+      ],
+      "output": {
+        "jobId": "job-90042",
+        "kind": "import",
+        "status": "queued",
+        "sequence": 0,
+        "progress": {
+          "done": 0,
+          "total": 3
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": null,
+        "error": null,
+        "result": null
+      }
+    },
+    {
+      "operation": "getJobStatus",
+      "command": "get_job_status",
+      "args": [
+        "job-90042"
+      ],
+      "output": {
+        "jobId": "job-90042",
+        "kind": "import",
+        "status": "succeeded",
+        "sequence": 3,
+        "progress": {
+          "done": 3,
+          "total": 3
+        },
+        "startedAt": "2026-03-02T08:00:13.300Z",
+        "finishedAt": "2026-03-02T08:00:13.300Z",
+        "error": null,
+        "result": {
+          "type": "import",
+          "deckId": "90043",
+          "create": 3,
+          "update": 0,
+          "skip": 0,
+          "duplicate": 0,
+          "error": 0,
+          "rowErrors": []
+        }
+      }
+    },
+    {
       "operation": "exportDeck",
       "command": "export_deck",
       "args": [
         {
-          "operationId": "contract-26",
+          "operationId": "contract-27",
           "deckId": "1",
           "format": "csv",
           "includeScheduling": true
         }
       ],
       "output": {
-        "jobId": "job-90041",
+        "jobId": "job-90050",
         "kind": "export",
         "status": "queued",
         "sequence": 0,
@@ -3396,10 +3511,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90041"
+        "job-90050"
       ],
       "output": {
-        "jobId": "job-90041",
+        "jobId": "job-90050",
         "kind": "export",
         "status": "succeeded",
         "sequence": 4,
@@ -3422,10 +3537,10 @@
       "command": "share_file",
       "args": [
         {
-          "operationId": "contract-27",
+          "operationId": "contract-28",
           "target": {
             "kind": "export",
-            "jobId": "job-90041"
+            "jobId": "job-90050"
           }
         }
       ],
@@ -3472,11 +3587,11 @@
       "command": "create_backup",
       "args": [
         {
-          "operationId": "contract-28"
+          "operationId": "contract-29"
         }
       ],
       "output": {
-        "jobId": "job-90042",
+        "jobId": "job-90051",
         "kind": "backup",
         "status": "queued",
         "sequence": 0,
@@ -3494,10 +3609,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90042"
+        "job-90051"
       ],
       "output": {
-        "jobId": "job-90042",
+        "jobId": "job-90051",
         "kind": "backup",
         "status": "succeeded",
         "sequence": 5,
@@ -3510,7 +3625,7 @@
         "error": null,
         "result": {
           "type": "backup",
-          "backupId": "backup-90043"
+          "backupId": "backup-90052"
         }
       }
     },
@@ -3519,7 +3634,7 @@
       "command": "share_file",
       "args": [
         {
-          "operationId": "contract-29",
+          "operationId": "contract-30",
           "target": {
             "kind": "backup",
             "backupId": "backup-3"
@@ -3570,14 +3685,14 @@
           "reviews": 83
         },
         "current": {
-          "decks": 5,
-          "notes": 38,
-          "cards": 42,
+          "decks": 6,
+          "notes": 41,
+          "cards": 45,
           "reviews": 84
         },
         "compatible": true,
         "issues": [],
-        "previewToken": "restore-35-3"
+        "previewToken": "restore-37-3"
       }
     },
     {
@@ -3585,12 +3700,12 @@
       "command": "restore_backup",
       "args": [
         {
-          "operationId": "contract-30",
-          "previewToken": "restore-35-3"
+          "operationId": "contract-31",
+          "previewToken": "restore-37-3"
         }
       ],
       "output": {
-        "jobId": "job-90045",
+        "jobId": "job-90054",
         "kind": "restore",
         "status": "queued",
         "sequence": 0,
@@ -3608,10 +3723,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90045"
+        "job-90054"
       ],
       "output": {
-        "jobId": "job-90045",
+        "jobId": "job-90054",
         "kind": "restore",
         "status": "succeeded",
         "sequence": 6,
@@ -3624,7 +3739,7 @@
         "error": null,
         "result": {
           "type": "restore",
-          "safetyBackupId": "backup-90044"
+          "safetyBackupId": "backup-90053"
         }
       }
     },
@@ -3646,7 +3761,7 @@
         },
         "confirmationPhrase": "RESETUJ POSTĘP",
         "latestBackupAt": "2026-03-02T08:02:13.300Z",
-        "previewToken": "reset-37-progress"
+        "previewToken": "reset-39-progress"
       }
     },
     {
@@ -3654,14 +3769,14 @@
       "command": "reset_collection",
       "args": [
         {
-          "operationId": "contract-31",
-          "previewToken": "reset-37-progress",
+          "operationId": "contract-32",
+          "previewToken": "reset-39-progress",
           "safetyBackupId": null,
           "confirmationPhrase": "RESETUJ POSTĘP"
         }
       ],
       "output": {
-        "jobId": "job-90046",
+        "jobId": "job-90055",
         "kind": "reset",
         "status": "queued",
         "sequence": 0,
@@ -3679,10 +3794,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90046"
+        "job-90055"
       ],
       "output": {
-        "jobId": "job-90046",
+        "jobId": "job-90055",
         "kind": "reset",
         "status": "succeeded",
         "sequence": 4,

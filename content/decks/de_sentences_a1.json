@@ -1,15 +1,31 @@
 {
-  "schemaVersion": 1,
-  "contentVersion": 1,
+  "schemaVersion": 2,
+  "deckGuid": "bundled-de-sentences-a1",
+  "contentVersion": "2026.11.04",
   "name": "Niemiecki A1 — zdania",
-  "language": "de",
-  "sourceLanguage": "pl",
+  "description": "Proste zdania niemieckie A1 z linkami do słówek i wskazówkami gramatycznymi.",
+  "level": "A1",
+  "nativeLanguage": "pl",
+  "targetLanguage": "de",
   "deckType": "Linguistic",
-  "cardType": "sentence",
-  "cardsFile": "de_sentences_a1.ndjson",
-  "wordDeckRef": "de_words_a1",
+  "noteType": "Sentence",
+  "contentKind": "sentences",
+  "dependsOn": [
+    "bundled-de-words-a1"
+  ],
+  "notesFile": "de_sentences_a1.ndjson",
+  "sha256": "b8b20523ed145a6d6d36a3e8292cb29b45dd7fafe5add29569717df47b872d2d",
+  "expectedNotes": 12,
+  "expectedCards": 12,
   "license": {
-    "source": "original",
-    "attribution": null
+    "name": "Original LanguaLinker content — rights audit pending (D-04)",
+    "attribution": null,
+    "url": null,
+    "rightsConfirmed": false
+  },
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "reviewedAt": null
   }
 }

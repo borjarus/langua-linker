@@ -1,0 +1,26 @@
+[package]
+name = "langualinker-anki"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Converts Anki .apkg exports into LanguaLinker import packages (desktop tool, not linked into the app)"
+
+[dependencies]
+chrono.workspace = true
+langualinker-content = { path = "../content" }
+langualinker-domain = { path = "../domain" }
+# Anki indexes use the custom collation `unicase`; it must be registered to query them.
+rusqlite = { workspace = true, features = ["collation"] }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+tempfile = "3.23.0"
+thiserror.workspace = true
+# .apkg is a ZIP (deflate); collection.anki21b and media are zstd-compressed (Anki 2.1.50+).
+zip = { version = "2", default-features = false, features = ["deflate"] }
+zstd = "0.13"
+
+[[bin]]
+name = "apkg-convert"
+path = "src/bin/apkg-convert.rs"

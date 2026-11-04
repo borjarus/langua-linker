@@ -51,6 +51,8 @@
     "allow-reset-collection",
     "allow-pick-file",
     "allow-preview-import",
+    "allow-commit-deck-import",
+    "allow-preview-deck-import",
     "allow-commit-import",
     "allow-export-deck",
     "allow-share-file",

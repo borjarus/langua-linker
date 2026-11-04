@@ -7,45 +7,45 @@
   },
   "expectedContentRecords": 113,
   "files": {
+    "content/decks/catalog.json": {
+      "sha256": "9ca29d9fe6a5ee48d793261188657035116e6a2dafe705ea1ced041773e90a6b",
+      "bytes": 126
+    },
     "content/decks/de_sentences_a1.json": {
-      "sha256": "2fa9a5093e6eb69da827f955f2062d4cdbe2099b9bd02c353f6699415c58b4ba",
-      "bytes": 328
+      "sha256": "058c6b055fc7286118f15140577bae67787b4ae538af8554514475e9a30bb655",
+      "bytes": 862
     },
     "content/decks/de_sentences_a1.ndjson": {
-      "sha256": "4dc5041398ff5b3e4802bdc0e4367ffa959f12e9a3b12833d972202f44b8cd12",
-      "bytes": 5858,
+      "sha256": "b8b20523ed145a6d6d36a3e8292cb29b45dd7fafe5add29569717df47b872d2d",
+      "bytes": 9543,
       "records": 12
     },
     "content/decks/de_words_a1.json": {
-      "sha256": "3724a572e4bf29d5828c869db71499b067c19543f0b7810b9b638bd0f28bd152",
-      "bytes": 288
+      "sha256": "a2230e10a2ebe0c712d0b71b9c368fc72b87fb6450228d1ffabdc833abb19f48",
+      "bytes": 828
     },
     "content/decks/de_words_a1.ndjson": {
-      "sha256": "b172a917e456b7ec5d73fbe3eff5906addcec9cb4dcdef2927dc6678b9fd037e",
-      "bytes": 2896,
+      "sha256": "b94c707f7fa64eaf0d6f09f3608e6853896c069a47222744f2f21f369008bbe2",
+      "bytes": 13708,
       "records": 43
     },
     "content/decks/en_sentences_a1.json": {
-      "sha256": "6c14e37a1301b2cae74ea807f6297b5646300de2e4f2a533ab19b94c230dc7af",
-      "bytes": 328
+      "sha256": "d032e8fa5016d6fb82b9d8edeace32aa042a14e0af8c5823b19e068e0ead661c",
+      "bytes": 862
     },
     "content/decks/en_sentences_a1.ndjson": {
-      "sha256": "9138f6274f7cc14c7707d18136542a8d68b157cfa2b9967bc9918562c5de8696",
-      "bytes": 5446,
+      "sha256": "6ff7737c79b79de24e4ecdb5129adbc77d5addd4ea2363e8a3abf4dc722f50c8",
+      "bytes": 8964,
       "records": 12
     },
     "content/decks/en_words_a1.json": {
-      "sha256": "89188f352b9783f4f91c50fc4d998ee42c5f0412ed93570bf0e3894145b4c001",
-      "bytes": 288
+      "sha256": "adbc6da37220b0bb18044f010e8b1d922ec24b56500d89c34b9ac36da3b7ac13",
+      "bytes": 828
     },
     "content/decks/en_words_a1.ndjson": {
-      "sha256": "53f9337013d4439ef86ccd47122ca17110633588c1805d3a7e87048481433a0b",
-      "bytes": 3090,
+      "sha256": "b06c5100a8adba1df8f32f34378878163483976135fd864038e4956ebb4fde5c",
+      "bytes": 14061,
       "records": 46
-    },
-    "content/decks/manifest.json": {
-      "sha256": "f32f2f66ced5e92aae9f84f4d06a352d398dcc9e53918fcf5e75d8df69590321",
-      "bytes": 281
     },
     "tests/fixtures/fsrs/kmp-fsrs-spec.json": {
       "sha256": "20cfc72dc21a095217da53d3fdd9adc43f78b97cefc4d3e83ca51d5c2954a54b",
@@ -54,6 +54,46 @@
     "tests/fixtures/kmp/apkg/sample_german_a1_sentences.apkg": {
       "sha256": "1ed524102963e7baeee4b84b068eaa4fa22e70a54d0fe99a526468b89e51db73",
       "bytes": 330741
+    },
+    "tests/fixtures/kmp/content/de_sentences_a1.json": {
+      "sha256": "2fa9a5093e6eb69da827f955f2062d4cdbe2099b9bd02c353f6699415c58b4ba",
+      "bytes": 328
+    },
+    "tests/fixtures/kmp/content/de_sentences_a1.ndjson": {
+      "sha256": "4dc5041398ff5b3e4802bdc0e4367ffa959f12e9a3b12833d972202f44b8cd12",
+      "bytes": 5858,
+      "records": 12
+    },
+    "tests/fixtures/kmp/content/de_words_a1.json": {
+      "sha256": "3724a572e4bf29d5828c869db71499b067c19543f0b7810b9b638bd0f28bd152",
+      "bytes": 288
+    },
+    "tests/fixtures/kmp/content/de_words_a1.ndjson": {
+      "sha256": "b172a917e456b7ec5d73fbe3eff5906addcec9cb4dcdef2927dc6678b9fd037e",
+      "bytes": 2896,
+      "records": 43
+    },
+    "tests/fixtures/kmp/content/en_sentences_a1.json": {
+      "sha256": "6c14e37a1301b2cae74ea807f6297b5646300de2e4f2a533ab19b94c230dc7af",
+      "bytes": 328
+    },
+    "tests/fixtures/kmp/content/en_sentences_a1.ndjson": {
+      "sha256": "9138f6274f7cc14c7707d18136542a8d68b157cfa2b9967bc9918562c5de8696",
+      "bytes": 5446,
+      "records": 12
+    },
+    "tests/fixtures/kmp/content/en_words_a1.json": {
+      "sha256": "89188f352b9783f4f91c50fc4d998ee42c5f0412ed93570bf0e3894145b4c001",
+      "bytes": 288
+    },
+    "tests/fixtures/kmp/content/en_words_a1.ndjson": {
+      "sha256": "53f9337013d4439ef86ccd47122ca17110633588c1805d3a7e87048481433a0b",
+      "bytes": 3090,
+      "records": 46
+    },
+    "tests/fixtures/kmp/content/manifest.json": {
+      "sha256": "f32f2f66ced5e92aae9f84f4d06a352d398dcc9e53918fcf5e75d8df69590321",
+      "bytes": 281
     },
     "tests/fixtures/kmp/schema/1.sqm": {
       "sha256": "c83455d99f41484d68cb475eb2cb18fec83c3bda6e82f15666c3dd8c4109b9de",

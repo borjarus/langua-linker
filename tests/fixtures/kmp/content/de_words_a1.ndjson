@@ -1,0 +1,43 @@
+{"front": "ich", "back": "ja", "tags": ["pronoun", "A1"]}
+{"front": "du", "back": "ty", "tags": ["pronoun", "A1"]}
+{"front": "wir", "back": "my", "tags": ["pronoun", "A1"]}
+{"front": "Sie", "back": "pan / pani (forma formalna)", "tags": ["pronoun", "A1"]}
+{"front": "mir", "back": "mnie (celownik)", "tags": ["pronoun", "A1"]}
+{"front": "uns", "back": "nas / się", "tags": ["pronoun", "A1"]}
+{"front": "mein", "back": "mój", "tags": ["pronoun", "A1"]}
+{"front": "das", "back": "to / ten (rodzaj nijaki)", "tags": ["article", "A1"]}
+{"front": "der", "back": "ten (rodzaj męski)", "tags": ["article", "A1"]}
+{"front": "ein", "back": "jakiś (rodzajnik nieokreślony)", "tags": ["article", "A1"]}
+{"front": "in das", "back": "do (wnętrza)", "tags": ["phrase", "A1"]}
+{"front": "an dem", "back": "w / przy", "tags": ["phrase", "A1"]}
+{"front": "aus", "back": "z (pochodzenie)", "tags": ["preposition", "A1"]}
+{"front": "seit", "back": "od (czasu)", "tags": ["preposition", "A1"]}
+{"front": "gehen", "back": "iść", "tags": ["verb", "A1"]}
+{"front": "kommen", "back": "przychodzić / pochodzić", "tags": ["verb", "A1"]}
+{"front": "sein", "back": "być", "tags": ["verb", "A1"]}
+{"front": "heißen", "back": "nazywać się", "tags": ["verb", "A1"]}
+{"front": "möchten", "back": "chcieć (uprzejmie)", "tags": ["verb", "A1"]}
+{"front": "kosten", "back": "kosztować", "tags": ["verb", "A1"]}
+{"front": "verstehen", "back": "rozumieć", "tags": ["verb", "A1"]}
+{"front": "können", "back": "móc / umieć", "tags": ["verb", "A1"]}
+{"front": "helfen", "back": "pomagać", "tags": ["verb", "A1"]}
+{"front": "lernen", "back": "uczyć się", "tags": ["verb", "A1"]}
+{"front": "treffen", "back": "spotykać", "tags": ["verb", "A1"]}
+{"front": "der Abend", "back": "wieczór", "tags": ["noun", "A1"]}
+{"front": "das Kino", "back": "kino", "tags": ["noun", "A1"]}
+{"front": "die Schwester", "back": "siostra", "tags": ["noun", "A1"]}
+{"front": "der Bahnhof", "back": "dworzec", "tags": ["noun", "A1"]}
+{"front": "der Kaffee", "back": "kawa", "tags": ["noun", "A1"]}
+{"front": "das Wetter", "back": "pogoda", "tags": ["noun", "A1"]}
+{"front": "das Jahr", "back": "rok", "tags": ["noun", "A1"]}
+{"front": "der Montag", "back": "poniedziałek", "tags": ["noun", "A1"]}
+{"front": "Polen", "back": "Polska", "tags": ["noun", "A1"]}
+{"front": "Deutsch", "back": "niemiecki (język)", "tags": ["noun", "A1"]}
+{"front": "heute", "back": "dzisiaj", "tags": ["adverb", "A1"]}
+{"front": "wo", "back": "gdzie", "tags": ["adverb", "A1"]}
+{"front": "wie", "back": "jak", "tags": ["adverb", "A1"]}
+{"front": "viel", "back": "dużo", "tags": ["adverb", "A1"]}
+{"front": "nicht", "back": "nie", "tags": ["adverb", "A1"]}
+{"front": "bitte", "back": "proszę", "tags": ["adverb", "A1"]}
+{"front": "schön", "back": "piękny / ładny", "tags": ["adjective", "A1"]}
+{"front": "zwei", "back": "dwa", "tags": ["number", "A1"]}

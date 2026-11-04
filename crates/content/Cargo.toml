@@ -1,0 +1,20 @@
+[package]
+name = "langualinker-content"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Bundled-content format v2: manifests, streaming NDJSON reader and the content linter"
+
+[dependencies]
+langualinker-domain = { path = "../domain" }
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+tempfile = "3.23.0"
+
+[[bin]]
+name = "content-lint"
+path = "src/bin/content-lint.rs"

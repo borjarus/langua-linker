@@ -254,7 +254,7 @@ describe('import and export', () => {
     const { mock, stop, user } = await open('#/settings/transfer')
     mock.setPickedFile('import', 'demo-import-apkg')
     await user.click(await screen.findByRole('button', { name: 'Choose a CSV file' }))
-    expect(await screen.findByRole('heading', { name: 'Anki packages (.apkg) are not supported yet' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'An .apkg file is not imported as CSV' })).toBeInTheDocument()
     expect(screen.getByText(/Notes in Plain Text/)).toBeInTheDocument()
 
     mock.setPickedFile('import', null)
@@ -269,6 +269,50 @@ describe('import and export', () => {
     await user.selectOptions(screen.getByRole('combobox', { name: /Column 2/ }), 'front')
     expect(screen.getByText('Choose exactly one Front and one Back column.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Import/ })).toBeDisabled()
+    stop()
+  })
+
+  it('imports a deck package converted from Anki with its progress, once', async () => {
+    const { mock, calls, stop, user } = await open('#/settings/transfer')
+    const decksBefore = (await mock.getDashboard()).decks.length
+    mock.setPickedFile('import', 'demo-import-deck')
+    await user.click(await screen.findByRole('button', { name: 'Choose a deck package' }))
+    expect(await screen.findByRole('heading', { name: 'Niemiecki — moje słówka z Anki' })).toBeInTheDocument()
+    expect(screen.getByText(/German · words · one card per note · level A1/)).toBeInTheDocument()
+    expect(screen.getByText('From moje-slowka.apkg, converted 2026-03-01')).toBeInTheDocument()
+    expect(screen.getByText('Cards with progress').nextElementSibling).toHaveTextContent('2')
+    expect(screen.getByText('Reviews in the history').nextElementSibling).toHaveTextContent('9')
+    expect(screen.getByText('1 content note')).toBeInTheDocument()
+    expect((await mock.getDashboard()).decks.length, 'a preview writes nothing').toBe(decksBefore)
+
+    await user.click(screen.getByRole('button', { name: 'Import the deck' }))
+    expect(await screen.findByText('Deck imported.')).toBeInTheDocument()
+    const dashboard = await mock.getDashboard()
+    const imported = dashboard.decks.find((deck) => deck.name === 'Niemiecki — moje słówka z Anki')
+    expect(imported?.counts.total).toBe(3)
+    expect(screen.getByRole('link', { name: 'Open the deck' })).toHaveAttribute('href', `#/deck/${imported?.id ?? ''}`)
+
+    // The same package again: the deck is known, nothing is duplicated.
+    await user.click(screen.getByRole('button', { name: 'Import another package' }))
+    await user.click(screen.getByRole('button', { name: 'Choose a deck package' }))
+    expect(await screen.findByText(/This deck is already in the app/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Import the deck' }))
+    expect(await screen.findByText('Deck imported.')).toBeInTheDocument()
+    expect(screen.getByText('Unchanged').nextElementSibling).toHaveTextContent('3')
+    expect((await mock.getDashboard()).decks.find((deck) => deck.id === imported?.id)?.counts.total).toBe(3)
+    expectContract(calls, 'transfer')
+    stop()
+  })
+
+  it('asks to convert an .apkg before importing it as a deck', async () => {
+    const { mock, stop, user } = await open('#/settings/transfer')
+    mock.setPickedFile('import', 'demo-import-apkg')
+    await user.click(await screen.findByRole('button', { name: 'Choose a deck package' }))
+    expect(await screen.findByRole('heading', { name: 'Convert the .apkg file first' })).toBeInTheDocument()
+    expect(screen.getByText(/apkg-convert deck\.apkg --language de/)).toBeInTheDocument()
+    mock.setPickedFile('import', 'demo-import-csv')
+    await user.click(screen.getByRole('button', { name: 'Choose another package' }))
+    expect(await screen.findByRole('heading', { name: 'This is not a deck package' })).toBeInTheDocument()
     stop()
   })
 

@@ -1,5 +1,5 @@
 /**
- * Transport contract v1.0 between the Svelte frontend and the Rust backend.
+ * Transport contract v1.2 between the Svelte frontend and the Rust backend.
  *
  * Rules (plan §4.1):
  * - SQLite i64 identifiers and GUIDs travel as strings (`Id`).
@@ -8,7 +8,7 @@
  * - Long-running work returns a `JobDto`; events are signals, never durable truth.
  *
  * This file is framework-independent: no Svelte, no Tauri imports.
- * Rust is the DTO source for the types re-exported from `src/generated/contracts.ts` (Phase 7);
+ * Rust is the DTO source for the types re-exported from `src/generated/contracts.ts` (Phases 7–8);
  * the remaining DTOs move there as their commands become real.
  */
 
@@ -29,6 +29,34 @@ import type {
   JobStatus,
   LogLevel,
   LogLineDto,
+  AttributionDto,
+  AttributionScope,
+  BundledDeckDto,
+  CompleteOnboardingInput,
+  ContentState,
+  ContentWarningCode,
+  ContentWarningDto,
+  DashboardDto,
+  DeckCapabilitiesDto,
+  DeckCountsDto,
+  DeckSummaryDto,
+  OnboardingStateDto,
+  ResumableSessionDto,
+  ResumableStatus,
+  NativeLanguage,
+  TargetLanguage,
+  CommitDeckImportInput,
+  DeckContentKind,
+  DeckImportOriginDto,
+  DeckImportPreviewDto,
+  DeckImportWarningDto,
+  FileHandleDto,
+  FilePurpose,
+  NoteTypeKind,
+  PickFileInput,
+  PreviewDeckImportInput,
+  DeckType as GeneratedDeckType,
+  OnboardingStep as GeneratedOnboardingStep,
   ErrorCode as GeneratedErrorCode,
 } from '../generated/contracts'
 
@@ -49,9 +77,38 @@ export type {
   JobStatus,
   LogLevel,
   LogLineDto,
+  AttributionDto,
+  AttributionScope,
+  BundledDeckDto,
+  CompleteOnboardingInput,
+  ContentState,
+  ContentWarningCode,
+  ContentWarningDto,
+  DashboardDto,
+  DeckCapabilitiesDto,
+  DeckCountsDto,
+  DeckSummaryDto,
+  OnboardingStateDto,
+  ResumableSessionDto,
+  ResumableStatus,
+  NativeLanguage,
+  TargetLanguage,
+  CommitDeckImportInput,
+  DeckContentKind,
+  DeckImportOriginDto,
+  DeckImportPreviewDto,
+  DeckImportWarningDto,
+  FileHandleDto,
+  FilePurpose,
+  NoteTypeKind,
+  PickFileInput,
+  PreviewDeckImportInput,
 }
 
-export const API_VERSION = '1.0'
+export const API_VERSION = '1.2'
+
+/** Equal sets of members: guards runtime lists against the Rust enums. */
+type SameMembers<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false
 
 export type Id = string
 export type IsoDateTime = string
@@ -62,25 +119,18 @@ export const RATINGS = ['Again', 'Hard', 'Good', 'Easy'] as const
 export type Rating = (typeof RATINGS)[number]
 
 export type UiLanguage = 'pl' | 'en'
-export type NativeLanguage = 'pl'
-export type TargetLanguage = 'de' | 'en'
 export type ThemePreference = 'system' | 'light' | 'dark'
 
 export const DECK_TYPES = ['Simple', 'TextWithAssociations', 'Linguistic'] as const
 export type DeckType = (typeof DECK_TYPES)[number]
-
-export interface DeckCapabilitiesDto {
-  associations: boolean
-  grammarTips: boolean
-  wordLinks: boolean
-  tts: boolean
-}
+/** Compile-time check: the runtime list equals the Rust `DeckType` enum. */
+const deckTypesMatchRust: SameMembers<DeckType, GeneratedDeckType> = true
+void deckTypesMatchRust
 
 export type CardState = 'New' | 'Learning' | 'Review' | 'Relearning'
 export type QueueState = 'New' | 'Learning' | 'Review' | 'DayLearn' | 'Suspended' | 'SchedBuried' | 'UserBuried'
 export const CARD_FLAGS = ['none', 'red', 'orange', 'green', 'blue', 'pink', 'turquoise', 'purple'] as const
 export type CardFlag = (typeof CARD_FLAGS)[number]
-export type NoteTypeKind = 'Basic' | 'BasicAndReversed' | 'Sentence' | 'SentenceAndReversed'
 /** Note types whose front is a sentence: its words can link to word notes. */
 export const isSentenceNoteType = (kind: NoteTypeKind): boolean => kind === 'Sentence' || kind === 'SentenceAndReversed'
 export type CardDirection = 'forward' | 'reverse'
@@ -111,7 +161,6 @@ export const ERROR_CODES = [
 ] as const
 export type ErrorCode = (typeof ERROR_CODES)[number]
 /** Compile-time check: the runtime list equals the Rust `ErrorCode` enum. */
-type SameMembers<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false
 const errorCodesMatchRust: SameMembers<ErrorCode, GeneratedErrorCode> = true
 void errorCodesMatchRust
 
@@ -120,56 +169,6 @@ void errorCodesMatchRust
 export type Unsubscribe = () => void
 
 // ---------------------------------------------------------------- decks / dashboard
-
-export interface DeckCountsDto {
-  new: number
-  learning: number
-  review: number
-  overdue: number
-  total: number
-}
-
-export type ContentState = 'ready' | 'preparing'
-
-export interface DeckSummaryDto {
-  id: Id
-  guid: Id
-  name: string
-  parentId: Id | null
-  targetLanguage: TargetLanguage
-  nativeLanguage: NativeLanguage
-  deckType: DeckType
-  capabilities: DeckCapabilitiesDto
-  counts: DeckCountsDto
-  /** Share of mature cards, 0..1. */
-  progress: number
-  bundled: boolean
-  contentState: ContentState
-  version: number
-}
-
-/** An unfinished session the dashboard offers to resume (durable in Rust from Phase 10). */
-export interface ResumableSessionDto {
-  sessionId: Id
-  /** `null` = a session over all decks. */
-  deckId: Id | null
-  deckName: string | null
-  status: Exclude<StudySessionStatus, 'finished'>
-  reviewedCount: number
-  remaining: number
-}
-
-export interface DashboardDto {
-  decks: DeckSummaryDto[]
-  streakDays: number
-  studiedToday: number
-  dueToday: number
-  dailyGoal: number
-  resumable: ResumableSessionDto | null
-  /** Earliest future due date over all decks; lets "nothing due today" say when the next review is. */
-  nextDueAt: IsoDateTime | null
-  generatedAt: IsoDateTime
-}
 
 export interface HiddenSectionCountsDto {
   associations: number
@@ -948,39 +947,10 @@ export interface RequestPermissionInput {
   operationId: OperationId
 }
 
-export interface BundledDeckDto {
-  guid: Id
-  name: string
-  description: string
-  targetLanguage: TargetLanguage
-  deckType: DeckType
-  noteCount: number
-  cardCount: number
-  level: string
-}
-
 export const ONBOARDING_STEPS = ['nativeLanguage', 'targetLanguage', 'goal', 'decks', 'ready'] as const
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number]
-
-export interface OnboardingStateDto {
-  completed: boolean
-  step: OnboardingStep
-  availableDecks: BundledDeckDto[]
-  /** Bundled decks already in the collection; onboarding again only adds the missing ones. */
-  installedDeckGuids: Id[]
-  nativeLanguage: NativeLanguage
-  targetLanguages: TargetLanguage[]
-  dailyGoal: number
-}
-
-export interface CompleteOnboardingInput {
-  operationId: OperationId
-  nativeLanguage: NativeLanguage
-  targetLanguages: TargetLanguage[]
-  dailyGoal: number
-  /** May be empty: the user can start without bundled decks. */
-  deckGuids: Id[]
-}
+const onboardingStepsMatchRust: SameMembers<OnboardingStep, GeneratedOnboardingStep> = true
+void onboardingStepsMatchRust
 
 export type ResetScope = 'progress' | 'everything'
 
@@ -1007,27 +977,7 @@ export interface ResetInput {
 }
 
 
-export interface AttributionDto {
-  name: string
-  license: string
-  url: string | null
-  scope: 'dependency' | 'content' | 'font' | 'icon'
-}
-
 // ---------------------------------------------------------------- transfer / backup
-
-export type FilePurpose = 'import' | 'restore' | 'backupFolder'
-
-export interface PickFileInput {
-  purpose: FilePurpose
-}
-
-/** Opaque handle from the native picker; the GUI never sends arbitrary paths. */
-export interface FileHandleDto {
-  token: string
-  name: string
-  sizeBytes: number
-}
 
 export const CSV_DELIMITERS = [',', ';', '\t'] as const
 export type CsvDelimiter = (typeof CSV_DELIMITERS)[number]

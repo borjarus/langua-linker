@@ -1,14 +1,29 @@
 {
-  "schemaVersion": 1,
-  "contentVersion": 1,
+  "schemaVersion": 2,
+  "deckGuid": "bundled-de-words-a1",
+  "contentVersion": "2026.11.04",
   "name": "Niemiecki A1 — słowa",
-  "language": "de",
-  "sourceLanguage": "pl",
+  "description": "Podstawowe słownictwo niemieckie A1 ze skojarzeniami i obiema stronami karty.",
+  "level": "A1",
+  "nativeLanguage": "pl",
+  "targetLanguage": "de",
   "deckType": "Linguistic",
-  "cardType": "word",
-  "cardsFile": "de_words_a1.ndjson",
+  "noteType": "BasicAndReversed",
+  "contentKind": "words",
+  "dependsOn": [],
+  "notesFile": "de_words_a1.ndjson",
+  "sha256": "b94c707f7fa64eaf0d6f09f3608e6853896c069a47222744f2f21f369008bbe2",
+  "expectedNotes": 43,
+  "expectedCards": 86,
   "license": {
-    "source": "original",
-    "attribution": null
+    "name": "Original LanguaLinker content — rights audit pending (D-04)",
+    "attribution": null,
+    "url": null,
+    "rightsConfirmed": false
+  },
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "reviewedAt": null
   }
 }

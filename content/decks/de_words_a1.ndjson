@@ -1,43 +1,43 @@
-{"front": "ich", "back": "ja", "tags": ["pronoun", "A1"]}
-{"front": "du", "back": "ty", "tags": ["pronoun", "A1"]}
-{"front": "wir", "back": "my", "tags": ["pronoun", "A1"]}
-{"front": "Sie", "back": "pan / pani (forma formalna)", "tags": ["pronoun", "A1"]}
-{"front": "mir", "back": "mnie (celownik)", "tags": ["pronoun", "A1"]}
-{"front": "uns", "back": "nas / się", "tags": ["pronoun", "A1"]}
-{"front": "mein", "back": "mój", "tags": ["pronoun", "A1"]}
-{"front": "das", "back": "to / ten (rodzaj nijaki)", "tags": ["article", "A1"]}
-{"front": "der", "back": "ten (rodzaj męski)", "tags": ["article", "A1"]}
-{"front": "ein", "back": "jakiś (rodzajnik nieokreślony)", "tags": ["article", "A1"]}
-{"front": "in das", "back": "do (wnętrza)", "tags": ["phrase", "A1"]}
-{"front": "an dem", "back": "w / przy", "tags": ["phrase", "A1"]}
-{"front": "aus", "back": "z (pochodzenie)", "tags": ["preposition", "A1"]}
-{"front": "seit", "back": "od (czasu)", "tags": ["preposition", "A1"]}
-{"front": "gehen", "back": "iść", "tags": ["verb", "A1"]}
-{"front": "kommen", "back": "przychodzić / pochodzić", "tags": ["verb", "A1"]}
-{"front": "sein", "back": "być", "tags": ["verb", "A1"]}
-{"front": "heißen", "back": "nazywać się", "tags": ["verb", "A1"]}
-{"front": "möchten", "back": "chcieć (uprzejmie)", "tags": ["verb", "A1"]}
-{"front": "kosten", "back": "kosztować", "tags": ["verb", "A1"]}
-{"front": "verstehen", "back": "rozumieć", "tags": ["verb", "A1"]}
-{"front": "können", "back": "móc / umieć", "tags": ["verb", "A1"]}
-{"front": "helfen", "back": "pomagać", "tags": ["verb", "A1"]}
-{"front": "lernen", "back": "uczyć się", "tags": ["verb", "A1"]}
-{"front": "treffen", "back": "spotykać", "tags": ["verb", "A1"]}
-{"front": "der Abend", "back": "wieczór", "tags": ["noun", "A1"]}
-{"front": "das Kino", "back": "kino", "tags": ["noun", "A1"]}
-{"front": "die Schwester", "back": "siostra", "tags": ["noun", "A1"]}
-{"front": "der Bahnhof", "back": "dworzec", "tags": ["noun", "A1"]}
-{"front": "der Kaffee", "back": "kawa", "tags": ["noun", "A1"]}
-{"front": "das Wetter", "back": "pogoda", "tags": ["noun", "A1"]}
-{"front": "das Jahr", "back": "rok", "tags": ["noun", "A1"]}
-{"front": "der Montag", "back": "poniedziałek", "tags": ["noun", "A1"]}
-{"front": "Polen", "back": "Polska", "tags": ["noun", "A1"]}
-{"front": "Deutsch", "back": "niemiecki (język)", "tags": ["noun", "A1"]}
-{"front": "heute", "back": "dzisiaj", "tags": ["adverb", "A1"]}
-{"front": "wo", "back": "gdzie", "tags": ["adverb", "A1"]}
-{"front": "wie", "back": "jak", "tags": ["adverb", "A1"]}
-{"front": "viel", "back": "dużo", "tags": ["adverb", "A1"]}
-{"front": "nicht", "back": "nie", "tags": ["adverb", "A1"]}
-{"front": "bitte", "back": "proszę", "tags": ["adverb", "A1"]}
-{"front": "schön", "back": "piękny / ładny", "tags": ["adjective", "A1"]}
-{"front": "zwei", "back": "dwa", "tags": ["number", "A1"]}
+{"guid": "dew-4999ee134d5c", "front": "ich", "back": "ja", "tags": ["pronoun", "A1"], "associations": [{"guid": "dew-4999ee134d5c-a1", "text": "Czkawka: „ich!” – i wszyscy patrzą w twoją stronę. Kto tak czka? Ja. ich = ja.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-a28fc1fd6069", "front": "du", "back": "ty", "tags": ["pronoun", "A1"], "associations": [{"guid": "dew-a28fc1fd6069-a1", "text": "Ty, chodź tu! – du brzmi prawie jak „tu”, a palec wskazuje rozmówcę: ty.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-78ef182c607a", "front": "wir", "back": "my", "tags": ["pronoun", "A1"], "associations": [{"guid": "dew-78ef182c607a-a1", "text": "My wszyscy trzymamy się za ręce i kręcimy się w jednym wirze tańca. wir = my.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-4c85f3dc7361", "front": "Sie", "back": "pan / pani (forma formalna)", "tags": ["pronoun", "A1"], "associations": [{"guid": "dew-4c85f3dc7361-a1", "text": "Sie piszemy zawsze wielką literą – jak wielki szacunek dla pana lub pani.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-acbb8c31fcea", "front": "mir", "back": "mnie (celownik)", "tags": ["pronoun", "A1"], "associations": [{"guid": "dew-acbb8c31fcea-a1", "text": "Gib mir! – daj mi! mir brzmi prawie jak polskie „mi”, czyli mnie.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-a239dc0bb41e", "front": "uns", "back": "nas / się", "tags": ["pronoun", "A1"], "associations": [{"guid": "dew-a239dc0bb41e-a1", "text": "W słowie uns siedzą te same litery n i s, co w polskim „nas”. Zabierz uns do kina – zabierz nas.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-244c1faa6e46", "front": "mein", "back": "mój", "tags": ["pronoun", "A1"], "associations": [{"guid": "dew-244c1faa6e46-a1", "text": "Dziecko ściska misia i woła: „Majn! Mój!” – mein brzmi „majn” i znaczy mój.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-0cc91a6a83a7", "front": "das", "back": "to / ten (rodzaj nijaki)", "tags": ["article", "A1"], "associations": [{"guid": "dew-0cc91a6a83a7-a1", "text": "Dasz mi to? – das brzmi jak „dasz”, a znaczy to: das Kino, das Jahr (rodzaj nijaki).", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-4597d35dd68b", "front": "der", "back": "ten (rodzaj męski)", "tags": ["article", "A1"], "associations": [{"guid": "dew-4597d35dd68b-a1", "text": "Ten pan drze się na cały głos: „deeer!”. der to ten – rodzaj męski: der Abend, der Montag.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-93c2f90abe4f", "front": "ein", "back": "jakiś (rodzajnik nieokreślony)", "tags": ["article", "A1"], "associations": [{"guid": "dew-93c2f90abe4f-a1", "text": "Liczysz: eins, zwei… ein brzmi „ajn” – jeden, jakiś, dowolny: ein Kaffee.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-0f2ae9914304", "front": "in das", "back": "do (wnętrza)", "tags": ["phrase", "A1"], "associations": [{"guid": "dew-0f2ae9914304-a1", "text": "in das Kino – przechodzisz przez drzwi do środka sali. in to ruch do wnętrza, jak polskie „w” z „wejść”.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-0e8b841814fc", "front": "an dem", "back": "w / przy", "tags": ["phrase", "A1"], "associations": [{"guid": "dew-0e8b841814fc-a1", "text": "an dem często skraca się do am: am Montag – w poniedziałek, a an dem Fenster – przy oknie.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-819721064b68", "front": "aus", "back": "z (pochodzenie)", "tags": ["preposition", "A1"], "associations": [{"guid": "dew-819721064b68-a1", "text": "Na drzwiach kina widzisz Ausgang – wyjście. aus to „z”: Ich komme aus Polen – pochodzę z Polski.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-395550040e55", "front": "seit", "back": "od (czasu)", "tags": ["preposition", "A1"], "associations": [{"guid": "dew-395550040e55-a1", "text": "seit brzmi „zajt”, jak początek „zajęty”: od poniedziałku ciągle jestem zajęty – seit Montag.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-935d6e4936a7", "front": "gehen", "back": "iść", "tags": ["verb", "A1"], "associations": [{"guid": "dew-935d6e4936a7-a1", "text": "Idziesz długą drogą, a buty skrzypią rytmicznie: „ge-hen, ge-hen” – krok za krokiem.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-1c6d20c63b95", "front": "kommen", "back": "przychodzić / pochodzić", "tags": ["verb", "A1"], "associations": [{"guid": "dew-1c6d20c63b95-a1", "text": "Kominiarz przychodzi do domu sprawdzić komin – kommen brzmi jak „komin”.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-50604bf1656d", "front": "sein", "back": "być", "tags": ["verb", "A1"], "associations": [{"guid": "dew-50604bf1656d-a1", "text": "sein wygląda jak „sen”: we śnie możesz być, kim tylko zechcesz. sein = być.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-7f78b6f5d8f7", "front": "heißen", "back": "nazywać się", "tags": ["verb", "A1"], "associations": [{"guid": "dew-7f78b6f5d8f7-a1", "text": "„Hej, jak się nazywasz?” – heißen zaczyna się jak „hej”: Ich heiße Ola.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-60228c407194", "front": "möchten", "back": "chcieć (uprzejmie)", "tags": ["verb", "A1"], "associations": [{"guid": "dew-60228c407194-a1", "text": "möchten – „mö-chte” jak „może chcę?”: grzecznie, cicho: Ich möchte einen Kaffee.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-777ce22f1d55", "front": "kosten", "back": "kosztować", "tags": ["verb", "A1"], "associations": [{"guid": "dew-777ce22f1d55-a1", "text": "kosten brzmi prawie jak „kosztować”. Was kostet das? – Ile to kosztuje?", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-3ed4a532d707", "front": "verstehen", "back": "rozumieć", "tags": ["verb", "A1"], "associations": [{"guid": "dew-3ed4a532d707-a1", "text": "Potoczne polskie „ferstejesz?” to właśnie verstehen: rozumiesz?", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-0102a02c2e48", "front": "können", "back": "móc / umieć", "tags": ["verb", "A1"], "associations": [{"guid": "dew-0102a02c2e48-a1", "text": "können zaczyna się jak „kon…”: konik umie przeskoczyć każdą przeszkodę. Umie, może – können.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-4ab07bf7ff58", "front": "helfen", "back": "pomagać", "tags": ["verb", "A1"], "associations": [{"guid": "dew-4ab07bf7ff58-a1", "text": "W środku słowa helfen siedzi mały elf, który zawsze chętnie pomaga.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-f7305a6e7b69", "front": "lernen", "back": "uczyć się", "tags": ["verb", "A1"], "associations": [{"guid": "dew-f7305a6e7b69-a1", "text": "lernen przypomina „e-learning”, czyli naukę przez internet. lernen = uczyć się.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-a1c9132351ed", "front": "treffen", "back": "spotykać", "tags": ["verb", "A1"], "associations": [{"guid": "dew-a1c9132351ed-a1", "text": "treffen brzmi jak „trafić”: trafiasz na przyjaciela w kawiarni – i spotykacie się.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-d88b6ff3d5d6", "front": "der Abend", "back": "wieczór", "tags": ["noun", "A1"], "associations": [{"guid": "dew-d88b6ff3d5d6-a1", "text": "der Abend: wieczorem, po całym dniu, padasz zmęczony na kanapę – „a… bęc!”.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-a2e50cfaa221", "front": "das Kino", "back": "kino", "tags": ["noun", "A1"], "associations": [{"guid": "dew-a2e50cfaa221-a1", "text": "das Kino to po prostu kino – tylko po niemiecku z rodzajnikiem nijakim das.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-c7504d4ead9b", "front": "die Schwester", "back": "siostra", "tags": ["noun", "A1"], "associations": [{"guid": "dew-c7504d4ead9b-a1", "text": "die Schwester – „szwester”, a w środku to samo s-t-r, co w „siostra”. Siostra jest żeńska, więc die.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-b51ed86953c7", "front": "der Bahnhof", "back": "dworzec", "tags": ["noun", "A1"], "associations": [{"guid": "dew-b51ed86953c7-a1", "text": "der Bahnhof: wyobraź sobie wielki hol dworca, w którym echem niesie się „ban-hof” zapowiedzi pociągów.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-b005d64c16db", "front": "der Kaffee", "back": "kawa", "tags": ["noun", "A1"], "associations": [{"guid": "dew-b005d64c16db-a1", "text": "der Kaffee brzmi „kafe”, jak w „kafejka”. Uwaga: po niemiecku kawa jest męska – der.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-d41103f96766", "front": "das Wetter", "back": "pogoda", "tags": ["noun", "A1"], "associations": [{"guid": "dew-d41103f96766-a1", "text": "das Wetter – przypomina „wiatr”: za oknem wieje, czyli pogoda zmienna.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-7039d8ed409e", "front": "das Jahr", "back": "rok", "tags": ["noun", "A1"], "associations": [{"guid": "dew-7039d8ed409e-a1", "text": "das Jahr brzmi jak „jar”: rok po roku rzeka powoli żłobi głęboki jar.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-f611785246fa", "front": "der Montag", "back": "poniedziałek", "tags": ["noun", "A1"], "associations": [{"guid": "dew-f611785246fa-a1", "text": "der Montag – jak „montaż”: w poniedziałek wracasz do pracy i od rana coś montujesz.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-4f690d59933f", "front": "Polen", "back": "Polska", "tags": ["noun", "A1"], "associations": [{"guid": "dew-4f690d59933f-a1", "text": "Polen brzmi jak „pole”: wyobraź sobie Polskę jako kraj szerokich, zielonych pól.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-582b1ab084ee", "front": "Deutsch", "back": "niemiecki (język)", "tags": ["noun", "A1"], "associations": [{"guid": "dew-582b1ab084ee-a1", "text": "Deutsch – „dojcz”, jak w potocznym „Dojczland”. Sprechen Sie Deutsch? – Mówi pan po niemiecku?", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-ea6cd338bce8", "front": "heute", "back": "dzisiaj", "tags": ["adverb", "A1"], "associations": [{"guid": "dew-ea6cd338bce8-a1", "text": "„Hoj, ahoj! Dziś wypływamy!” – woła żeglarz. heute brzmi „hojte”: dzisiaj.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-84de67440eda", "front": "wo", "back": "gdzie", "tags": ["adverb", "A1"], "associations": [{"guid": "dew-84de67440eda-a1", "text": "Szukasz kogoś w lesie i wołasz przeciągle: „Wooo… gdzie jesteś?”. wo = gdzie.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-6facbaad5d60", "front": "wie", "back": "jak", "tags": ["adverb", "A1"], "associations": [{"guid": "dew-6facbaad5d60-a1", "text": "Kto wie, jak to zrobić? wie po niemiecku znaczy „jak” (czytaj „wi”).", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-924f07f23863", "front": "viel", "back": "dużo", "tags": ["adverb", "A1"], "associations": [{"guid": "dew-924f07f23863-a1", "text": "viel brzmi jak „wiele” – i znaczy właśnie dużo.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-d94098dccd54", "front": "nicht", "back": "nie", "tags": ["adverb", "A1"], "associations": [{"guid": "dew-d94098dccd54-a1", "text": "nicht brzmi prawie jak „nic”: nie mam nic, nicht – nie.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-700c87ac402b", "front": "bitte", "back": "proszę", "tags": ["adverb", "A1"], "associations": [{"guid": "dew-700c87ac402b-a1", "text": "Proszę, oto kawa z bitą śmietaną – bitte!", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-4e2ddca57416", "front": "schön", "back": "piękny / ładny", "tags": ["adjective", "A1"], "associations": [{"guid": "dew-4e2ddca57416-a1", "text": "Patrzysz na zachód słońca i wzdychasz z zachwytem: „szöön…” – jak pięknie!", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}
+{"guid": "dew-ed65df035740", "front": "zwei", "back": "dwa", "tags": ["number", "A1"], "associations": [{"guid": "dew-ed65df035740-a1", "text": "Dwóch cwaniaków – zwei brzmi „cwaj”, a znaczy dwa.", "promptVersion": "association-candidates-v1", "model": "claude-opus-5-5"}]}

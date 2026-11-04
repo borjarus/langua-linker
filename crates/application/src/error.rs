@@ -23,6 +23,9 @@ pub enum AppError {
     PermissionDenied { reason: &'static str },
     #[error("preview is stale")]
     PreviewStale,
+    /// The file is not in a format the operation reads (`format` names what it looks like).
+    #[error("unsupported format {format}")]
+    UnsupportedFormat { format: &'static str },
     #[error("cancelled")]
     Cancelled,
     #[error("{operation} is not implemented yet")]
@@ -60,6 +63,7 @@ impl AppError {
             Self::SchemaTooNew { .. } => "SCHEMA_TOO_NEW",
             Self::PermissionDenied { .. } => "PERMISSION_DENIED",
             Self::PreviewStale => "PREVIEW_STALE",
+            Self::UnsupportedFormat { .. } => "UNSUPPORTED_FORMAT",
             Self::Cancelled => "CANCELLED",
             Self::NotImplemented { .. } => "NOT_IMPLEMENTED",
             Self::Internal(_) => "INTERNAL",
@@ -85,6 +89,7 @@ impl AppError {
             }
             Self::PermissionDenied { reason } => vec![("reason", Text(reason))],
             Self::NotImplemented { operation } => vec![("operation", Text(operation))],
+            Self::UnsupportedFormat { format } => vec![("format", Text(format))],
             Self::DbBusy
             | Self::StorageFull
             | Self::PreviewStale

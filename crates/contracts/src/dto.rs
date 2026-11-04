@@ -114,9 +114,210 @@ pub enum JobResultDto {
     Reset {
         safety_backup_id: Option<String>,
     },
+    /// Counts and warnings since contract 1.1; a 1.0 frontend reads only `deckIds`.
     PrepareContent {
         deck_ids: Vec<String>,
+        #[serde(default)]
+        created: u32,
+        #[serde(default)]
+        updated: u32,
+        #[serde(default)]
+        unchanged: u32,
+        /// Removed from the bundled content but kept: the learner has progress or edits.
+        #[serde(default)]
+        kept: u32,
+        /// Removed from the bundled content without progress: cards archived, history intact.
+        #[serde(default)]
+        archived: u32,
+        #[serde(default)]
+        warnings: Vec<ContentWarningDto>,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum ContentWarningCode {
+    /// The learner's edit was kept over a changed bundled value.
+    OverrideConflict,
+    /// A deleted bundled deck is not reinstalled.
+    DeckDeleted,
+}
+
+/// A notable outcome of preparing bundled content (contract 1.1).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ContentWarningDto {
+    pub code: ContentWarningCode,
+    pub deck_guid: String,
+    pub note_guid: Option<String>,
+    /// The field kept for the learner (`front`, `back`, `tags`, `association:<guid>`, ...).
+    pub field: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub enum NativeLanguage {
+    #[serde(rename = "pl")]
+    Pl,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
+pub enum TargetLanguage {
+    #[serde(rename = "de")]
+    De,
+    #[serde(rename = "en")]
+    En,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub enum DeckType {
+    Simple,
+    TextWithAssociations,
+    Linguistic,
+}
+
+/// Sections a deck shows; owned by Rust (`DeckType::capabilities`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeckCapabilitiesDto {
+    pub associations: bool,
+    pub grammar_tips: bool,
+    pub word_links: bool,
+    pub tts: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct DeckCountsDto {
+    pub new: u32,
+    pub learning: u32,
+    pub review: u32,
+    pub overdue: u32,
+    pub total: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum ContentState {
+    Ready,
+    Preparing,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeckSummaryDto {
+    pub id: String,
+    pub guid: String,
+    pub name: String,
+    pub parent_id: Option<String>,
+    pub target_language: TargetLanguage,
+    pub native_language: NativeLanguage,
+    pub deck_type: DeckType,
+    pub capabilities: DeckCapabilitiesDto,
+    pub counts: DeckCountsDto,
+    /// Share of mature cards, 0..1.
+    pub progress: f64,
+    pub bundled: bool,
+    pub content_state: ContentState,
+    pub version: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum ResumableStatus {
+    Active,
+    Paused,
+}
+
+/// An unfinished session the dashboard offers to resume (durable in Rust from Phase 10).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ResumableSessionDto {
+    pub session_id: String,
+    /// `null` = a session over all decks.
+    pub deck_id: Option<String>,
+    pub deck_name: Option<String>,
+    pub status: ResumableStatus,
+    pub reviewed_count: u32,
+    pub remaining: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DashboardDto {
+    pub decks: Vec<DeckSummaryDto>,
+    pub streak_days: u32,
+    pub studied_today: u32,
+    pub due_today: u32,
+    pub daily_goal: u32,
+    pub resumable: Option<ResumableSessionDto>,
+    /// Earliest future due date over all decks; lets "nothing due today" say when the next review is.
+    pub next_due_at: Option<String>,
+    pub generated_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct BundledDeckDto {
+    pub guid: String,
+    pub name: String,
+    pub description: String,
+    pub target_language: TargetLanguage,
+    pub deck_type: DeckType,
+    pub note_count: u32,
+    pub card_count: u32,
+    pub level: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum OnboardingStep {
+    NativeLanguage,
+    TargetLanguage,
+    Goal,
+    Decks,
+    Ready,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct OnboardingStateDto {
+    pub completed: bool,
+    pub step: OnboardingStep,
+    pub available_decks: Vec<BundledDeckDto>,
+    /// Bundled decks already in the collection; onboarding again only adds the missing ones.
+    pub installed_deck_guids: Vec<String>,
+    pub native_language: NativeLanguage,
+    pub target_languages: Vec<TargetLanguage>,
+    pub daily_goal: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CompleteOnboardingInput {
+    pub operation_id: String,
+    pub native_language: NativeLanguage,
+    pub target_languages: Vec<TargetLanguage>,
+    pub daily_goal: u32,
+    /// May be empty: the user can start without bundled decks.
+    pub deck_guids: Vec<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum AttributionScope {
+    Dependency,
+    Content,
+    Font,
+    Icon,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct AttributionDto {
+    pub name: String,
+    pub license: String,
+    pub url: Option<String>,
+    pub scope: AttributionScope,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, TS)]
@@ -178,6 +379,109 @@ pub struct DiagnosticsReportDto {
     pub redactions: u32,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum FilePurpose {
+    Import,
+    Restore,
+    BackupFolder,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct PickFileInput {
+    pub purpose: FilePurpose,
+}
+
+/// Opaque handle from the native picker; the GUI never sends arbitrary paths.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct FileHandleDto {
+    pub token: String,
+    pub name: String,
+    pub size_bytes: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub enum NoteTypeKind {
+    Basic,
+    BasicAndReversed,
+    Sentence,
+    SentenceAndReversed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum DeckContentKind {
+    Words,
+    Sentences,
+}
+
+/// Where a deck package came from (`apkg-convert` records it).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeckImportOriginDto {
+    /// `apkg` for Anki.
+    pub kind: String,
+    pub file_name: String,
+    /// Date of the conversion, `YYYY-MM-DD`.
+    pub converted_on: String,
+    pub tool: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct DeckImportWarningDto {
+    /// Content-rule code, e.g. `front.homograph`.
+    pub code: String,
+    /// Line in the package file.
+    pub line: Option<u32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PreviewDeckImportInput {
+    pub file_token: String,
+}
+
+/// Dry run of a deck package import (contract 1.2): nothing is written until
+/// `commitDeckImport` with the same `previewToken`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeckImportPreviewDto {
+    pub file_name: String,
+    pub deck_guid: String,
+    pub name: String,
+    pub description: String,
+    pub target_language: TargetLanguage,
+    pub deck_type: DeckType,
+    pub note_type: NoteTypeKind,
+    pub content_kind: DeckContentKind,
+    pub level: String,
+    pub origin: Option<DeckImportOriginDto>,
+    pub notes: u32,
+    pub cards: u32,
+    /// Cards that arrive with progress (not new).
+    pub scheduled_cards: u32,
+    pub suspended_cards: u32,
+    /// Past reviews imported as history.
+    pub reviews: u32,
+    pub new_notes: u32,
+    /// Notes already in the collection: kept with their progress, content updated unless edited.
+    pub existing_notes: u32,
+    /// The deck this package updates, when it was imported before.
+    pub existing_deck_id: Option<String>,
+    pub warnings: Vec<DeckImportWarningDto>,
+    pub preview_token: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CommitDeckImportInput {
+    pub operation_id: String,
+    pub preview_token: String,
+}
+
 /// Renders every Rust-owned DTO as one TypeScript module.
 pub fn typescript() -> String {
     let cfg = ts_rs::Config::new();
@@ -199,6 +503,34 @@ pub fn typescript() -> String {
         LogLevel::decl(&cfg),
         LogLineDto::decl(&cfg),
         DiagnosticsReportDto::decl(&cfg),
+        ContentWarningCode::decl(&cfg),
+        ContentWarningDto::decl(&cfg),
+        NativeLanguage::decl(&cfg),
+        TargetLanguage::decl(&cfg),
+        DeckType::decl(&cfg),
+        DeckCapabilitiesDto::decl(&cfg),
+        DeckCountsDto::decl(&cfg),
+        ContentState::decl(&cfg),
+        DeckSummaryDto::decl(&cfg),
+        ResumableStatus::decl(&cfg),
+        ResumableSessionDto::decl(&cfg),
+        DashboardDto::decl(&cfg),
+        BundledDeckDto::decl(&cfg),
+        OnboardingStep::decl(&cfg),
+        OnboardingStateDto::decl(&cfg),
+        CompleteOnboardingInput::decl(&cfg),
+        AttributionScope::decl(&cfg),
+        AttributionDto::decl(&cfg),
+        FilePurpose::decl(&cfg),
+        PickFileInput::decl(&cfg),
+        FileHandleDto::decl(&cfg),
+        NoteTypeKind::decl(&cfg),
+        DeckContentKind::decl(&cfg),
+        DeckImportOriginDto::decl(&cfg),
+        DeckImportWarningDto::decl(&cfg),
+        PreviewDeckImportInput::decl(&cfg),
+        DeckImportPreviewDto::decl(&cfg),
+        CommitDeckImportInput::decl(&cfg),
     ];
     let mut out = String::from(
         "// Generated from crates/contracts (Rust is the DTO source, plan Phase 7 step 28).\n\
@@ -334,10 +666,50 @@ mod tests {
         );
         assert_eq!(
             round_trip(&JobResultDto::PrepareContent {
-                deck_ids: vec!["1".into()]
+                deck_ids: vec!["1".into()],
+                created: 40,
+                updated: 2,
+                unchanged: 1,
+                kept: 1,
+                archived: 0,
+                warnings: vec![ContentWarningDto {
+                    code: ContentWarningCode::OverrideConflict,
+                    deck_guid: "bundled-de-words-a1".into(),
+                    note_guid: Some("dew-1".into()),
+                    field: Some("back".into()),
+                }],
             }),
-            json!({ "type": "prepareContent", "deckIds": ["1"] })
+            json!({
+                "type": "prepareContent", "deckIds": ["1"], "created": 40, "updated": 2,
+                "unchanged": 1, "kept": 1, "archived": 0,
+                "warnings": [{ "code": "overrideConflict", "deckGuid": "bundled-de-words-a1",
+                    "noteGuid": "dew-1", "field": "back" }]
+            })
         );
+        // A 1.0 result (deck ids only) still reads.
+        let old: JobResultDto =
+            serde_json::from_value(json!({ "type": "prepareContent", "deckIds": [] })).unwrap();
+        assert!(matches!(
+            old,
+            JobResultDto::PrepareContent { created: 0, .. }
+        ));
+    }
+
+    #[test]
+    fn phase8_enums_use_the_typescript_spelling() {
+        assert_eq!(json!(TargetLanguage::De), json!("de"));
+        assert_eq!(json!(NativeLanguage::Pl), json!("pl"));
+        assert_eq!(
+            json!(DeckType::TextWithAssociations),
+            json!("TextWithAssociations")
+        );
+        assert_eq!(json!(ContentState::Preparing), json!("preparing"));
+        assert_eq!(
+            json!(OnboardingStep::NativeLanguage),
+            json!("nativeLanguage")
+        );
+        assert_eq!(json!(AttributionScope::Content), json!("content"));
+        assert_eq!(json!(ResumableStatus::Paused), json!("paused"));
     }
 
     #[test]

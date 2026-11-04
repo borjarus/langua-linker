@@ -206,6 +206,11 @@ export async function recordContractSamples(raw: AppApi): Promise<ContractSample
   await finish(cancelled)
   const imported = await api.commitImport({ operationId: operationId(), previewToken: (await api.previewImport(importInput)).previewToken })
   await finish(imported)
+  // Deck package (converted from Anki): the demo picker hands out the package next.
+  ;(raw as unknown as { setPickedFile?: (purpose: 'import', token: string) => void }).setPickedFile?.('import', 'demo-import-deck')
+  const deckFile = required(await api.pickFile({ purpose: 'import' }), 'deck package')
+  const deckPreview = await api.previewDeckImport({ fileToken: deckFile.token })
+  await finish(await api.commitDeckImport({ operationId: operationId(), previewToken: deckPreview.previewToken }))
   const exported = await api.exportDeck({ operationId: operationId(), deckId: '1', format: 'csv', includeScheduling: true })
   await finish(exported)
   await api.shareFile({ operationId: operationId(), target: { kind: 'export', jobId: exported.jobId } })

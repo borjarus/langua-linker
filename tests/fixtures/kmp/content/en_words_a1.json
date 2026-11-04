@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": 1,
+  "name": "Angielski A1 — słowa",
+  "language": "en",
+  "sourceLanguage": "pl",
+  "deckType": "Linguistic",
+  "cardType": "word",
+  "cardsFile": "en_words_a1.ndjson",
+  "license": {
+    "source": "original",
+    "attribution": null
+  }
+}

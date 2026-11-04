@@ -1,5 +1,5 @@
 {
-  "apiVersion": "1.0",
+  "apiVersion": "1.2",
   "errorCodes": [
     "VALIDATION_FAILED",
     "VERSION_CONFLICT",
@@ -511,6 +511,33 @@
         "PREVIEW_STALE",
         "STORAGE_FULL",
         "CANCELLED"
+      ],
+      "emits": [
+        "job_progress",
+        "collection_changed"
+      ],
+      "permission": "file"
+    },
+    "previewDeckImport": {
+      "kind": "query",
+      "command": "preview_deck_import",
+      "errors": [
+        "UNSUPPORTED_FORMAT",
+        "VALIDATION_FAILED",
+        "NOT_FOUND",
+        "DELETED"
+      ],
+      "emits": [],
+      "permission": "file"
+    },
+    "commitDeckImport": {
+      "kind": "job",
+      "command": "commit_deck_import",
+      "errors": [
+        "PREVIEW_STALE",
+        "STORAGE_FULL",
+        "VALIDATION_FAILED",
+        "DB_BUSY"
       ],
       "emits": [
         "job_progress",
