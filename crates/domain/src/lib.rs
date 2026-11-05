@@ -3,12 +3,16 @@
 //! Persistence codes are explicit (`db_code`/`from_db_code`) and never derived from enum order,
 //! so reordering a variant cannot silently change stored data (plan Phase 7 step 2).
 
+pub mod calendar;
 pub mod card;
 pub mod content;
 pub mod deck;
+pub mod fsrs;
 pub mod ids;
 pub mod note;
+pub mod queue;
 pub mod review;
+pub mod scheduling;
 pub mod text;
 pub mod validation;
 

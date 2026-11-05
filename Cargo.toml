@@ -17,6 +17,9 @@ license = "UNLICENSED"
 
 [workspace.dependencies]
 chrono = { version = "0.4.45", default-features = false, features = ["std", "clock"] }
+# IANA zones for the study day (plan Phase 9 step 11, ADR-15).
+chrono-tz = { version = "0.10.4", default-features = false, features = ["std"] }
+proptest = { version = "1.6.0", default-features = false, features = ["std"] }
 # Bundled SQLite 3.x with FTS5 and JSON1, identical on every platform (plan step 19).
 rusqlite = { version = "=0.41.1", features = ["bundled"] }
 serde = { version = "1.0.219", features = ["derive"] }

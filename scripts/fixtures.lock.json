@@ -51,6 +51,10 @@
       "sha256": "20cfc72dc21a095217da53d3fdd9adc43f78b97cefc4d3e83ca51d5c2954a54b",
       "bytes": 5272
     },
+    "tests/fixtures/fsrs/vectors-py-fsrs-6.3.0.json": {
+      "sha256": "d671fecc174f3ef19492c6d5007d1ea149da35126bd16999f2268dbbde2cf174",
+      "bytes": 376203
+    },
     "tests/fixtures/kmp/apkg/sample_german_a1_sentences.apkg": {
       "sha256": "1ed524102963e7baeee4b84b068eaa4fa22e70a54d0fe99a526468b89e51db73",
       "bytes": 330741

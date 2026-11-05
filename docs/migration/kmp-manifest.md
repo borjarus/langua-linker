@@ -138,4 +138,4 @@ The plan's "135 data-layer tests" does not match the source: 137 tests in total,
 ## 5. Open after Phase 0
 
 - License/rights confirmation for content and the APKG (`content/PROVENANCE.md`, D-04/ADR-14).
-- Pinned FSRS-6 reference implementation and numeric vectors (Phase 9); KMP default weights must be cross-checked against it.
+- Pinned FSRS-6 reference implementation and numeric vectors (Phase 9); KMP default weights must be cross-checked against it. *(Done 2026-11-04: py-fsrs 6.3.0, `tests/fixtures/fsrs/vectors-py-fsrs-6.3.0.json`; defaults identical — ADR-15.)*

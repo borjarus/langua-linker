@@ -33,6 +33,7 @@ use rusqlite::{OptionalExtension, Row, Transaction, params, params_from_iter};
 use super::{codec, map_sqlite};
 
 mod bundled;
+mod study;
 
 /// Update sequence number for local changes not yet synchronized (Anki convention).
 const LOCAL_USN: i64 = -1;

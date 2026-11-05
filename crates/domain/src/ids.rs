@@ -75,7 +75,7 @@ impl fmt::Display for Guid {
 }
 
 /// UTC instant in epoch milliseconds — the storage form of every timestamp (plan §4.1).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TimestampMs(pub i64);
 
 impl TimestampMs {

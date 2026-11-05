@@ -1,8 +1,8 @@
 //! Dashboard read model (plan Phase 8 step 13; scheduler-dependent parts arrive in Phase 10).
 //!
-//! Counts come from the cards' stored state and queue. The study day starts at the collection's
-//! cutoff in UTC; time zones other than UTC wait for the scheduler (Phase 9), which owns the
-//! study-day rule. There is no resumable session before Phase 10.
+//! Counts come from the cards' stored state and queue. Today's boundaries follow the collection
+//! calendar (IANA zone and cutoff, Phase 9); the limit-aware counts of the scheduler
+//! (`study::due_counts`) and the zone-aware streak replace these in Phase 10.
 
 use std::collections::{HashMap, HashSet};
 
@@ -66,8 +66,8 @@ pub fn dashboard(
     pending: &[String],
 ) -> AppResult<Dashboard> {
     let cutoff = tx.day_cutoff_minutes()?;
-    let day_start = study_day_start(now, cutoff);
-    let day_end = TimestampMs(day_start.0 + DAY_MS);
+    let moment = crate::study::study_moment(tx, now)?;
+    let (day_start, day_end) = (moment.day_start, moment.day_end);
     let decks = tx.active_decks()?;
     let own: HashMap<DeckId, DeckCardCounts> = tx
         .deck_card_counts(day_start, day_end)?

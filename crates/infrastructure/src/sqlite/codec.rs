@@ -2,11 +2,12 @@
 //! Field names are fixed here; the serialized form is part of the schema.
 
 use langualinker_application::jobs::JobDetail;
+use langualinker_application::repositories::{SiblingChange, UndoChanges};
 use langualinker_application::{AppError, AppResult};
-use langualinker_domain::TimestampMs;
 use langualinker_domain::card::{CardFlag, CardFsrsState, CardState, QueueState};
 use langualinker_domain::note::NoteFields;
 use langualinker_domain::review::CardSnapshot;
+use langualinker_domain::{CardId, NoteId, TimestampMs};
 use serde_json::{Map, Value, json};
 
 fn bad(column: &str) -> AppError {
@@ -49,6 +50,10 @@ pub fn f64_list_from_json(text: &str, column: &str) -> AppResult<Vec<f64>> {
 }
 
 pub fn snapshot_to_json(snapshot: &CardSnapshot) -> String {
+    snapshot_to_value(snapshot).to_string()
+}
+
+fn snapshot_to_value(snapshot: &CardSnapshot) -> Value {
     json!({
         "state": snapshot.state.db_code(),
         "queue": snapshot.queue.db_code(),
@@ -67,11 +72,14 @@ pub fn snapshot_to_json(snapshot: &CardSnapshot) -> String {
         "flag": snapshot.flag.db_code(),
         "version": snapshot.version,
     })
-    .to_string()
 }
 
 pub fn snapshot_from_json(text: &str) -> AppResult<CardSnapshot> {
     let value: Map<String, Value> = serde_json::from_str(text).map_err(|_| bad("card snapshot"))?;
+    snapshot_from_map(&value)
+}
+
+fn snapshot_from_map(value: &Map<String, Value>) -> AppResult<CardSnapshot> {
     let int = |name: &str| {
         value
             .get(name)
@@ -111,6 +119,63 @@ pub fn snapshot_from_json(text: &str) -> AppResult<CardSnapshot> {
         buried_until: opt_int("buriedUntil")?.map(TimestampMs),
         flag: CardFlag::from_db_code(int("flag")?)?,
         version: int("version")?,
+    })
+}
+
+/// `review_undo_entries.sibling_changes`: `{"siblings": [{"cardId", "before", "afterVersion"}],
+/// "leechTagged": {"noteId", "version"} | null}`.
+pub fn undo_changes_to_json(changes: &UndoChanges) -> String {
+    let siblings: Vec<Value> = changes
+        .siblings
+        .iter()
+        .map(|change| {
+            json!({
+                "cardId": change.card_id.0,
+                "before": snapshot_to_value(&change.before),
+                "afterVersion": change.after_version,
+            })
+        })
+        .collect();
+    let leech = changes
+        .leech_tagged
+        .map(|(note, version)| json!({ "noteId": note.0, "version": version }));
+    json!({ "siblings": siblings, "leechTagged": leech }).to_string()
+}
+
+pub fn undo_changes_from_json(text: &str) -> AppResult<UndoChanges> {
+    let column = "sibling_changes";
+    let value: Value = serde_json::from_str(text).map_err(|_| bad(column))?;
+    // Rows written before schema v3 hold a bare array of sibling changes (always empty).
+    let (siblings, leech) = match &value {
+        Value::Array(items) => (items.as_slice(), &Value::Null),
+        Value::Object(map) => (
+            map.get("siblings")
+                .and_then(Value::as_array)
+                .map_or(&[][..], Vec::as_slice),
+            map.get("leechTagged").unwrap_or(&Value::Null),
+        ),
+        _ => return Err(bad(column)),
+    };
+    let siblings = siblings
+        .iter()
+        .map(|item| {
+            Ok(SiblingChange {
+                card_id: CardId(item["cardId"].as_i64().ok_or_else(|| bad(column))?),
+                before: snapshot_from_map(item["before"].as_object().ok_or_else(|| bad(column))?)?,
+                after_version: item["afterVersion"].as_i64().ok_or_else(|| bad(column))?,
+            })
+        })
+        .collect::<AppResult<Vec<_>>>()?;
+    let leech_tagged = match leech {
+        Value::Null => None,
+        other => Some((
+            NoteId(other["noteId"].as_i64().ok_or_else(|| bad(column))?),
+            other["version"].as_i64().ok_or_else(|| bad(column))?,
+        )),
+    };
+    Ok(UndoChanges {
+        siblings,
+        leech_tagged,
     })
 }
 
@@ -175,6 +240,46 @@ mod tests {
             snapshot_from_json(&snapshot_to_json(&snapshot)).unwrap(),
             snapshot
         );
+    }
+
+    #[test]
+    fn undo_changes_round_trip_with_siblings_and_leech_tag() {
+        let before = CardSnapshot {
+            state: CardState::Review,
+            queue: QueueState::Review,
+            due_at: Some(TimestampMs(5)),
+            position: 3,
+            fsrs: CardFsrsState {
+                stability: Some(2.5),
+                difficulty: Some(4.0),
+                last_review_at: Some(TimestampMs(1)),
+                scheduled_days: 4,
+                elapsed_days: 1,
+            },
+            legacy_ease: None,
+            reps: 2,
+            lapses: 0,
+            learning_step: None,
+            buried_until: None,
+            flag: CardFlag::Blue,
+            version: 6,
+        };
+        let changes = UndoChanges {
+            siblings: vec![SiblingChange {
+                card_id: CardId(11),
+                before,
+                after_version: 7,
+            }],
+            leech_tagged: Some((NoteId(4), 9)),
+        };
+        let json = undo_changes_to_json(&changes);
+        assert_eq!(undo_changes_from_json(&json).unwrap(), changes);
+        assert_eq!(
+            undo_changes_from_json("[]").unwrap(),
+            UndoChanges::default()
+        );
+        assert!(undo_changes_from_json("{\"siblings\":[{\"cardId\":1}]}").is_err());
+        assert!(undo_changes_from_json("7").is_err());
     }
 
     #[test]
