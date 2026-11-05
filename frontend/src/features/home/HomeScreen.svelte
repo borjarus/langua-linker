@@ -109,7 +109,7 @@
           >
             <meter min="0" max={Math.max(data.dailyGoal, 1)} value={Math.min(data.studiedToday, data.dailyGoal)} aria-label={i18n.t('dashboard.goalProgress')}></meter>
           </StatTile>
-          <StatTile label={i18n.t('dashboard.streak', { count: data.streakDays })} value={i18n.formatNumber(data.streakDays)} tone="warning" />
+          <StatTile label={i18n.t('dashboard.streak', { count: data.streakDays })} value={i18n.formatNumber(data.streakDays)} hint={i18n.t('dashboard.streakHint')} tone="warning" />
         </dl>
 
         {#if state === 'due'}

@@ -33,6 +33,9 @@ pub struct Collection {
     pub db: Arc<SqliteDatabase>,
     pub jobs: JobService<SqliteDatabase>,
     pub content: ContentService<SqliteDatabase>,
+    /// Signals after committed mutations (read signals for the UI, never truth).
+    pub events: Arc<dyn EventSink>,
+    pub clock: Arc<dyn Clock>,
 }
 
 impl Backend {
@@ -99,15 +102,21 @@ impl Collection {
             db.clone(),
             Arc::new(crate::content::BUNDLED),
             jobs.clone(),
-            events,
-            clock,
+            events.clone(),
+            clock.clone(),
             Arc::new(OsRng),
             langualinker_application::content::ResultEncoders {
                 prepare: crate::content::encode_outcome,
                 import: crate::content::encode_import,
             },
         );
-        Ok(Self { db, jobs, content })
+        Ok(Self {
+            db,
+            jobs,
+            content,
+            events,
+            clock,
+        })
     }
 }
 

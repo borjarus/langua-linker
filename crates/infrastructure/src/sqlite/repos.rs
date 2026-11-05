@@ -779,6 +779,26 @@ impl CardRepository for SqliteRepos<'_> {
             .map_err(map_sqlite)
     }
 
+    fn soft_delete_card(
+        &mut self,
+        id: CardId,
+        expected_version: i64,
+        at: TimestampMs,
+    ) -> AppResult<Card> {
+        let changed = self
+            .tx
+            .execute(
+                "UPDATE cards SET deleted_at = ?1, updated_at = ?1, usn = ?2, version = version + 1
+                 WHERE id = ?3 AND version = ?4 AND deleted_at IS NULL",
+                params![at.0, LOCAL_USN, id.0, expected_version],
+            )
+            .map_err(map_sqlite)?;
+        if changed == 0 {
+            return Err(self.version_failure("cards", "card", id.0));
+        }
+        self.card(id)?.ok_or(AppError::NotFound { entity: "card" })
+    }
+
     fn update_card(&mut self, card: &Card, at: TimestampMs) -> AppResult<Card> {
         let changed = self
             .tx
@@ -1252,6 +1272,42 @@ impl ContentRepository for SqliteRepos<'_> {
             .query_map([sentence.0], link_row)
             .and_then(Iterator::collect)
             .map_err(map_sqlite)
+    }
+
+    fn word_link(&mut self, id: WordLinkId) -> AppResult<Option<SentenceWordLink>> {
+        let sql = format!("SELECT {LINK_COLUMNS} FROM sentence_word_links WHERE id = ?1");
+        self.tx
+            .query_row(&sql, [id.0], link_row)
+            .optional()
+            .map_err(map_sqlite)
+    }
+
+    fn update_word_link(
+        &mut self,
+        link: &SentenceWordLink,
+        at: TimestampMs,
+    ) -> AppResult<SentenceWordLink> {
+        link.check()?;
+        let changed = self
+            .tx
+            .execute(
+                "UPDATE sentence_word_links
+                 SET word_note_id = ?1, preferred_word_card_id = ?2, resolution = ?3, updated_at = ?4
+                 WHERE id = ?5",
+                params![
+                    link.word_note_id.map(|id| id.0),
+                    link.preferred_word_card_id.map(|id| id.0),
+                    link.resolution.db_code(),
+                    at.0,
+                    link.id.0,
+                ],
+            )
+            .map_err(map_sqlite)?;
+        if changed == 0 {
+            return Err(AppError::NotFound { entity: "wordLink" });
+        }
+        self.word_link(link.id)?
+            .ok_or(AppError::NotFound { entity: "wordLink" })
     }
 
     fn unresolve_links_to(&mut self, word: NoteId, at: TimestampMs) -> AppResult<u64> {

@@ -280,6 +280,7 @@ export const pl: LocaleResource = {
     streak_few: '{{count, number}} dni z rzędu',
     streak_many: '{{count, number}} dni z rzędu',
     streak_other: '{{count, number}} dnia z rzędu',
+    streakHint: 'Dzień liczy się po co najmniej jednej ocenie; nowy dzień zaczyna się o godzinie zmiany dnia. Bez dni ochronnych.',
     studiedToday: 'Dziś przerobione',
     dueToday: 'Na dziś',
     goal: 'Cel dzienny',

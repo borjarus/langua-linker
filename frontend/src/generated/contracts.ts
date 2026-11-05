@@ -191,3 +191,116 @@ existingNotes: number,
 existingDeckId: string | null, warnings: Array<DeckImportWarningDto>, previewToken: string, };
 
 export type CommitDeckImportInput = { operationId: string, previewToken: string, };
+
+export type Rating = "Again" | "Hard" | "Good" | "Easy";
+
+export type CardState = "New" | "Learning" | "Review" | "Relearning";
+
+export type QueueState = "New" | "Learning" | "Review" | "DayLearn" | "Suspended" | "SchedBuried" | "UserBuried";
+
+export type CardFlag = "none" | "red" | "orange" | "green" | "blue" | "pink" | "turquoise" | "purple";
+
+export type CardDirection = "forward" | "reverse";
+
+export type AssociationProvenance = "bundled" | "generated" | "manual";
+
+export type AssociationStatus = "ready" | "pending" | "offlineQueued" | "error" | "blocked";
+
+export type AssociationDto = { id: string, noteId: string, text: string, provenance: AssociationProvenance, favorite: boolean, status: AssociationStatus, model: string | null, error: ErrorDto | null, };
+
+export type GrammarTipDto = { id: string, noteId: string, text: string, order: number, };
+
+export type WordLinkResolution = "resolved" | "unresolved" | "ambiguous" | "userOverridden";
+
+export type WordCandidateDto = { noteId: string, lemma: string, translation: string, };
+
+export type WordLinkDto = { id: string, sentenceNoteId: string, surface: string, 
+/**
+ * UTF-16 offsets in NFC text, half-open [startIndex, endIndex) — plan §14.1.
+ */
+startIndex: number, endIndex: number, lemma: string | null, resolution: WordLinkResolution, wordNoteId: string | null, translation: string | null, candidates: Array<WordCandidateDto>, };
+
+export type NoteContentDto = { noteId: string, deckId: string, front: string, back: string, targetLanguage: TargetLanguage, capabilities: DeckCapabilitiesDto, associations: Array<AssociationDto>, grammarTips: Array<GrammarTipDto>, };
+
+export type StudyCardDto = { cardId: string, noteId: string, deckId: string, version: number, deckType: DeckType, capabilities: DeckCapabilitiesDto, direction: CardDirection, state: CardState, flag: CardFlag, front: string, back: string, targetLanguage: TargetLanguage, associations: Array<AssociationDto>, grammarTips: Array<GrammarTipDto>, wordLinks: Array<WordLinkDto>, };
+
+export type StudySessionStatus = "active" | "paused" | "finished";
+
+export type StudySessionDto = { sessionId: string, deckId: string | null, deckName: string | null, status: StudySessionStatus, current: StudyCardDto | null, 
+/**
+ * Cards still to study today in the session's scope; `total` is their sum.
+ */
+counts: DeckCountsDto, reviewedCount: number, undoAvailable: boolean, startedAt: string, };
+
+export type StartStudyInput = { operationId: string, 
+/**
+ * `null` studies all decks.
+ */
+deckId: string | null, 
+/**
+ * Restricts the session to these cards (e.g. "study the Again cards again"); omitted = the
+ * normal queue.
+ */
+cardIds?: Array<string>, };
+
+export type StudySessionAction = "pause" | "resume" | "end";
+
+export type UpdateStudySessionInput = { operationId: string, sessionId: string, action: StudySessionAction, };
+
+export type PreviewInput = { sessionId: string, cardId: string, cardVersion: number, };
+
+export type IntervalPreviewDto = { dueAt: string, intervalSeconds: number, };
+
+export type RatingIntervalsDto = { Again: IntervalPreviewDto, Hard: IntervalPreviewDto, Good: IntervalPreviewDto, Easy: IntervalPreviewDto, };
+
+export type RatingPreviewDto = { cardId: string, cardVersion: number, 
+/**
+ * Card + preset version token; stale tokens are rejected with PREVIEW_STALE.
+ */
+previewToken: string, intervals: RatingIntervalsDto, };
+
+export type RateCardInput = { operationId: string, sessionId: string, cardId: string, cardVersion: number, previewToken: string, rating: Rating, 
+/**
+ * Monotonic active answer time, capped by the backend.
+ */
+answerMs: number, };
+
+export type ReviewedCardDto = { cardId: string, version: number, state: CardState, dueAt: string | null, };
+
+export type ReviewResultDto = { operationId: string, sessionId: string, reviewed: ReviewedCardDto, next: StudyCardDto | null, counts: DeckCountsDto, reviewedCount: number, undoAvailable: boolean, sessionStatus: StudySessionStatus, };
+
+export type UndoInput = { operationId: string, sessionId: string, };
+
+export type CardActionKind = "suspend" | "unsuspend" | "bury" | "unbury" | "flag" | "delete";
+
+export type CardActionInput = { operationId: string, cardId: string, expectedVersion: number, action: CardActionKind, flag?: CardFlag, };
+
+export type CardActionResultDto = { cardId: string, version: number, queue: QueueState, flag: CardFlag, deleted: boolean, };
+
+export type SessionCardDto = { cardId: string, front: string, back: string, targetLanguage: TargetLanguage, direction: CardDirection, };
+
+export type NextDeckDto = { id: string, name: string, due: number, };
+
+export type RatingCountsDto = { Again: number, Hard: number, Good: number, Easy: number, };
+
+export type SessionSummaryDto = { sessionId: string, deckId: string | null, deckName: string | null, status: StudySessionStatus, ratings: RatingCountsDto, reviewedCount: number, activeMs: number, 
+/**
+ * Cards rated Again at least once; the summary offers to study them again.
+ */
+againCards: Array<SessionCardDto>, nextDueAt: string | null, 
+/**
+ * Cards of the session's deck scope still due today.
+ */
+remainingDue: number, 
+/**
+ * Another deck with due cards, if any.
+ */
+nextDeck: NextDeckDto | null, 
+/**
+ * First finished session of this profile: the summary offers a daily reminder.
+ */
+firstCompleted: boolean, startedAt: string, finishedAt: string | null, };
+
+export type SetFavoriteAssociationInput = { operationId: string, noteId: string, associationId: string, };
+
+export type ResolveWordLinkInput = { operationId: string, linkId: string, wordNoteId: string, };

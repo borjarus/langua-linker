@@ -8,7 +8,7 @@
  * - Long-running work returns a `JobDto`; events are signals, never durable truth.
  *
  * This file is framework-independent: no Svelte, no Tauri imports.
- * Rust is the DTO source for the types re-exported from `src/generated/contracts.ts` (Phases 7–8);
+ * Rust is the DTO source for the types re-exported from `src/generated/contracts.ts` (Phases 7–10);
  * the remaining DTOs move there as their commands become real.
  */
 
@@ -58,6 +58,40 @@ import type {
   DeckType as GeneratedDeckType,
   OnboardingStep as GeneratedOnboardingStep,
   ErrorCode as GeneratedErrorCode,
+  NoteContentDto,
+  AssociationDto,
+  GrammarTipDto,
+  WordCandidateDto,
+  WordLinkDto,
+  StudyCardDto,
+  StudySessionDto,
+  StartStudyInput,
+  UpdateStudySessionInput,
+  PreviewInput,
+  IntervalPreviewDto,
+  RatingPreviewDto,
+  RateCardInput,
+  ReviewedCardDto,
+  ReviewResultDto,
+  UndoInput,
+  CardActionInput,
+  CardActionResultDto,
+  SessionCardDto,
+  NextDeckDto,
+  SessionSummaryDto,
+  SetFavoriteAssociationInput,
+  ResolveWordLinkInput,
+  AssociationProvenance,
+  AssociationStatus,
+  WordLinkResolution,
+  StudySessionStatus,
+  StudySessionAction,
+  CardActionKind,
+  CardState,
+  QueueState,
+  CardDirection,
+  Rating as GeneratedRating,
+  CardFlag as GeneratedCardFlag,
 } from '../generated/contracts'
 
 export type {
@@ -103,6 +137,38 @@ export type {
   NoteTypeKind,
   PickFileInput,
   PreviewDeckImportInput,
+  NoteContentDto,
+  AssociationDto,
+  GrammarTipDto,
+  WordCandidateDto,
+  WordLinkDto,
+  StudyCardDto,
+  StudySessionDto,
+  StartStudyInput,
+  UpdateStudySessionInput,
+  PreviewInput,
+  IntervalPreviewDto,
+  RatingPreviewDto,
+  RateCardInput,
+  ReviewedCardDto,
+  ReviewResultDto,
+  UndoInput,
+  CardActionInput,
+  CardActionResultDto,
+  SessionCardDto,
+  NextDeckDto,
+  SessionSummaryDto,
+  SetFavoriteAssociationInput,
+  ResolveWordLinkInput,
+  AssociationProvenance,
+  AssociationStatus,
+  WordLinkResolution,
+  StudySessionStatus,
+  StudySessionAction,
+  CardActionKind,
+  CardState,
+  QueueState,
+  CardDirection,
 }
 
 export const API_VERSION = '1.2'
@@ -117,6 +183,9 @@ export type OperationId = string
 
 export const RATINGS = ['Again', 'Hard', 'Good', 'Easy'] as const
 export type Rating = (typeof RATINGS)[number]
+/** Compile-time check: the runtime list equals the Rust `Rating` enum. */
+const ratingsMatchRust: SameMembers<Rating, GeneratedRating> = true
+void ratingsMatchRust
 
 export type UiLanguage = 'pl' | 'en'
 export type ThemePreference = 'system' | 'light' | 'dark'
@@ -127,13 +196,13 @@ export type DeckType = (typeof DECK_TYPES)[number]
 const deckTypesMatchRust: SameMembers<DeckType, GeneratedDeckType> = true
 void deckTypesMatchRust
 
-export type CardState = 'New' | 'Learning' | 'Review' | 'Relearning'
-export type QueueState = 'New' | 'Learning' | 'Review' | 'DayLearn' | 'Suspended' | 'SchedBuried' | 'UserBuried'
 export const CARD_FLAGS = ['none', 'red', 'orange', 'green', 'blue', 'pink', 'turquoise', 'purple'] as const
 export type CardFlag = (typeof CARD_FLAGS)[number]
+/** Compile-time check: the runtime list equals the Rust `CardFlag` enum. */
+const cardFlagsMatchRust: SameMembers<CardFlag, GeneratedCardFlag> = true
+void cardFlagsMatchRust
 /** Note types whose front is a sentence: its words can link to word notes. */
 export const isSentenceNoteType = (kind: NoteTypeKind): boolean => kind === 'Sentence' || kind === 'SentenceAndReversed'
-export type CardDirection = 'forward' | 'reverse'
 
 // ---------------------------------------------------------------- errors
 
@@ -265,218 +334,9 @@ export interface SavePresetInput {
   config: PresetConfigDto
 }
 
-// ---------------------------------------------------------------- notes / cards content
-
-export type AssociationProvenance = 'bundled' | 'generated' | 'manual'
-export type AssociationStatus = 'ready' | 'pending' | 'offlineQueued' | 'error' | 'blocked'
-
-/** Read-only content of a note, used by the word sheet in study. */
-export interface NoteContentDto {
-  noteId: Id
-  deckId: Id
-  front: string
-  back: string
-  targetLanguage: TargetLanguage
-  capabilities: DeckCapabilitiesDto
-  associations: AssociationDto[]
-  grammarTips: GrammarTipDto[]
-}
-
-export interface AssociationDto {
-  id: Id
-  noteId: Id
-  text: string
-  provenance: AssociationProvenance
-  favorite: boolean
-  status: AssociationStatus
-  model: string | null
-  error: ErrorDto | null
-}
-
-export interface GrammarTipDto {
-  id: Id
-  noteId: Id
-  text: string
-  order: number
-}
-
-export type WordLinkResolution = 'resolved' | 'unresolved' | 'ambiguous' | 'userOverridden'
-
-export interface WordCandidateDto {
-  noteId: Id
-  lemma: string
-  translation: string
-}
-
-export interface WordLinkDto {
-  id: Id
-  sentenceNoteId: Id
-  surface: string
-  /** UTF-16 offsets in NFC text, half-open [startIndex, endIndex) — plan §14.1. */
-  startIndex: number
-  endIndex: number
-  lemma: string | null
-  resolution: WordLinkResolution
-  wordNoteId: Id | null
-  translation: string | null
-  candidates: WordCandidateDto[]
-}
-
 // ---------------------------------------------------------------- study
 
-export interface StudyCardDto {
-  cardId: Id
-  noteId: Id
-  deckId: Id
-  version: number
-  deckType: DeckType
-  capabilities: DeckCapabilitiesDto
-  direction: CardDirection
-  state: CardState
-  flag: CardFlag
-  front: string
-  back: string
-  targetLanguage: TargetLanguage
-  associations: AssociationDto[]
-  grammarTips: GrammarTipDto[]
-  wordLinks: WordLinkDto[]
-}
-
-export type StudySessionStatus = 'active' | 'paused' | 'finished'
-
-export interface StudySessionDto {
-  sessionId: Id
-  deckId: Id | null
-  deckName: string | null
-  status: StudySessionStatus
-  current: StudyCardDto | null
-  counts: DeckCountsDto
-  reviewedCount: number
-  undoAvailable: boolean
-  startedAt: IsoDateTime
-}
-
-export interface StartStudyInput {
-  operationId: OperationId
-  /** `null` studies all decks. */
-  deckId: Id | null
-  /** Restricts the session to these cards (e.g. "study the Again cards again"); omitted = the normal queue. */
-  cardIds?: Id[]
-}
-
-export type StudySessionAction = 'pause' | 'resume' | 'end'
-
-export interface UpdateStudySessionInput {
-  operationId: OperationId
-  sessionId: Id
-  action: StudySessionAction
-}
-
-export interface PreviewInput {
-  sessionId: Id
-  cardId: Id
-  cardVersion: number
-}
-
-export interface IntervalPreviewDto {
-  dueAt: IsoDateTime
-  intervalSeconds: number
-}
-
-export interface RatingPreviewDto {
-  cardId: Id
-  cardVersion: number
-  /** Card + preset version token; stale tokens are rejected with PREVIEW_STALE. */
-  previewToken: string
-  intervals: Record<Rating, IntervalPreviewDto>
-}
-
-export interface RateCardInput {
-  operationId: OperationId
-  sessionId: Id
-  cardId: Id
-  cardVersion: number
-  previewToken: string
-  rating: Rating
-  /** Monotonic active answer time, capped by the backend. */
-  answerMs: number
-}
-
-export interface ReviewedCardDto {
-  cardId: Id
-  version: number
-  state: CardState
-  dueAt: IsoDateTime | null
-}
-
-export interface ReviewResultDto {
-  operationId: OperationId
-  sessionId: Id
-  reviewed: ReviewedCardDto
-  next: StudyCardDto | null
-  counts: DeckCountsDto
-  reviewedCount: number
-  undoAvailable: boolean
-  sessionStatus: StudySessionStatus
-}
-
-export interface UndoInput {
-  operationId: OperationId
-  sessionId: Id
-}
-
-export type CardActionKind = 'suspend' | 'unsuspend' | 'bury' | 'unbury' | 'flag' | 'delete'
-
-export interface CardActionInput {
-  operationId: OperationId
-  cardId: Id
-  expectedVersion: number
-  action: CardActionKind
-  flag?: CardFlag
-}
-
-export interface CardActionResultDto {
-  cardId: Id
-  version: number
-  queue: QueueState
-  flag: CardFlag
-  deleted: boolean
-}
-
-export interface SessionCardDto {
-  cardId: Id
-  front: string
-  back: string
-  targetLanguage: TargetLanguage
-  direction: CardDirection
-}
-
-export interface NextDeckDto {
-  id: Id
-  name: string
-  due: number
-}
-
-export interface SessionSummaryDto {
-  sessionId: Id
-  deckId: Id | null
-  deckName: string | null
-  status: StudySessionStatus
-  ratings: Record<Rating, number>
-  reviewedCount: number
-  activeMs: number
-  /** Cards rated Again at least once; the summary offers to study them again. */
-  againCards: SessionCardDto[]
-  nextDueAt: IsoDateTime | null
-  /** Cards of the session's deck scope still due today. */
-  remainingDue: number
-  /** Another deck with due cards, if any. */
-  nextDeck: NextDeckDto | null
-  /** First finished session of this profile: the summary offers a daily reminder. */
-  firstCompleted: boolean
-  startedAt: IsoDateTime
-  finishedAt: IsoDateTime | null
-}
+// Study, word-sheet and card-action DTOs come from Rust (`src/generated/contracts.ts`, Phase 10).
 
 // ---------------------------------------------------------------- details / editor
 
@@ -649,18 +509,6 @@ export interface DuplicateCheckInput {
 
 export interface DuplicateCheckDto {
   duplicates: { noteId: Id; front: string; deckName: string }[]
-}
-
-export interface SetFavoriteAssociationInput {
-  operationId: OperationId
-  noteId: Id
-  associationId: Id
-}
-
-export interface ResolveWordLinkInput {
-  operationId: OperationId
-  linkId: Id
-  wordNoteId: Id
 }
 
 export interface GenerateAssociationInput {
@@ -976,7 +824,6 @@ export interface ResetInput {
   confirmationPhrase: string | null
 }
 
-
 // ---------------------------------------------------------------- transfer / backup
 
 export const CSV_DELIMITERS = [',', ';', '\t'] as const
@@ -997,7 +844,6 @@ export interface ImportInput {
   /** `null` = a new deck named after the file. */
   targetDeckId: Id | null
 }
-
 
 /** Dry run: nothing is written until `commitImport` with the same `previewToken`. */
 export interface ImportPreviewDto {

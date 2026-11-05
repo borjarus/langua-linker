@@ -16,7 +16,7 @@ use langualinker_domain::queue::{Candidate, DoneToday};
 use langualinker_domain::review::{CardSnapshot, ReviewLog};
 use langualinker_domain::{
     AssociationId, CardId, DeckConfigId, DeckId, GrammarTipId, Guid, NoteId, NoteTypeId,
-    ReviewLogId, SessionId, TimestampMs,
+    ReviewLogId, SessionId, TimestampMs, WordLinkId,
 };
 
 use crate::AppResult;
@@ -89,6 +89,13 @@ pub trait CardRepository {
     /// New cards of the decks in introduction order.
     fn new_card_ids(&mut self, decks: &[DeckId], limit: u32) -> AppResult<Vec<CardId>>;
     fn next_position(&mut self) -> AppResult<i64>;
+    /// Soft-deletes one card at the version the caller saw; its history stays.
+    fn soft_delete_card(
+        &mut self,
+        id: CardId,
+        expected_version: i64,
+        at: TimestampMs,
+    ) -> AppResult<Card>;
 }
 
 pub trait ReviewLogRepository {
@@ -135,6 +142,13 @@ pub trait ContentRepository {
         at: TimestampMs,
     ) -> AppResult<Vec<SentenceWordLink>>;
     fn word_links(&mut self, sentence: NoteId) -> AppResult<Vec<SentenceWordLink>>;
+    fn word_link(&mut self, id: WordLinkId) -> AppResult<Option<SentenceWordLink>>;
+    /// Changes the word and resolution of one link, keeping its id.
+    fn update_word_link(
+        &mut self,
+        link: &SentenceWordLink,
+        at: TimestampMs,
+    ) -> AppResult<SentenceWordLink>;
     /// Links pointing at a deleted word become unresolved; the links themselves stay.
     fn unresolve_links_to(&mut self, word: NoteId, at: TimestampMs) -> AppResult<u64>;
 }
@@ -245,6 +259,10 @@ pub trait DashboardQueries {
     fn review_days(&mut self, cutoff_minutes: u32, limit: u32) -> AppResult<Vec<i64>>;
     /// Earliest due time after `after` of a scheduled, studyable card.
     fn next_due_after(&mut self, after: TimestampMs) -> AppResult<Option<TimestampMs>>;
+    /// Whether a valid review exists in `[from, to)`.
+    fn has_review_between(&mut self, from: TimestampMs, to: TimestampMs) -> AppResult<bool>;
+    /// The session of the oldest valid review made in a session.
+    fn first_reviewed_session(&mut self) -> AppResult<Option<SessionId>>;
 }
 
 /// Result of a mutation recorded under its `operationId`.

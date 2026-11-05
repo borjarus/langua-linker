@@ -7,7 +7,9 @@ use langualinker_application::{AppError, AppResult};
 use langualinker_domain::card::{CardState, QueueState};
 use langualinker_domain::content::{Association, GrammarTip};
 use langualinker_domain::deck::Deck;
-use langualinker_domain::{AssociationId, DeckId, GrammarTipId, Guid, NoteId, TimestampMs};
+use langualinker_domain::{
+    AssociationId, DeckId, GrammarTipId, Guid, NoteId, SessionId, TimestampMs,
+};
 use rusqlite::{OptionalExtension, params};
 
 use super::{
@@ -396,6 +398,31 @@ impl DashboardQueries for SqliteRepos<'_> {
                 |row| row.get::<_, Option<i64>>(0),
             )
             .map(|due| due.map(TimestampMs))
+            .map_err(map_sqlite)
+    }
+
+    fn has_review_between(&mut self, from: TimestampMs, to: TimestampMs) -> AppResult<bool> {
+        self.tx
+            .query_row(
+                "SELECT EXISTS (SELECT 1 FROM review_logs
+                     WHERE reviewed_at >= ?1 AND reviewed_at < ?2 AND invalidated_at IS NULL)",
+                params![from.0, to.0],
+                |row| row.get(0),
+            )
+            .map_err(map_sqlite)
+    }
+
+    fn first_reviewed_session(&mut self) -> AppResult<Option<SessionId>> {
+        self.tx
+            .query_row(
+                "SELECT session_id FROM review_logs
+                 WHERE session_id IS NOT NULL AND invalidated_at IS NULL
+                 ORDER BY reviewed_at, id LIMIT 1",
+                [],
+                |row| row.get::<_, i64>(0),
+            )
+            .optional()
+            .map(|id| id.map(SessionId))
             .map_err(map_sqlite)
     }
 }

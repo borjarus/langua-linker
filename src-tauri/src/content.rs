@@ -12,7 +12,8 @@ use langualinker_contracts::dto::{
     AttributionDto, AttributionScope, BundledDeckDto, ContentState, ContentWarningCode,
     ContentWarningDto, DashboardDto, DeckCapabilitiesDto, DeckContentKind, DeckCountsDto,
     DeckImportOriginDto, DeckImportPreviewDto, DeckImportWarningDto, DeckSummaryDto, DeckType,
-    JobResultDto, NativeLanguage, NoteTypeKind, OnboardingStateDto, OnboardingStep, TargetLanguage,
+    JobResultDto, NativeLanguage, NoteTypeKind, OnboardingStateDto, OnboardingStep,
+    ResumableSessionDto, ResumableStatus, TargetLanguage,
 };
 use langualinker_domain::deck;
 use langualinker_domain::note;
@@ -121,7 +122,7 @@ fn native_language(language: deck::NativeLanguage) -> NativeLanguage {
     }
 }
 
-fn deck_type(value: deck::DeckType) -> DeckType {
+pub fn deck_type(value: deck::DeckType) -> DeckType {
     match value {
         deck::DeckType::Simple => DeckType::Simple,
         deck::DeckType::TextWithAssociations => DeckType::TextWithAssociations,
@@ -129,7 +130,7 @@ fn deck_type(value: deck::DeckType) -> DeckType {
     }
 }
 
-fn capabilities(value: deck::DeckType) -> DeckCapabilitiesDto {
+pub fn capabilities(value: deck::DeckType) -> DeckCapabilitiesDto {
     let caps = value.capabilities();
     DeckCapabilitiesDto {
         associations: caps.associations,
@@ -139,7 +140,7 @@ fn capabilities(value: deck::DeckType) -> DeckCapabilitiesDto {
     }
 }
 
-fn clamp(value: i64) -> u32 {
+pub fn clamp(value: i64) -> u32 {
     u32::try_from(value.max(0)).unwrap_or(u32::MAX)
 }
 
@@ -211,8 +212,18 @@ pub fn dashboard_dto(dashboard: Dashboard) -> DashboardDto {
         studied_today: dashboard.studied_today,
         due_today: dashboard.due_today,
         daily_goal: dashboard.daily_goal,
-        // Durable sessions arrive with the real study flow (Phase 10).
-        resumable: None,
+        resumable: dashboard.resumable.map(|open| ResumableSessionDto {
+            session_id: open.session_id.0.to_string(),
+            deck_id: open.deck_id.map(|id| id.0.to_string()),
+            deck_name: open.deck_name,
+            status: if open.paused {
+                ResumableStatus::Paused
+            } else {
+                ResumableStatus::Active
+            },
+            reviewed_count: open.reviewed_count,
+            remaining: open.remaining,
+        }),
         next_due_at: dashboard.next_due_at.map(iso),
         generated_at: iso(dashboard.generated_at),
     }

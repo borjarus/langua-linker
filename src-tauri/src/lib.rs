@@ -5,6 +5,7 @@ mod commands;
 mod content;
 mod diagnostics;
 mod files;
+mod study;
 
 use std::path::PathBuf;
 
@@ -106,6 +107,17 @@ fn configure<R: Runtime>(
         commands::pick_file,
         commands::preview_deck_import,
         commands::commit_deck_import,
+        study::start_study,
+        study::resume_study,
+        study::update_study_session,
+        study::get_rating_preview,
+        study::rate_card,
+        study::undo_review,
+        study::apply_card_action,
+        study::get_session_summary,
+        study::get_note_content,
+        study::set_favorite_association,
+        study::resolve_word_link,
         diagnostics::probe_secret_store,
         diagnostics::probe_file_open,
         diagnostics::probe_file_save
@@ -494,10 +506,12 @@ mod tests {
             dashboard
                 .decks
                 .iter()
-                .map(|deck| deck.counts.new)
+                .map(|deck| deck.counts.total)
                 .sum::<u32>(),
             202
         );
+        // New cards shown for today respect the preset's daily limit (Phase 10).
+        assert!(dashboard.decks.iter().all(|deck| deck.counts.new <= 20));
         let state: OnboardingStateDto = serde_json::from_value(
             invoke(&window, "get_onboarding_state", serde_json::json!({})).unwrap(),
         )
@@ -521,6 +535,227 @@ mod tests {
         )
         .unwrap_err();
         assert_eq!(error_code(error), ErrorCode::ValidationFailed);
+    }
+
+    /// A mock app over a collection file in `dir`, opened as the real app opens it.
+    fn app_at(dir: &std::path::Path) -> tauri::App<MockRuntime> {
+        let app = configure(mock_builder(), false, in_memory_backend)
+            .build(tauri::generate_context!(test = true))
+            .expect("mock app builds");
+        app.manage(Backend::open(app.handle(), dir.to_path_buf(), None));
+        app.manage(files::PickedFiles::default());
+        app
+    }
+
+    fn wait_for_job(window: &WebviewWindow<MockRuntime>, job: &JobDto) -> JobDto {
+        let mut status = job.clone();
+        for _ in 0..400 {
+            status = serde_json::from_value(
+                invoke(
+                    window,
+                    "get_job_status",
+                    serde_json::json!({ "input": job.job_id }),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+            if matches!(status.status, JobStatus::Succeeded | JobStatus::Failed) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        }
+        status
+    }
+
+    /// Phase 10 DoD over IPC: fresh install → onboarding (DE) → 20 ratings with an undo →
+    /// restart → the session, its history and every card's due date are as committed, and the
+    /// bundled content is not imported again.
+    #[test]
+    fn twenty_ratings_survive_a_restart_with_their_due_dates_and_history() {
+        use langualinker_application::repositories::UnitOfWork;
+        use langualinker_contracts::dto::{
+            DashboardDto, OnboardingStateDto, RatingPreviewDto, ReviewResultDto, SessionSummaryDto,
+            StudySessionDto, StudySessionStatus, TargetLanguage,
+        };
+        use langualinker_domain::CardId;
+
+        let dir = std::env::temp_dir().join(format!("ll-phase10-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut due_by_card: std::collections::HashMap<String, Option<String>> = Default::default();
+        let session_id;
+        {
+            let app = app_at(&dir);
+            let window = main_window(&app);
+            let state: OnboardingStateDto = serde_json::from_value(
+                invoke(&window, "get_onboarding_state", serde_json::json!({})).unwrap(),
+            )
+            .unwrap();
+            let german: Vec<String> = state
+                .available_decks
+                .iter()
+                .filter(|deck| deck.target_language == TargetLanguage::De)
+                .map(|deck| deck.guid.clone())
+                .collect();
+            let job: JobDto = serde_json::from_value(
+                invoke(
+                    &window,
+                    "complete_onboarding",
+                    serde_json::json!({ "input": {
+                        "operationId": "op-onboarding", "nativeLanguage": "pl",
+                        "targetLanguages": ["de"], "dailyGoal": 20, "deckGuids": german,
+                    }}),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+            assert_eq!(wait_for_job(&window, &job).status, JobStatus::Succeeded);
+
+            let session: StudySessionDto = serde_json::from_value(
+                invoke(
+                    &window,
+                    "start_study",
+                    serde_json::json!({ "input": { "operationId": "op-start", "deckId": null } }),
+                )
+                .unwrap(),
+            )
+            .unwrap();
+            session_id = session.session_id.clone();
+            let mut current = session.current.expect("a first card");
+            let mut rated = 0;
+            while rated < 20 {
+                let preview: RatingPreviewDto = serde_json::from_value(
+                    invoke(
+                        &window,
+                        "get_rating_preview",
+                        serde_json::json!({ "input": {
+                            "sessionId": session_id, "cardId": current.card_id,
+                            "cardVersion": current.version,
+                        }}),
+                    )
+                    .unwrap(),
+                )
+                .unwrap();
+                let rating = if rated % 5 == 0 { "Again" } else { "Good" };
+                let body = serde_json::json!({ "input": {
+                    "operationId": format!("op-rate-{rated}"), "sessionId": session_id,
+                    "cardId": current.card_id, "cardVersion": current.version,
+                    "previewToken": preview.preview_token, "rating": rating, "answerMs": 2500,
+                }});
+                let result: ReviewResultDto =
+                    serde_json::from_value(invoke(&window, "rate_card", body.clone()).unwrap())
+                        .unwrap();
+                // A double tap (same operationId) does not rate twice.
+                let again: ReviewResultDto =
+                    serde_json::from_value(invoke(&window, "rate_card", body).unwrap()).unwrap();
+                assert_eq!(again.reviewed_count, result.reviewed_count);
+                rated += 1;
+                assert_eq!(result.reviewed_count, rated);
+                if rated == 20 {
+                    // Undo the last rating and make it again.
+                    let undone: ReviewResultDto = serde_json::from_value(
+                        invoke(
+                            &window,
+                            "undo_review",
+                            serde_json::json!({ "input": {
+                                "operationId": "op-undo", "sessionId": session_id,
+                            }}),
+                        )
+                        .unwrap(),
+                    )
+                    .unwrap();
+                    assert_eq!(undone.reviewed_count, 19);
+                    let card = undone.next.expect("the undone card is shown again");
+                    assert_eq!(card.card_id, result.reviewed.card_id);
+                    let preview: RatingPreviewDto = serde_json::from_value(
+                        invoke(
+                            &window,
+                            "get_rating_preview",
+                            serde_json::json!({ "input": {
+                                "sessionId": session_id, "cardId": card.card_id,
+                                "cardVersion": card.version,
+                            }}),
+                        )
+                        .unwrap(),
+                    )
+                    .unwrap();
+                    let redo: ReviewResultDto = serde_json::from_value(
+                        invoke(
+                            &window,
+                            "rate_card",
+                            serde_json::json!({ "input": {
+                                "operationId": "op-redo", "sessionId": session_id,
+                                "cardId": card.card_id, "cardVersion": card.version,
+                                "previewToken": preview.preview_token, "rating": "Easy",
+                                "answerMs": 1000,
+                            }}),
+                        )
+                        .unwrap(),
+                    )
+                    .unwrap();
+                    assert_eq!(redo.reviewed_count, 20);
+                    due_by_card.insert(redo.reviewed.card_id.clone(), redo.reviewed.due_at);
+                    break;
+                }
+                due_by_card.insert(result.reviewed.card_id.clone(), result.reviewed.due_at);
+                current = result.next.expect("more than 20 German cards are due");
+            }
+        }
+
+        // Restart: a new process opens the same file.
+        let app = app_at(&dir);
+        let window = main_window(&app);
+        let dashboard: DashboardDto = serde_json::from_value(
+            invoke(&window, "get_dashboard", serde_json::json!({})).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(dashboard.decks.len(), 2, "content is not imported again");
+        assert_eq!(dashboard.studied_today, 20);
+        assert_eq!(dashboard.streak_days, 1);
+        let open = dashboard.resumable.expect("the open session is offered");
+        assert_eq!(open.session_id, session_id);
+        assert_eq!(open.reviewed_count, 20);
+
+        let resumed: StudySessionDto = serde_json::from_value(
+            invoke(
+                &window,
+                "resume_study",
+                serde_json::json!({ "input": session_id }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(resumed.reviewed_count, 20);
+        assert_ne!(resumed.status, StudySessionStatus::Finished);
+
+        let summary: SessionSummaryDto = serde_json::from_value(
+            invoke(
+                &window,
+                "get_session_summary",
+                serde_json::json!({ "input": session_id }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let ratings = summary.ratings;
+        assert_eq!((ratings.again, ratings.good, ratings.easy), (4, 15, 1));
+        assert_eq!(summary.again_cards.len(), 4);
+
+        let backend = app.state::<Backend>();
+        let db = backend.collection.as_ref().unwrap().db.clone();
+        for (card, due) in due_by_card {
+            let id = CardId(card.parse().unwrap());
+            let (stored, logs) = db
+                .read(move |tx| Ok((tx.card(id)?.unwrap(), tx.review_logs(id)?)))
+                .unwrap();
+            assert_eq!(stored.due_at.map(backend::iso), due, "card {card}");
+            let valid = logs
+                .iter()
+                .filter(|log| log.invalidated_at.is_none())
+                .count();
+            assert_eq!(valid, 1, "card {card}: one valid rating");
+        }
+        drop(app);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     /// A package as `apkg-convert` writes it: one note with review progress and history.

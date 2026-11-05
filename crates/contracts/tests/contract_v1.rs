@@ -339,6 +339,60 @@ fn phase8_inputs_deserialize_into_their_rust_dtos() {
 }
 
 #[test]
+fn phase10_outputs_round_trip_through_their_rust_dtos() {
+    use langualinker_contracts::dto::{
+        AssociationDto, CardActionResultDto, NoteContentDto, RatingPreviewDto, ReviewResultDto,
+        SessionSummaryDto, StudySessionDto, WordLinkDto,
+    };
+    assert!(round_trips::<StudySessionDto>("startStudy") >= 1);
+    assert!(round_trips::<StudySessionDto>("resumeStudy") >= 1);
+    assert!(round_trips::<StudySessionDto>("updateStudySession") >= 1);
+    assert!(round_trips::<RatingPreviewDto>("getRatingPreview") >= 1);
+    assert!(round_trips::<ReviewResultDto>("rateCard") >= 1);
+    assert!(round_trips::<ReviewResultDto>("undoReview") >= 1);
+    assert!(round_trips::<CardActionResultDto>("applyCardAction") >= 1);
+    assert!(round_trips::<SessionSummaryDto>("getSessionSummary") >= 1);
+    assert!(round_trips::<NoteContentDto>("getNoteContent") >= 1);
+    assert!(round_trips::<Vec<AssociationDto>>("setFavoriteAssociation") >= 1);
+    assert!(round_trips::<WordLinkDto>("resolveWordLink") >= 1);
+}
+
+#[test]
+fn phase10_inputs_deserialize_into_their_rust_dtos() {
+    use langualinker_contracts::dto::{
+        CardActionInput, PreviewInput, RateCardInput, ResolveWordLinkInput,
+        SetFavoriteAssociationInput, StartStudyInput, UndoInput, UpdateStudySessionInput,
+    };
+    fn back<T: DeserializeOwned + Serialize>(input: &Value) -> Value {
+        serde_json::to_value(serde_json::from_value::<T>(input.clone()).unwrap()).unwrap()
+    }
+    let samples = samples();
+    let mut seen = 0;
+    for call in samples["calls"].as_array().expect("calls") {
+        let input = &call["args"][0];
+        let read = match call["operation"].as_str() {
+            Some("startStudy") => back::<StartStudyInput>(input),
+            Some("updateStudySession") => back::<UpdateStudySessionInput>(input),
+            Some("getRatingPreview") => back::<PreviewInput>(input),
+            Some("rateCard") => back::<RateCardInput>(input),
+            Some("undoReview") => back::<UndoInput>(input),
+            Some("applyCardAction") => back::<CardActionInput>(input),
+            Some("setFavoriteAssociation") => back::<SetFavoriteAssociationInput>(input),
+            Some("resolveWordLink") => back::<ResolveWordLinkInput>(input),
+            // Bare ids.
+            Some("resumeStudy" | "getSessionSummary" | "getNoteContent") => {
+                let _: String = serde_json::from_value(input.clone()).expect("id string");
+                input.clone()
+            }
+            _ => continue,
+        };
+        assert_eq!(&read, input, "{}", call["operation"]);
+        seen += 1;
+    }
+    assert!(seen >= 11);
+}
+
+#[test]
 fn phase7_inputs_are_a_bare_job_id() {
     let samples = samples();
     for call in samples["calls"].as_array().expect("calls") {
