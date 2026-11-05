@@ -5,6 +5,7 @@
 use criterion::{Criterion, criterion_group, criterion_main};
 use langualinker_application::ports::Clock;
 use langualinker_application::repositories::UnitOfWork;
+use langualinker_application::study;
 use langualinker_domain::{DeckId, TimestampMs};
 use langualinker_infrastructure::sqlite::SqliteDatabase;
 use langualinker_infrastructure::sqlite::seed::{SEED_EPOCH_MS, SeedSize, seed_collection};
@@ -44,6 +45,22 @@ fn due_queue(c: &mut Criterion) {
         b.iter(|| {
             database
                 .read(|tx| tx.new_card_ids(&[DeckId(1)], 20))
+                .unwrap()
+        })
+    });
+    // The scheduler's full queue (Phase 9): limits over the deck tree, done-today counts from
+    // the logs, sibling rules. Needs a write transaction (expired burials are lifted first).
+    group.bench_function("scheduler_counts_all_decks", |b| {
+        b.iter(|| {
+            database
+                .write(|tx| study::due_counts(tx, None, TimestampMs(SEED_EPOCH_MS)))
+                .unwrap()
+        })
+    });
+    group.bench_function("scheduler_counts_one_deck", |b| {
+        b.iter(|| {
+            database
+                .write(|tx| study::due_counts(tx, Some(DeckId(1)), TimestampMs(SEED_EPOCH_MS)))
                 .unwrap()
         })
     });

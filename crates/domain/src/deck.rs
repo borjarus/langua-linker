@@ -144,14 +144,10 @@ pub fn check_reparent(
 }
 
 /// Number of FSRS-6 weights w0–w20.
-pub const FSRS_WEIGHT_COUNT: usize = 21;
+pub const FSRS_WEIGHT_COUNT: usize = crate::fsrs::WEIGHT_COUNT;
 
-/// FSRS-6 default weights, cross-checked with `tests/fixtures/fsrs/kmp-fsrs-spec.json`. Phase 9
-/// verifies them against the pinned reference implementation.
-pub const DEFAULT_FSRS_WEIGHTS: [f64; FSRS_WEIGHT_COUNT] = [
-    0.2120, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194, 0.0010, 1.8722, 0.1666, 0.7960, 1.4835,
-    0.0614, 0.2629, 1.6483, 0.6014, 1.8729, 0.5425, 0.0912, 0.0658, 0.1542,
-];
+/// FSRS-6 default weights (see [`crate::fsrs::DEFAULT_WEIGHTS`]).
+pub const DEFAULT_FSRS_WEIGHTS: [f64; FSRS_WEIGHT_COUNT] = crate::fsrs::DEFAULT_WEIGHTS;
 
 coded_enum! {
     /// Order in which new cards are introduced.
@@ -201,7 +197,8 @@ impl Default for DeckConfigOptions {
 
 impl DeckConfigOptions {
     /// Ranges from contract v1 (`savePreset`): new/day 0–9999, reviews/day 0–99 999, retention
-    /// 0.70–0.99, max interval 1–36 500 days, up to 10 steps of 0–43 200 min, exactly 21 weights.
+    /// 0.70–0.99, max interval 1–36 500 days, up to 10 steps of 0–43 200 min, exactly 21 weights
+    /// within the FSRS-6 reference bounds.
     pub fn validate(&self) -> ValidationResult {
         validation::in_range("newPerDay", self.new_per_day.into(), 0, 9_999)?;
         validation::in_range("reviewsPerDay", self.reviews_per_day.into(), 0, 99_999)?;
@@ -225,12 +222,8 @@ impl DeckConfigOptions {
                 validation::in_range(field, (*step).into(), 0, 43_200)?;
             }
         }
-        if self.weights.len() != FSRS_WEIGHT_COUNT {
-            return Err(ValidationError::new("weights", "count"));
-        }
-        if self.weights.iter().any(|weight| !weight.is_finite()) {
-            return Err(ValidationError::new("weights", "notFinite"));
-        }
+        // Count, finiteness and the reference bounds (FSRS-6 is only defined inside them).
+        crate::fsrs::validate_weights(&self.weights)?;
         validation::in_range("leechThreshold", self.leech_threshold.into(), 1, 99)?;
         Ok(())
     }
@@ -283,7 +276,7 @@ mod tests {
     #[test]
     fn options_outside_the_contract_ranges_are_rejected() {
         type Mutation = fn(&mut DeckConfigOptions);
-        let cases: [(&str, Mutation); 6] = [
+        let cases: [(&str, Mutation); 7] = [
             ("newPerDay", |o| o.new_per_day = 10_000),
             ("desiredRetention", |o| o.desired_retention = 0.995),
             ("maxIntervalDays", |o| o.maximum_interval_days = 0),
@@ -292,6 +285,7 @@ mod tests {
             }),
             ("weights", |o| o.weights.pop().map(drop).unwrap_or_default()),
             ("weights", |o| o.weights[3] = f64::NAN),
+            ("weights", |o| o.weights[20] = 0.05),
         ];
         for (field, mutate) in cases {
             let mut options = DeckConfigOptions::default();

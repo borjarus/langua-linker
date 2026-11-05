@@ -7,5 +7,6 @@ pub mod error;
 pub mod jobs;
 pub mod ports;
 pub mod repositories;
+pub mod study;
 
 pub use error::{AppError, AppResult, DetailValue};

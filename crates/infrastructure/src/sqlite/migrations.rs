@@ -46,6 +46,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "bundled_content",
         sql: include_str!("../../migrations/0002_bundled_content.sql"),
     },
+    Migration {
+        version: 3,
+        name: "scheduler",
+        sql: include_str!("../../migrations/0003_scheduler.sql"),
+    },
 ];
 
 /// Highest schema version this build understands.
@@ -357,7 +362,7 @@ mod tests {
                  SELECT 'c7', 7, id, 0, 0, 0 FROM decks WHERE guid = 'd1';",
         )
         .unwrap();
-        let report = migrate(&mut conn, None, MIGRATIONS, 2).unwrap();
+        let report = migrate(&mut conn, None, &MIGRATIONS[..2], 2).unwrap();
         assert_eq!((report.from_version, report.to_version), (1, 2));
         let cards: i64 = conn
             .query_row("SELECT COUNT(*) FROM cards WHERE note_id = 7", [], |r| {
@@ -385,5 +390,45 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM bundled_notes", [], |r| r.get(0))
             .unwrap();
         assert_eq!(left, 0);
+    }
+
+    /// Fixture: a v2 collection with a finished session, a rating and an undo entry in the old
+    /// bare-array form upgrades to v3; sessions default to unrestricted and the entry still reads.
+    #[test]
+    fn v2_collection_upgrades_to_scheduler_sessions() {
+        let mut conn = memory();
+        migrate(&mut conn, None, &MIGRATIONS[..2], 1).unwrap();
+        insert_deck(&conn);
+        conn.execute_batch(
+            "INSERT INTO notes (id, guid, note_type_id, fields, sort_field, created_at, updated_at)
+                 VALUES (7, 'n7', 1, '{\"front\":\"Hund\",\"back\":\"pies\"}', 'hund', 0, 0);
+             INSERT INTO cards (id, guid, note_id, deck_id, template_ordinal, created_at, updated_at)
+                 SELECT 9, 'c9', 7, id, 0, 0, 0 FROM decks WHERE guid = 'd1';
+             INSERT INTO study_sessions (id, status, started_at, created_at, updated_at)
+                 VALUES (3, 'finished', 0, 0, 0);
+             INSERT INTO review_logs (id, card_id, session_id, operation_id, rating, kind,
+                     reviewed_at, duration_ms, card_before, card_after, fsrs_version, parameters_hash)
+                 VALUES (5, 9, 3, 'op', 3, 0, 0, 0, '{}', '{}', 'fsrs-6', 'h');
+             INSERT INTO review_undo_entries (session_id, review_log_id, created_at)
+                 VALUES (3, 5, 0);",
+        )
+        .unwrap();
+        let report = migrate(&mut conn, None, MIGRATIONS, 2).unwrap();
+        assert_eq!((report.from_version, report.to_version), (2, 3));
+        let (restricted, changes): (bool, String) = conn
+            .query_row(
+                "SELECT s.restricted, u.sibling_changes FROM study_sessions s
+                 JOIN review_undo_entries u ON u.session_id = s.id WHERE s.id = 3",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert!(!restricted);
+        let decoded = crate::sqlite::codec::undo_changes_from_json(&changes).unwrap();
+        assert!(decoded.siblings.is_empty() && decoded.leech_tagged.is_none());
+        assert!(
+            conn.execute("UPDATE study_sessions SET restricted = 2 WHERE id = 3", [])
+                .is_err()
+        );
     }
 }

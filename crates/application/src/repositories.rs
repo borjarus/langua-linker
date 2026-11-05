@@ -9,12 +9,14 @@ use langualinker_domain::card::{Card, NewCard};
 use langualinker_domain::content::{
     Association, GrammarTip, NewAssociation, SentenceWordLink, TipProvenance,
 };
+use langualinker_domain::deck::NewCardOrder;
 use langualinker_domain::deck::{Deck, DeckConfig, DeckConfigOptions, NewDeck};
 use langualinker_domain::note::{CardTemplate, NewNote, Note, NoteType, NoteTypeKind};
-use langualinker_domain::review::ReviewLog;
+use langualinker_domain::queue::{Candidate, DoneToday};
+use langualinker_domain::review::{CardSnapshot, ReviewLog};
 use langualinker_domain::{
     AssociationId, CardId, DeckConfigId, DeckId, GrammarTipId, Guid, NoteId, NoteTypeId,
-    TimestampMs,
+    ReviewLogId, SessionId, TimestampMs,
 };
 
 use crate::AppResult;
@@ -263,6 +265,194 @@ pub trait IdempotencyRepository {
     ) -> AppResult<()>;
 }
 
+/// Lifecycle of a study session. At most one session is not finished.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionStatus {
+    Active,
+    Paused,
+    Finished,
+}
+
+impl SessionStatus {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Paused => "paused",
+            Self::Finished => "finished",
+        }
+    }
+
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "active" => Some(Self::Active),
+            "paused" => Some(Self::Paused),
+            "finished" => Some(Self::Finished),
+            _ => None,
+        }
+    }
+}
+
+/// A durable study session (`study_sessions`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct StudySession {
+    pub id: SessionId,
+    /// Studied deck and its subdecks; `None` studies all decks.
+    pub deck_id: Option<DeckId>,
+    pub status: SessionStatus,
+    /// Preset of the studied deck when the session started (audit; ratings use the current one).
+    pub config_id: Option<DeckConfigId>,
+    pub config_version: Option<i64>,
+    /// The session studies only its own items (chosen cards), without daily limits.
+    pub restricted: bool,
+    pub current_card_id: Option<CardId>,
+    pub started_at: TimestampMs,
+    pub paused_at: Option<TimestampMs>,
+    pub finished_at: Option<TimestampMs>,
+    /// Answer time of valid ratings, capped per rating.
+    pub active_ms: i64,
+    pub updated_at: TimestampMs,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct NewStudySession {
+    pub deck_id: Option<DeckId>,
+    pub config_id: Option<DeckConfigId>,
+    pub config_version: Option<i64>,
+    pub restricted: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SessionItemStatus {
+    Pending,
+    Answered,
+    Skipped,
+}
+
+impl SessionItemStatus {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Pending => "pending",
+            Self::Answered => "answered",
+            Self::Skipped => "skipped",
+        }
+    }
+
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "pending" => Some(Self::Pending),
+            "answered" => Some(Self::Answered),
+            "skipped" => Some(Self::Skipped),
+            _ => None,
+        }
+    }
+}
+
+/// A card of a session, in the order the session met it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SessionItem {
+    pub position: i64,
+    pub card_id: CardId,
+    pub status: SessionItemStatus,
+}
+
+/// A sibling buried by a rating: its state before and the version the rating left it at.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SiblingChange {
+    pub card_id: CardId,
+    pub before: CardSnapshot,
+    pub after_version: i64,
+}
+
+/// Side effects of a rating that undo must reverse besides the rated card itself.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct UndoChanges {
+    pub siblings: Vec<SiblingChange>,
+    /// The rating tagged the note as a leech; the note version it left.
+    pub leech_tagged: Option<(NoteId, i64)>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct UndoEntry {
+    pub id: i64,
+    pub session_id: SessionId,
+    pub review_log_id: ReviewLogId,
+    pub operation_id: String,
+    pub changes: UndoChanges,
+    pub created_at: TimestampMs,
+    pub consumed_at: Option<TimestampMs>,
+}
+
+/// Sessions, their items and undo entries (plan Phase 9 step 3).
+pub trait StudyRepository {
+    /// Fails with `Validation(sessionId, open)` when another session is not finished.
+    fn insert_session(
+        &mut self,
+        session: &NewStudySession,
+        at: TimestampMs,
+    ) -> AppResult<StudySession>;
+    fn session(&mut self, id: SessionId) -> AppResult<Option<StudySession>>;
+    /// The session that is active or paused, if any.
+    fn open_session(&mut self) -> AppResult<Option<StudySession>>;
+    /// Persists status, current card, timestamps and active time.
+    fn update_session(&mut self, session: &StudySession, at: TimestampMs) -> AppResult<()>;
+    fn session_items(&mut self, session: SessionId) -> AppResult<Vec<SessionItem>>;
+    /// Sets the status of the card's item, appending the card when the session has none.
+    fn put_session_item(
+        &mut self,
+        session: SessionId,
+        card: CardId,
+        status: SessionItemStatus,
+    ) -> AppResult<()>;
+    fn insert_undo_entry(
+        &mut self,
+        session: SessionId,
+        review_log: ReviewLogId,
+        changes: &UndoChanges,
+        at: TimestampMs,
+    ) -> AppResult<i64>;
+    /// The newest undo entry of the session, consumed or not.
+    fn last_undo_entry(&mut self, session: SessionId) -> AppResult<Option<UndoEntry>>;
+    fn consume_undo_entry(&mut self, id: i64, at: TimestampMs) -> AppResult<()>;
+    /// Valid (not undone) reviews of the session, oldest first.
+    fn session_reviews(&mut self, session: SessionId) -> AppResult<Vec<ReviewLog>>;
+    fn session_review_count(&mut self, session: SessionId) -> AppResult<u32>;
+}
+
+/// Read models of the scheduler. Candidates are studyable cards only: not suspended, buried,
+/// archived or deleted.
+pub trait SchedulerQueries {
+    /// IANA time zone and day cutoff (minutes) of the collection.
+    fn collection_calendar(&mut self) -> AppResult<(String, u32)>;
+    /// Valid ratings at or after `since`, by the deck of the rated card: introduced new cards,
+    /// and reviews of review or day-learning cards (both use the review limit).
+    fn done_since(&mut self, since: TimestampMs) -> AppResult<Vec<(DeckId, DoneToday)>>;
+    /// Notes with a valid rating at or after `since`.
+    fn notes_reviewed_since(&mut self, since: TimestampMs) -> AppResult<Vec<NoteId>>;
+    /// Intraday learning cards of the decks due before `until`, by due time.
+    fn learning_candidates(
+        &mut self,
+        decks: &[DeckId],
+        until: TimestampMs,
+    ) -> AppResult<Vec<Candidate>>;
+    /// Review and day-learning cards of one deck due before `until`, by due time.
+    fn review_candidates(
+        &mut self,
+        deck: DeckId,
+        until: TimestampMs,
+        limit: u32,
+    ) -> AppResult<Vec<Candidate>>;
+    /// New cards of one deck in introduction order; `Random` shuffles per `day`.
+    fn new_candidates(
+        &mut self,
+        deck: DeckId,
+        order: NewCardOrder,
+        day: i64,
+        limit: u32,
+    ) -> AppResult<Vec<Candidate>>;
+    /// Buried cards whose day has passed (`buried_until` at or before `now`, or unset).
+    fn expired_buried_cards(&mut self, now: TimestampMs) -> AppResult<Vec<CardId>>;
+}
+
 /// Every repository inside one transaction.
 pub trait Repositories:
     DeckRepository
@@ -277,6 +467,8 @@ pub trait Repositories:
     + IdempotencyRepository
     + BundledContentRepository
     + DashboardQueries
+    + StudyRepository
+    + SchedulerQueries
 {
 }
 
@@ -293,6 +485,8 @@ impl<T> Repositories for T where
         + IdempotencyRepository
         + BundledContentRepository
         + DashboardQueries
+        + StudyRepository
+        + SchedulerQueries
 {
 }
 

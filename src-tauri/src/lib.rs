@@ -428,7 +428,7 @@ mod tests {
         let window = main_window(&app);
         let about = invoke(&window, "get_about_info", serde_json::json!({})).unwrap();
         let about: AboutDto = serde_json::from_value(about).unwrap();
-        assert_eq!(about.schema_version, Some(2));
+        assert_eq!(about.schema_version, Some(3));
         assert_eq!(about.api_version, API_VERSION);
         assert_eq!(
             (about.fsrs_version.as_str(), about.content_version.as_str()),

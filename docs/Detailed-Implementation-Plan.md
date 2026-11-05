@@ -676,12 +676,14 @@ Before this gate, do not implement production FSRS/CRUD/LLM. Spikes, IPC transpo
 
 ### Tests and DoD
 
-- [ ] Vectors: all-Good/all-Again/alternating/mature lapse/same-day/2-year gap/200 reviews, plus default/optimized/extreme parameters. [file:2]
-- [ ] Properties: finite/bounds/max interval and monotonicity only for the reference policy.
-- [ ] Limits/parents/bury correct; suspended never appears in the queue.
-- [ ] Card-log-session rollback consistent; retry idempotent.
-- [ ] Rate→undo restores domain state, except audit metadata.
-- [ ] Green conformance is required before real rating in Phase 10.
+- [x] Vectors: all-Good/all-Again/alternating/mature lapse/same-day/2-year gap/200 reviews, plus default/optimized/extreme parameters. [file:2] *(Generated from the pinned py-fsrs 6.3.0: 44 scenarios / 1 219 ratings, plus fuzz, retrievability and interval vectors.)*
+- [x] Properties: finite/bounds/max interval and monotonicity only for the reference policy. *(proptest over arbitrary in-bounds weights, plus the KMP specification checks.)*
+- [x] Limits/parents/bury correct; suspended never appears in the queue.
+- [x] Card-log-session rollback consistent; retry idempotent. *(Rollback forced by a failing trigger on `review_logs`.)*
+- [x] Rate→undo restores domain state, except audit metadata.
+- [x] Green conformance is required before real rating in Phase 10.
+
+> **Status 2026-11-04 — implemented; device run with Phase 10.** Step 1: own port of py-fsrs 6.3.0 (MIT, wheel SHA-256 pinned) in `crates/domain/src/fsrs.rs` — `f64`, the reference's operation order, round-half-to-even intervals, minimum stability 0.001 (KMP used 0.1), weights validated against the reference bounds (also in `DeckConfigOptions::validate`), learning [1 m, 10 m] / relearning [10 m] with the reference's Hard/Good/Easy step rules, `fsrsVersion` `fsrs-6/py-fsrs-6.3.0` and a 32-hex `parametersHash` (weights, retention, maximum interval, steps, fuzz) in every log; fuzz seeded by SHA-256(card GUID, card version, parameters hash) so preview and commit agree (the operation id does not exist at preview time — [ADR-15](adr/ADR-15-fsrs-scheduler.md) §6). Vectors come from the reference via `scripts/fsrs/generate_vectors.py` → `tests/fixtures/fsrs/vectors-py-fsrs-6.3.0.json`; all 1 219 ratings match (S/D within 1e-9 relative, state/step/interval exact), as do fuzz, R(t, S) and intervals; the KMP defaults equal the reference. Step 2: `calendar.rs` (IANA zone + cutoff from `collection`, calendar days of 23/25 h across DST, DST-gap and ambiguous cutoffs, elapsed days in study days), `scheduling.rs` (due at the start of the study day for review intervals, day-learning queue for steps ending on a later day, lapses, sibling bury/unbury at the cutoff) and `queue.rs` (limits over the deck tree with done-today from committed valid logs, sibling dedupe, learning → reviews mixed with new cards → learn-ahead 20 min, "limit reached" hints, chosen-card queues without limits); `extend_today_limits` covers step 13 without filtered decks. Step 3: `crates/application/src/study.rs` — start/resume/pause/end, GetDue (`due_counts`), preview with a token over card + preset version, session and study day (`PREVIEW_STALE` otherwise), rating in one transaction (card, leech tag/suspend, buried siblings, full before/after log, undo entry, session item/time/current card), retry by `operationId` returns the first result, undo of the latest rating with conflict checks, GetStudyStats; schema v3 (`0003_scheduler.sql`: `study_sessions.restricted`, session/undo/buried indexes) with a v2 → v3 fixture test. The dashboard now uses the collection zone for today's boundaries. Evidence: domain 73 unit + 7 conformance + 11 property tests (512 cases each), infrastructure 16 study integration tests + migration/codec tests, all workspace tests, clippy `-D warnings`, rustfmt; full queue for all decks ≈ 9 ms on the 50 000-card / 500 000-log seed (release, development PC). Open: IPC/DTO mapping and the GUI (Phase 10), device measurement of the queue, zone-aware streak and limit-aware dashboard counts (Phase 10), ADR-15 acceptance after the Phase 10 device run.
 
 ## PHASE 10 — Connect learning to the existing GUI
 
@@ -1102,6 +1104,7 @@ D-01–D-08 originate from the input plan; D-09–D-14 arise from the stack/cont
 | ADR-12 | Native plugins | 1/15 | PROPOSED: WebView spike done on the Android emulator and iOS simulator, no plugin needed; notifications/TTS/files pending — [ADR-12](adr/ADR-12-native-capabilities.md) | Device permissions/deep link/TTS |
 | ADR-13 | Telemetry/crash | 0/16 | Opt-in/minimal/EU-self-host after audit | No content/secrets/symbols |
 | ADR-14 | Content/license | 0/8 | PROPOSED: format v2, shared lint/import checks, per-deck transactions, keep/archive policy, release gate on review+rights — [ADR-14](adr/ADR-14-bundled-content.md) | Linter/attribution/manual acceptance |
+| ADR-15 | FSRS-6/scheduler | 9 | PROPOSED: own port of py-fsrs 6.3.0 with reference vectors, study days in the collection zone, tree limits, transactional rating/undo — [ADR-15](adr/ADR-15-fsrs-scheduler.md) | Conformance/properties/Phase 10 device run |
 
 D-02 versus the old plan’s recommended hybrid requires a conscious choice: the Tauri frontend does not provide its own server/proxy billing/abuse protection. If hybrid is selected for v1, Phase 13 includes separate deployment/maintenance and added effort. [file:2]
 
