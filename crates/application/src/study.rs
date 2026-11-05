@@ -760,6 +760,32 @@ pub fn resume_study(tx: &mut dyn Repositories, now: TimestampMs) -> AppResult<Op
     refresh(tx, &mut session, &moment, true).map(Some)
 }
 
+/// Opens a session by id for the study screen (also after a restart): a paused session stays
+/// paused, the current card is kept while it is still due, and a finished session is returned as
+/// it is. Needs a write transaction (expired burials are lifted and the cursor is persisted).
+pub fn open_study(
+    tx: &mut dyn Repositories,
+    session_id: SessionId,
+    now: TimestampMs,
+) -> AppResult<StudyView> {
+    let mut session = load_session(tx, session_id)?;
+    if session.status == SessionStatus::Finished {
+        return study_view(tx, session_id, now);
+    }
+    let moment = study_moment(tx, now)?;
+    unbury_expired(tx, &moment)?;
+    refresh(tx, &mut session, &moment, true)
+}
+
+/// Today's counts of a scope within the daily limits, without lifting expired burials (a read).
+pub fn scope_counts(
+    tx: &mut dyn Repositories,
+    scope: Option<DeckId>,
+    moment: &StudyMoment,
+) -> AppResult<QueueCounts> {
+    Ok(plan_for_scope(tx, scope, moment)?.0.counts())
+}
+
 /// Pauses, resumes or ends a session. Repeating an action changes nothing.
 pub fn change_session(
     tx: &mut dyn Repositories,

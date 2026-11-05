@@ -1,5 +1,6 @@
 //! AppApi commands (contract v1). Every command of `crates/contracts/v1/catalogue.json` is
-//! registered (integration checklist rule 1): the ones implemented in Phases 7–8 are below; every
+//! registered (integration checklist rule 1): the ones implemented in Phases 7–8 are below and the
+//! learning commands of Phase 10 are in `study.rs`; every
 //! other one answers `NOT_IMPLEMENTED` until its phase arrives — never demo data and never
 //! "command not found" (which would reach the UI as `INTERNAL`).
 
@@ -47,6 +48,17 @@ pub const IMPLEMENTED: &[&str] = &[
     "pick_file",
     "preview_deck_import",
     "commit_deck_import",
+    "start_study",
+    "resume_study",
+    "update_study_session",
+    "get_rating_preview",
+    "rate_card",
+    "undo_review",
+    "apply_card_action",
+    "get_session_summary",
+    "get_note_content",
+    "set_favorite_association",
+    "resolve_word_link",
 ];
 
 /// Lines returned by the diagnostic report.
@@ -85,7 +97,7 @@ pub fn reject_pending<R: Runtime>(invoke: Invoke<R>) -> Option<Invoke<R>> {
 
 /// Deserializes a command's `input` ourselves, so a malformed payload is `VALIDATION_FAILED`
 /// instead of a transport error string the UI can only show as `INTERNAL`.
-fn parse_input<T: DeserializeOwned>(input: Value) -> Result<T, ErrorDto> {
+pub(crate) fn parse_input<T: DeserializeOwned>(input: Value) -> Result<T, ErrorDto> {
     let too_large =
         serde_json::to_vec(&input).map_or(true, |bytes| bytes.len() > MAX_PAYLOAD_BYTES);
     if too_large {
@@ -103,7 +115,7 @@ fn job_id(input: Value) -> Result<JobId, ErrorDto> {
     Ok(JobId(id))
 }
 
-async fn blocking<T: Send + 'static>(
+pub(crate) async fn blocking<T: Send + 'static>(
     task: impl FnOnce() -> Result<T, ErrorDto> + Send + 'static,
 ) -> Result<T, ErrorDto> {
     tauri::async_runtime::spawn_blocking(task)
@@ -135,7 +147,7 @@ pub async fn cancel_job(backend: State<'_, Backend>, input: Value) -> Result<Job
     .await
 }
 
-fn operation_id(value: &str) -> Result<(), ErrorDto> {
+pub(crate) fn operation_id(value: &str) -> Result<(), ErrorDto> {
     if value.is_empty() || value.len() > 128 {
         return Err(error_dto(
             &ValidationError::new("operationId", "format").into(),
@@ -210,12 +222,12 @@ pub async fn complete_onboarding(
 pub async fn get_dashboard(backend: State<'_, Backend>) -> Result<DashboardDto, ErrorDto> {
     let collection = backend.collection()?;
     let (db, content) = (collection.db.clone(), collection.content.clone());
+    let clock = collection.clock.clone();
     blocking(move || {
         let pending = content.pending().map_err(|error| error_dto(&error))?;
-        let now = langualinker_application::ports::Clock::now(
-            &langualinker_infrastructure::system::SystemClock,
-        );
-        db.read(move |tx| langualinker_application::dashboard::dashboard(tx, now, &pending))
+        let now = clock.now();
+        // A write: expired burials return to their queues before counting (Phase 10).
+        db.write(move |tx| langualinker_application::dashboard::dashboard(tx, now, &pending))
             .map(crate::content::dashboard_dto)
             .map_err(|error| error_dto(&error))
     })

@@ -254,6 +254,7 @@ export const en = {
     title: 'Your decks',
     streak_one: '{{count, number}}-day streak',
     streak_other: '{{count, number}}-day streak',
+    streakHint: 'A day counts after at least one rating; a new day starts at the day cutoff. No streak freezes.',
     studiedToday: 'Studied today',
     dueToday: 'Due today',
     goal: 'Daily goal',

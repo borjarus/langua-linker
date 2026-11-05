@@ -482,6 +482,391 @@ pub struct CommitDeckImportInput {
     pub preview_token: String,
 }
 
+// ---------------------------------------------------------------- study (Phase 10)
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub enum Rating {
+    Again,
+    Hard,
+    Good,
+    Easy,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub enum CardState {
+    New,
+    Learning,
+    Review,
+    Relearning,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub enum QueueState {
+    New,
+    Learning,
+    Review,
+    DayLearn,
+    Suspended,
+    SchedBuried,
+    UserBuried,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum CardFlag {
+    None,
+    Red,
+    Orange,
+    Green,
+    Blue,
+    Pink,
+    Turquoise,
+    Purple,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum CardDirection {
+    Forward,
+    Reverse,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum AssociationProvenance {
+    Bundled,
+    Generated,
+    Manual,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum AssociationStatus {
+    Ready,
+    Pending,
+    OfflineQueued,
+    Error,
+    Blocked,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AssociationDto {
+    pub id: String,
+    pub note_id: String,
+    pub text: String,
+    pub provenance: AssociationProvenance,
+    pub favorite: bool,
+    pub status: AssociationStatus,
+    pub model: Option<String>,
+    pub error: Option<ErrorDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GrammarTipDto {
+    pub id: String,
+    pub note_id: String,
+    pub text: String,
+    pub order: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum WordLinkResolution {
+    Resolved,
+    Unresolved,
+    Ambiguous,
+    UserOverridden,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WordCandidateDto {
+    pub note_id: String,
+    pub lemma: String,
+    pub translation: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WordLinkDto {
+    pub id: String,
+    pub sentence_note_id: String,
+    pub surface: String,
+    /// UTF-16 offsets in NFC text, half-open [startIndex, endIndex) — plan §14.1.
+    pub start_index: u32,
+    pub end_index: u32,
+    pub lemma: Option<String>,
+    pub resolution: WordLinkResolution,
+    pub word_note_id: Option<String>,
+    pub translation: Option<String>,
+    pub candidates: Vec<WordCandidateDto>,
+}
+
+/// Read-only content of a note, used by the word sheet in study.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NoteContentDto {
+    pub note_id: String,
+    pub deck_id: String,
+    pub front: String,
+    pub back: String,
+    pub target_language: TargetLanguage,
+    pub capabilities: DeckCapabilitiesDto,
+    pub associations: Vec<AssociationDto>,
+    pub grammar_tips: Vec<GrammarTipDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct StudyCardDto {
+    pub card_id: String,
+    pub note_id: String,
+    pub deck_id: String,
+    pub version: u32,
+    pub deck_type: DeckType,
+    pub capabilities: DeckCapabilitiesDto,
+    pub direction: CardDirection,
+    pub state: CardState,
+    pub flag: CardFlag,
+    pub front: String,
+    pub back: String,
+    pub target_language: TargetLanguage,
+    pub associations: Vec<AssociationDto>,
+    pub grammar_tips: Vec<GrammarTipDto>,
+    pub word_links: Vec<WordLinkDto>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum StudySessionStatus {
+    Active,
+    Paused,
+    Finished,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct StudySessionDto {
+    pub session_id: String,
+    pub deck_id: Option<String>,
+    pub deck_name: Option<String>,
+    pub status: StudySessionStatus,
+    pub current: Option<StudyCardDto>,
+    /// Cards still to study today in the session's scope; `total` is their sum.
+    pub counts: DeckCountsDto,
+    pub reviewed_count: u32,
+    pub undo_available: bool,
+    pub started_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct StartStudyInput {
+    pub operation_id: String,
+    /// `null` studies all decks.
+    pub deck_id: Option<String>,
+    /// Restricts the session to these cards (e.g. "study the Again cards again"); omitted = the
+    /// normal queue.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub card_ids: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum StudySessionAction {
+    Pause,
+    Resume,
+    End,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct UpdateStudySessionInput {
+    pub operation_id: String,
+    pub session_id: String,
+    pub action: StudySessionAction,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PreviewInput {
+    pub session_id: String,
+    pub card_id: String,
+    pub card_version: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct IntervalPreviewDto {
+    pub due_at: String,
+    pub interval_seconds: u32,
+}
+
+/// One entry per rating button (`Record<Rating, …>` in TypeScript).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "PascalCase", deny_unknown_fields)]
+pub struct RatingIntervalsDto {
+    pub again: IntervalPreviewDto,
+    pub hard: IntervalPreviewDto,
+    pub good: IntervalPreviewDto,
+    pub easy: IntervalPreviewDto,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RatingPreviewDto {
+    pub card_id: String,
+    pub card_version: u32,
+    /// Card + preset version token; stale tokens are rejected with PREVIEW_STALE.
+    pub preview_token: String,
+    pub intervals: RatingIntervalsDto,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RateCardInput {
+    pub operation_id: String,
+    pub session_id: String,
+    pub card_id: String,
+    pub card_version: u32,
+    pub preview_token: String,
+    pub rating: Rating,
+    /// Monotonic active answer time, capped by the backend.
+    pub answer_ms: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ReviewedCardDto {
+    pub card_id: String,
+    pub version: u32,
+    pub state: CardState,
+    pub due_at: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ReviewResultDto {
+    pub operation_id: String,
+    pub session_id: String,
+    pub reviewed: ReviewedCardDto,
+    pub next: Option<StudyCardDto>,
+    pub counts: DeckCountsDto,
+    pub reviewed_count: u32,
+    pub undo_available: bool,
+    pub session_status: StudySessionStatus,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct UndoInput {
+    pub operation_id: String,
+    pub session_id: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum CardActionKind {
+    Suspend,
+    Unsuspend,
+    Bury,
+    Unbury,
+    Flag,
+    Delete,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CardActionInput {
+    pub operation_id: String,
+    pub card_id: String,
+    pub expected_version: u32,
+    pub action: CardActionKind,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub flag: Option<CardFlag>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CardActionResultDto {
+    pub card_id: String,
+    pub version: u32,
+    pub queue: QueueState,
+    pub flag: CardFlag,
+    pub deleted: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SessionCardDto {
+    pub card_id: String,
+    pub front: String,
+    pub back: String,
+    pub target_language: TargetLanguage,
+    pub direction: CardDirection,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(deny_unknown_fields)]
+pub struct NextDeckDto {
+    pub id: String,
+    pub name: String,
+    pub due: u32,
+}
+
+/// Valid ratings by button (`Record<Rating, number>` in TypeScript).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "PascalCase", deny_unknown_fields)]
+pub struct RatingCountsDto {
+    pub again: u32,
+    pub hard: u32,
+    pub good: u32,
+    pub easy: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SessionSummaryDto {
+    pub session_id: String,
+    pub deck_id: Option<String>,
+    pub deck_name: Option<String>,
+    pub status: StudySessionStatus,
+    pub ratings: RatingCountsDto,
+    pub reviewed_count: u32,
+    pub active_ms: u32,
+    /// Cards rated Again at least once; the summary offers to study them again.
+    pub again_cards: Vec<SessionCardDto>,
+    pub next_due_at: Option<String>,
+    /// Cards of the session's deck scope still due today.
+    pub remaining_due: u32,
+    /// Another deck with due cards, if any.
+    pub next_deck: Option<NextDeckDto>,
+    /// First finished session of this profile: the summary offers a daily reminder.
+    pub first_completed: bool,
+    pub started_at: String,
+    pub finished_at: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SetFavoriteAssociationInput {
+    pub operation_id: String,
+    pub note_id: String,
+    pub association_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ResolveWordLinkInput {
+    pub operation_id: String,
+    pub link_id: String,
+    pub word_note_id: String,
+}
+
 /// Renders every Rust-owned DTO as one TypeScript module.
 pub fn typescript() -> String {
     let cfg = ts_rs::Config::new();
@@ -531,6 +916,42 @@ pub fn typescript() -> String {
         PreviewDeckImportInput::decl(&cfg),
         DeckImportPreviewDto::decl(&cfg),
         CommitDeckImportInput::decl(&cfg),
+        Rating::decl(&cfg),
+        CardState::decl(&cfg),
+        QueueState::decl(&cfg),
+        CardFlag::decl(&cfg),
+        CardDirection::decl(&cfg),
+        AssociationProvenance::decl(&cfg),
+        AssociationStatus::decl(&cfg),
+        AssociationDto::decl(&cfg),
+        GrammarTipDto::decl(&cfg),
+        WordLinkResolution::decl(&cfg),
+        WordCandidateDto::decl(&cfg),
+        WordLinkDto::decl(&cfg),
+        NoteContentDto::decl(&cfg),
+        StudyCardDto::decl(&cfg),
+        StudySessionStatus::decl(&cfg),
+        StudySessionDto::decl(&cfg),
+        StartStudyInput::decl(&cfg),
+        StudySessionAction::decl(&cfg),
+        UpdateStudySessionInput::decl(&cfg),
+        PreviewInput::decl(&cfg),
+        IntervalPreviewDto::decl(&cfg),
+        RatingIntervalsDto::decl(&cfg),
+        RatingPreviewDto::decl(&cfg),
+        RateCardInput::decl(&cfg),
+        ReviewedCardDto::decl(&cfg),
+        ReviewResultDto::decl(&cfg),
+        UndoInput::decl(&cfg),
+        CardActionKind::decl(&cfg),
+        CardActionInput::decl(&cfg),
+        CardActionResultDto::decl(&cfg),
+        SessionCardDto::decl(&cfg),
+        NextDeckDto::decl(&cfg),
+        RatingCountsDto::decl(&cfg),
+        SessionSummaryDto::decl(&cfg),
+        SetFavoriteAssociationInput::decl(&cfg),
+        ResolveWordLinkInput::decl(&cfg),
     ];
     let mut out = String::from(
         "// Generated from crates/contracts (Rust is the DTO source, plan Phase 7 step 28).\n\
@@ -807,6 +1228,59 @@ mod tests {
             assert_eq!(ts.matches(&declaration).count(), 1, "{name}");
         }
         assert!(ts.ends_with("\n") && !ts.ends_with("\n\n"));
+    }
+
+    #[test]
+    fn study_dtos_use_the_typescript_spelling() {
+        assert_eq!(json!(Rating::Again), json!("Again"));
+        assert_eq!(json!(QueueState::SchedBuried), json!("SchedBuried"));
+        assert_eq!(json!(CardFlag::Turquoise), json!("turquoise"));
+        assert_eq!(json!(CardDirection::Reverse), json!("reverse"));
+        assert_eq!(
+            json!(AssociationStatus::OfflineQueued),
+            json!("offlineQueued")
+        );
+        assert_eq!(
+            json!(WordLinkResolution::UserOverridden),
+            json!("userOverridden")
+        );
+        let counts = RatingCountsDto {
+            again: 1,
+            hard: 2,
+            good: 3,
+            easy: 4,
+        };
+        assert_eq!(
+            round_trip(&counts),
+            json!({ "Again": 1, "Hard": 2, "Good": 3, "Easy": 4 })
+        );
+    }
+
+    #[test]
+    fn optional_inputs_may_be_omitted() {
+        let start: StartStudyInput =
+            serde_json::from_value(json!({ "operationId": "op", "deckId": null })).unwrap();
+        assert_eq!(start.card_ids, None);
+        assert!(
+            !serde_json::to_value(&start)
+                .unwrap()
+                .as_object()
+                .unwrap()
+                .contains_key("cardIds")
+        );
+        let action: CardActionInput = serde_json::from_value(json!({
+            "operationId": "op", "cardId": "1", "expectedVersion": 2, "action": "flag", "flag": "red"
+        }))
+        .unwrap();
+        assert_eq!(action.flag, Some(CardFlag::Red));
+        assert!(
+            serde_json::from_value::<RateCardInput>(json!({
+                "operationId": "op", "sessionId": "1", "cardId": "1", "cardVersion": 1,
+                "previewToken": "t", "rating": "Good", "answerMs": -1
+            }))
+            .is_err(),
+            "negative answer time is rejected by the shape"
+        );
     }
 
     #[test]

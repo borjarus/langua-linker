@@ -890,3 +890,134 @@ fn snapshots_in_logs_capture_every_scheduling_field() {
     assert_eq!(log.card_after, CardSnapshot::of(&after));
     assert_eq!(after.due_at, Some(TimestampMs(NOON + 330_000)));
 }
+
+// ---------------------------------------------------------------- open_study and scope_counts
+
+fn open(db: &Arc<SqliteDatabase>, session: SessionId, at: i64) -> AppResult<StudyView> {
+    write(db, move |tx| {
+        study::open_study(tx, session, TimestampMs(at))
+    })
+}
+
+/// Today's counts of a scope, computed read-only (no burials are lifted).
+fn scope(db: &Arc<SqliteDatabase>, deck: Option<DeckId>, at: i64) -> QueueCounts {
+    write(db, move |tx| {
+        let moment = study::study_moment(tx, TimestampMs(at))?;
+        study::scope_counts(tx, deck, &moment)
+    })
+    .unwrap()
+}
+
+/// Buries a card by hand with a burial that ended before `NOON`, as a previous day would leave it.
+fn bury_expired(db: &Arc<SqliteDatabase>, id: CardId) {
+    write(db, move |tx| {
+        let mut card = tx.card(id)?.unwrap();
+        card.queue = QueueState::SchedBuried;
+        card.buried_until = Some(TimestampMs(NOON - 1));
+        tx.update_card(&card, TimestampMs(NOON))?;
+        Ok(())
+    })
+    .unwrap();
+}
+
+#[test]
+fn open_study_keeps_a_paused_session_paused_on_the_same_card() {
+    let db = db();
+    let deck = default_deck(&db);
+    for seed in 1..=3 {
+        note(&db, seed, deck, NoteTypeKind::Basic);
+    }
+    let view = start(&db, "start", Some(deck), None, NOON).unwrap();
+    let session = view.session.id;
+    let after = rate(&db, &view, "rate", Rating::Good, NOON).unwrap().view;
+    let shown = after.current.clone().map(|card| card.id);
+    write(&db, move |tx| {
+        study::change_session(
+            tx,
+            "pause",
+            session,
+            SessionAction::Pause,
+            TimestampMs(NOON),
+        )
+    })
+    .unwrap();
+
+    let reopened = open(&db, session, NOON + MINUTE).unwrap();
+    assert_eq!(reopened.session.status, SessionStatus::Paused);
+    assert_eq!(reopened.current.map(|card| card.id), shown);
+    assert_eq!(reopened.reviewed_count, 1);
+}
+
+#[test]
+fn open_study_returns_a_finished_session_without_changing_it() {
+    let db = db();
+    let deck = default_deck(&db);
+    note(&db, 1, deck, NoteTypeKind::Basic);
+    note(&db, 2, deck, NoteTypeKind::Basic);
+    let view = start(&db, "start", Some(deck), None, NOON).unwrap();
+    let session = view.session.id;
+    rate(&db, &view, "rate", Rating::Good, NOON).unwrap();
+    write(&db, move |tx| {
+        study::change_session(tx, "end", session, SessionAction::End, TimestampMs(NOON))
+    })
+    .unwrap();
+
+    let finished = open(&db, session, NOON + MINUTE).unwrap();
+    assert_eq!(finished.session.status, SessionStatus::Finished);
+    assert_eq!(finished.session.finished_at, Some(TimestampMs(NOON)));
+    assert!(finished.current.is_none());
+    assert_eq!(finished.reviewed_count, 1);
+}
+
+#[test]
+fn open_study_returns_expired_burials_to_their_queues() {
+    let db = db();
+    let deck = default_deck(&db);
+    let first = note(&db, 1, deck, NoteTypeKind::Basic)[0];
+    note(&db, 2, deck, NoteTypeKind::Basic);
+    let view = start(&db, "start", Some(deck), None, NOON).unwrap();
+    bury_expired(&db, first);
+
+    let opened = open(&db, view.session.id, NOON).unwrap();
+    assert_eq!(card(&db, first).queue, QueueState::New);
+    assert_eq!(opened.counts.new, 2, "the lifted card is due again");
+}
+
+#[test]
+fn scope_counts_does_not_lift_burials_but_due_counts_does() {
+    let db = db();
+    let deck = default_deck(&db);
+    let first = note(&db, 1, deck, NoteTypeKind::Basic)[0];
+    note(&db, 2, deck, NoteTypeKind::Basic);
+    bury_expired(&db, first);
+
+    let read_only = scope(&db, Some(deck), NOON);
+    assert_eq!(
+        read_only.new, 1,
+        "the buried card is not in today's queue yet"
+    );
+    assert_eq!(
+        card(&db, first).queue,
+        QueueState::SchedBuried,
+        "nothing was written"
+    );
+
+    let counted = due(&db, Some(deck), NOON);
+    assert_eq!(counted.new, 2);
+    assert_eq!(card(&db, first).queue, QueueState::New);
+}
+
+#[test]
+fn scope_counts_only_covers_the_chosen_deck_tree() {
+    let db = db();
+    let first = default_deck(&db);
+    let second = deck(&db, 2, None, DeckConfigId(1));
+    note(&db, 1, first, NoteTypeKind::Basic);
+    note(&db, 2, first, NoteTypeKind::Basic);
+    for seed in 3..=5 {
+        note(&db, seed, second, NoteTypeKind::Basic);
+    }
+    assert_eq!(scope(&db, Some(first), NOON).new, 2);
+    assert_eq!(scope(&db, Some(second), NOON).new, 3);
+    assert_eq!(scope(&db, None, NOON).new, 5, "all decks together");
+}

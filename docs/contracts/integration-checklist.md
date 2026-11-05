@@ -14,6 +14,8 @@ Approved at the Phase 6 gate as the condition for replacing demo data with Rust,
 
 ## Per screen
 
+> **Phase 10 (2026-11-05).** Every Dashboard, Study and Summary operation of phase ≤ 10 is real in Rust ([ADR-16](../adr/ADR-16-learning-flow.md)); the screens are ticked after the Android device run. Still answering `NOT_IMPLEMENTED` on these screens: `createDeck` (11), `generateAssociation` (13), `getSettings`/`updateSettings` (12) — TTS stays enabled and the reminder offer stays hidden while settings are unavailable.
+
 Tick a screen when all its operations are real in the production build and its checks pass on a device. "Phase" is the plan phase that connects the operation (`backendPhase` in `operations.ts`).
 
 | Screen | Operations (phase) | Before switching the screen | Done |
@@ -21,7 +23,7 @@ Tick a screen when all its operations are real in the production build and its c
 | Shell | getAppInfo (1), onCollectionChanged (7), getSettings (12), getOnboardingState (8) | `collection_changed` emitted by every mutation; the first start routes to onboarding from the real `getOnboardingState` | ☐ |
 | Onboarding | getOnboardingState, completeOnboarding (8); getJobStatus, cancelJob, onJobEvent (7); updateSettings (12) | bundled decks installed by the importer (Phase 8); the prepare job reports progress and survives leaving the screen | ☐ |
 | Dashboard `/home` | getDashboard (8, scheduler counts 10), startStudy, resumeStudy (10); createDeck (11) | counts from the scheduler, study day with zone and cutoff; resumable session read from SQLite | ☐ |
-| Study | resumeStudy, updateStudySession, getRatingPreview, rateCard, undoReview, applyCardAction (10); getNoteContent, resolveWordLink, setFavoriteAssociation (11); generateAssociation (13); getJobStatus, onJobEvent (7); getSettings (12) | durable session (pause/resume after restart); the rating commits in one transaction before the next card; `PREVIEW_STALE` after a preset change; undo checks later mutations; TTS stays a platform adapter (15) | ☐ |
+| Study | resumeStudy, updateStudySession, getRatingPreview, rateCard, undoReview, applyCardAction, getNoteContent, resolveWordLink, setFavoriteAssociation (10); generateAssociation (13); getJobStatus, onJobEvent (7); getSettings (12) | durable session (pause/resume after restart); the rating commits in one transaction before the next card; `PREVIEW_STALE` after a preset change; undo checks later mutations; TTS stays a platform adapter (15) | ☐ |
 | Summary | getSessionSummary, startStudy (10); getSettings, updateSettings (12) | summary from review logs, not from the session object | ☐ |
 | Deck `/deck/:id` | getDeck, createDeck, updateDeck, deleteDeck, listPresets, savePreset, getEditorData (11); startStudy (10) | no cycles on move; type change hides and restores; a preset change applies to every dependent deck and refreshes previews | ☐ |
 | Card `/card/:id` | getNoteDetails, getNoteContent, deleteNote, updateNoteContent, setFavoriteAssociation, resolveWordLink, searchWords (11); applyCardAction (10); generateAssociation (13); onJobEvent (7) | per-card S/D/R from FSRS (Phase 9); delete removes history; word links become `unresolved` | ☐ |
