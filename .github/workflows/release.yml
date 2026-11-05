@@ -3,6 +3,8 @@ name: Release
 # Builds installable release-variant packages for every desktop platform and Android.
 # - Pushing a tag `vX.Y.Z` (must match `version` in src-tauri/tauri.conf.json) publishes a GitHub
 #   Release with all packages attached; a tag with a suffix (`v0.2.0-beta.1`) is a pre-release.
+#   MSI accepts only numeric versions, so a pre-release also sets `bundle.windows.wix.version`
+#   in tauri.conf.json (`0.3.0-beta.2` → `0.3.0.2`); remove it again for a final `vX.Y.Z`.
 # - Manual runs only upload the packages as workflow artifacts.
 # Signing secrets stay outside the repository (plan Phase 1 step 14). Android release signing:
 # ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD.
