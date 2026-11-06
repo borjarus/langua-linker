@@ -2025,6 +2025,12 @@
           "markdownDescription": "Enables the check_duplicate command without any pre-configured scope."
         },
         {
+          "description": "Enables the commit_deck_import command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-commit-deck-import",
+          "markdownDescription": "Enables the commit_deck_import command without any pre-configured scope."
+        },
+        {
           "description": "Enables the commit_import command without any pre-configured scope.",
           "type": "string",
           "const": "allow-commit-import",
@@ -2185,6 +2191,12 @@
           "type": "string",
           "const": "allow-preview-bulk-action",
           "markdownDescription": "Enables the preview_bulk_action command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the preview_deck_import command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-preview-deck-import",
+          "markdownDescription": "Enables the preview_deck_import command without any pre-configured scope."
         },
         {
           "description": "Enables the preview_import command without any pre-configured scope.",
@@ -2361,6 +2373,12 @@
           "markdownDescription": "Denies the check_duplicate command without any pre-configured scope."
         },
         {
+          "description": "Denies the commit_deck_import command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-commit-deck-import",
+          "markdownDescription": "Denies the commit_deck_import command without any pre-configured scope."
+        },
+        {
           "description": "Denies the commit_import command without any pre-configured scope.",
           "type": "string",
           "const": "deny-commit-import",
@@ -2521,6 +2539,12 @@
           "type": "string",
           "const": "deny-preview-bulk-action",
           "markdownDescription": "Denies the preview_bulk_action command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the preview_deck_import command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-preview-deck-import",
+          "markdownDescription": "Denies the preview_deck_import command without any pre-configured scope."
         },
         {
           "description": "Denies the preview_import command without any pre-configured scope.",

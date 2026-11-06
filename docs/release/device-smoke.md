@@ -52,6 +52,47 @@ Legend: ☑ pass · ◐ partly verified (see notes) · ☒ fail · ☐ not run. 
 | 2026-10-30 | Physical Android device (Phase 6 gate, step 7) | — | `33c44e0` (dev build) | Rows 1–26 and G1–G8 passed, reported by the product owner; device details not recorded here. |
 | 2026-11-02 | Android Emulator `Medium_Phone_API_36.1` (x86_64, Play Store image), WebView 155.0.8059.43 | Android 16 | `33c44e0` + uncommitted Phase 7 changes (dev debug APK, x86_64) | Phase 7 backend: P1–P8 below. Screenshot `docs/release/screenshots/android-phase7-start.png`. |
 | 2026-10-13 | iOS Simulator `iPhone 17` (arm64), WKWebView / MobileSafari | iOS 26.5 | `001aaf3` | See iOS notes below. Screenshots in `docs/release/screenshots/`. |
+| 2026-11-06 | Physical Samsung Galaxy A56 `SM-A566B` (arm64-v8a), WebView 156.0.8078.47 | Android 16 (API 36) | `8e437d8` (beta debug APK; beta release profile signed with the debug key for H) | Phase 10 run, parts A–E, G, H done remotely over adb; F (TalkBack) and I (iOS) not run. See notes below. Screenshots `docs/release/screenshots/android-phase10-*.png`. |
+
+### Phase 10 physical Android run (2026-11-06)
+
+Plan: [phase10-device-testing.md](phase10-device-testing.md). The run was driven remotely from the PC: taps with `adb shell input tap` (real Android touch events, coordinates read from the WebView DOM over Chrome DevTools), not with fingers; TalkBack was not listened to. Airplane mode on for the whole run (Wi-Fi off). The UI ran in **English**: the UI language follows the phone language and the settings screen cannot change it yet (`get_settings` is Phase 12), so the labels below are the English ones.
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-06 |
+| Device / ABI | Samsung Galaxy A56 `SM-A566B` / arm64-v8a |
+| Android / API | 16 / 36 |
+| WebView | com.google.android.webview 156.0.8078.47 |
+| Phone time zone | CET+0100 |
+| Commit | `8e437d8` |
+| Build | beta debug APK (A–G); beta release profile signed with the debug key (H) |
+
+| Row | Result | Note / screenshot |
+|---|---|---|
+| A1–A7 | ◐ | No automatic onboarding on a fresh install: the app opens on the empty decks screen and onboarding is reached through "Add decks" (the shell never calls `getOnboardingState`). Onboarding PL → DE → goal 20 → both DE decks → "Get started": decks screen after **≈ 1.6 s** (DOM polling, ±0.3 s; recording kept, no ffmpeg for frame stepping); **peak PSS 274 MB**. "Due today" = 0 after the import is correct (`due_today = review + learning`, [dashboard.rs](../../crates/application/src/dashboard.rs)); the plan expectation "> 0" is wrong. A6 ☑ (restart: decks straight away, log `status="current"`, no second import). The log has no entries for a successful preparation job, so A5 cannot be read from the log. A7 not run. |
+| B1–B9 | ☑ | Valid ratings: 20 / undone: 1 / duplicates: 0; order and ratings match the rating log one to one; double tap at #7 → one log; undo at #12 restores the card; summary 20 ratings, A4/H3/G9/E4, 2 min 11 s, 3 "Again" cards; streak 1; counters identical after restart; due dates: Again 1–2 min, Hard 6 min, Good 10 min, Easy 6–10 days; learning cards back after 10 min. `android-phase10-B5-summary.png`, `android-phase10-B6-dashboard.png`. |
+| C1–C6 | ◐ | Leave / resume on the same card ☑, pause → kill → "Session paused" + "Continue" → same card ☑, 2 min in background not counted (`duration_ms` 24 444, `active_ms` 24 444) ☑, "Don't keep activities" ☑, summary of the session only ☑. **Defect:** the dashboard is not refreshed after a session is started (and after "Study everything" replaced an open session): after "Leave session" the "Unfinished session" card is missing or shows the previous, finished session, and "Resume session" then opens "No more cards in this session" (`android-phase10-C2-resume-empty.png`); "Refresh" or a restart shows the right session. |
+| D1–D4 | ☑ | Kills: 12 (tap and `am force-stop` in one `adb shell`, 0–0.6 s apart). All 12 landed after COMMIT (next card on screen after restart), each gave exactly one log; valid logs 37 = 20 + 3 + 2 + 12; no duplicate `operation_id`. D1 (kill before rating): same card, no log. D4 (undo + kill): undo kept (`invalidated_at` set), card back. |
+| E1–E10 | ◐ | Bury, suspend, flag (rating afterwards fine), delete, word sheet with real content (Back closes the sheet), favourite (exactly one in `associations`), AI generation "not available yet", speech button `aria-disabled` ☑; database: `queue -3` + `buried_until`, `queue -1`, `flags 1`, `deleted_at` ☑. E4: editor shows "This feature is not available yet", but Back asks "Discard changes? You have unsaved changes" with nothing edited (`android-phase10-E4-discard-dialog.png`). |
+| F1–F10 | — | Not run (needs listening to TalkBack). |
+| G | ☑ | scheduler all decks: **4.09 ms**; one deck: **0.75 ms**; due 200: **8.43 ms** (`due_queue` group: all decks 4.14 ms, one deck 0.92 ms, one deck 200: 0.41 ms, new 20: 0.41 ms); budget 50 ms. |
+| H | ☑ | T1+T2 median: **1.36 s** (tries: 1.44, 1.30, 1.46, 1.32, 1.36; T1 1.00–1.13 s, T2 0.30–0.37 s); resume: 1.40, 1.50, 1.50 s; blank window: yes, a white frame for ≈ 0.35–0.7 s before the app background. Measured on the phone: `input tap` on the launcher icon, then `screencap` in a loop checking two pixels (≈ 0.35 s per sample, so values are rounded up). The release APK is written as `app-universal-release.apk`, not `…-unsigned.apk` as in the plan. |
+| I | — | Not run (needs a Mac). |
+| J | — | Not run (optional). |
+
+Defects (proposed priority):
+
+1. **P1 — collection time zone is always `UTC`.** Nothing sets `collection.time_zone` (migration default `'UTC'`), so on a Polish phone the study day, buried-until and streak change at 05:00 local time (06:00 in summer) instead of 04:00. Part J step 5 assumes the phone zone is saved when the collection is created.
+2. **P1 — stale "Unfinished session" on the dashboard** (C above).
+3. **P1 (release) — `liblangualinker_lib.so` not 16 KB aligned.** Android 16 shows "This app isn't 16 KB compatible … LOAD segment not aligned" on every cold start of the debuggable build (`android-phase10-X-16kb-alignment.png`); required by Google Play for apps targeting Android 15+ and needed on 16 KB page devices.
+4. **P2 — no onboarding on first start** (A above); the UI language does not follow the native language chosen in onboarding.
+5. **P2 — new-card counter.** Before the first session the words deck showed "New 10" (sentences 12), but the all-decks session served 19 new word cards and no sentence cards (deck limit `new_per_day` 20). Probably the counter counts a 20-card candidate window after sibling burial (`bury_siblings`); to be confirmed.
+6. **P2 — beta build shows "Component gallery" and "Native diagnostics"** in Settings: [SettingsScreen.svelte](../../frontend/src/features/settings/SettingsScreen.svelte) hides `devOnly` links only for `release`, not for `beta`.
+7. **P2 — "Session resumed — N cards already rated."** does not update while studying (says 13 after 14 ratings).
+8. **P2 — editor "Discard changes?"** with nothing edited (E4).
+
+Not part of the app: the default `JAVA_HOME` on the build PC (JDK 25) breaks the Gradle/Kotlin build; the APK was built with JDK 17. Also observed: Xiaomi/HyperOS refuses both `adb install` and `input` until "Install via USB" and "USB debugging (Security settings)" are on; the run moved to the Samsung.
 
 ### Phase 7 Android emulator run (2026-11-02)
 
