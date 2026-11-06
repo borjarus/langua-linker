@@ -78,7 +78,7 @@ Plan: [phase10-device-testing.md](phase10-device-testing.md). The run was driven
 | F1–F10 | — | Not run (needs listening to TalkBack). |
 | G | ☑ | scheduler all decks: **4.09 ms**; one deck: **0.75 ms**; due 200: **8.43 ms** (`due_queue` group: all decks 4.14 ms, one deck 0.92 ms, one deck 200: 0.41 ms, new 20: 0.41 ms); budget 50 ms. |
 | H | ☑ | T1+T2 median: **1.36 s** (tries: 1.44, 1.30, 1.46, 1.32, 1.36; T1 1.00–1.13 s, T2 0.30–0.37 s); resume: 1.40, 1.50, 1.50 s; blank window: yes, a white frame for ≈ 0.35–0.7 s before the app background. Measured on the phone: `input tap` on the launcher icon, then `screencap` in a loop checking two pixels (≈ 0.35 s per sample, so values are rounded up). The release APK is written as `app-universal-release.apk`, not `…-unsigned.apk` as in the plan. |
-| I | — | Not run (needs a Mac). |
+| I | ☑ | iOS Simulator (`iPhone 17`, iOS 26.5 runtime, app variant: `beta com.mila.langualinker`). Onboarding & import: **≈ 1.08 s** (86 words + 12 sentences). Part B: 20 ratings (A:4, H:3, G:9, E:4), double-tap (#7) preserved 1 log, undo (#12) marked `invalidated_at`, summary matches, restart keeps streak (1) and counters, due dates: Again ~1 min, Hard ~6 min, Good ~10 min, Easy 8–10 d. Part C: Leave session & resume on same card (`sein`) ☑; pause → kill process → restart shows `[ Paused ]` unfinished session → Continue restores exact card `sein` ☑. Part E: Bury (`queue -3`, `buried_until`), Suspend (`queue -1`), Delete (`deleted_at` set), WordSheet (`ins`: base form, translation, grammar tips, associations, backdrop close restores study) ☑; Speech button active (ADR-12 native WKWebView TTS enabled) ☑. Part F: Accessible structure, `role="group"` `aria-labelledby` for rating group, `aria-label` with intervals (`"{{rating}} — następna powtórka za {{interval}}"`), focus moved to question/answer on phase transitions ☑. Database integrity: 33 valid logs, 1 undone, 0 duplicates, 0 duration > 60 s. Screenshots: `ios-phase10-B5-summary.png`, `ios-phase10-B6-dashboard.png`, `ios-phase10-E4-editor.png`, `ios-phase10-E4-discard-dialog.png`, `ios-phase10-E5-sentence-card.png`, `ios-phase10-E5-wordsheet.png`, `ios-phase10-F10-dashboard.png`. |
 | J | — | Not run (optional). |
 
 Defects (proposed priority):
@@ -91,6 +91,15 @@ Defects (proposed priority):
 6. **P2 — beta build shows "Component gallery" and "Native diagnostics"** in Settings: [SettingsScreen.svelte](../../frontend/src/features/settings/SettingsScreen.svelte) hides `devOnly` links only for `release`, not for `beta`.
 7. **P2 — "Session resumed — N cards already rated."** does not update while studying (says 13 after 14 ratings).
 8. **P2 — editor "Discard changes?"** with nothing edited (E4).
+9. **P2 — Svelte 5 `$derived` state mutation prevents flag selection in `CardActions.svelte` and accordion expansion in `Disclosure.svelte`:**
+   - In [CardActions.svelte](../../frontend/src/features/study/CardActions.svelte#L25), `let flag = $derived<CardFlag>(card.flag)` is bound via `bind:group={flag}` to radio inputs. Mutating a `$derived` rune is rejected at runtime in Svelte 5, so picking a flag does not update `flag` (it remains `card.flag` = `'none'`), and tapping "Set flag" only ever sends `'none'` without persisting any flag.
+   - In [Disclosure.svelte](../../frontend/src/components/Disclosure.svelte#L16), `let open = $derived(expanded)` with `onclick={() => (open = !open)}` cannot be toggled because assigning to `$derived` fails at runtime, leaving collapsed accordions stuck collapsed.
+10. **P2 — Top safe-area touch boundary on iOS (`Screen.svelte`):**
+    - On iPhone 17 (402 × 874 pt), the top safe area / Dynamic Island spans y = 0 to ~50 pt. The `<` back button in [Screen.svelte](../../frontend/src/features/shared/Screen.svelte#L30) renders at y ≈ 40 pt without `env(safe-area-inset-top)` padding, causing native touches to be intercepted by the iOS status bar rather than the web back button.
+11. **P2 — Bottom deck card "Study" button overlap with fixed bottom navigation on iOS:**
+    - When the decks list is scrolled to the bottom, Deck 2's "Study" button sits at y ≈ 790 pt, partially overlapping the tap targets of the fixed bottom navigation bar (Statistics / Settings tabs).
+12. **P2 — Missing `onfavorite` callback in `WordDetails.svelte`:**
+    - [WordDetails.svelte](../../frontend/src/features/study/WordDetails.svelte#L26) embeds `<AssociationPanel associations={note.associations} expanded />` without `onfavorite`, so associations shown inside the sentence WordSheet do not render the "Mark as favorite" button.
 
 Not part of the app: the default `JAVA_HOME` on the build PC (JDK 25) breaks the Gradle/Kotlin build; the APK was built with JDK 17. Also observed: Xiaomi/HyperOS refuses both `adb install` and `input` until "Install via USB" and "USB debugging (Security settings)" are on; the run moved to the Samsung.
 
