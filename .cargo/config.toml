@@ -1,0 +1,11 @@
+# Android 15+ devices may use 16 KB memory pages; Google Play requires native
+# libraries whose ELF LOAD segments are 16 KB aligned. NDK r27 still links with
+# 4 KB alignment by default (r28+ switches to 16 KB), so force it here.
+# APK zip alignment of the .so is handled by AGP >= 8.5.1.
+# https://developer.android.com/guide/practices/page-sizes
+
+[target.aarch64-linux-android]
+rustflags = ["-C", "link-arg=-Wl,-z,max-page-size=16384"]
+
+[target.x86_64-linux-android]
+rustflags = ["-C", "link-arg=-Wl,-z,max-page-size=16384"]
