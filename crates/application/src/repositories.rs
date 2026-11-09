@@ -471,6 +471,149 @@ pub trait SchedulerQueries {
     fn expired_buried_cards(&mut self, now: TimestampMs) -> AppResult<Vec<CardId>>;
 }
 
+/// Associations, tips and word links stored for a set of notes (deck type previews).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ContentCounts {
+    pub associations: u32,
+    pub grammar_tips: u32,
+    pub word_links: u32,
+}
+
+/// A note found by its normalized front (duplicate warning).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NoteMatch {
+    pub note_id: NoteId,
+    pub front: String,
+    pub deck_id: DeckId,
+}
+
+/// A word note (not a sentence) with the deck of its first card.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WordNote {
+    pub note_id: NoteId,
+    pub front: String,
+    pub back: String,
+    pub deck_id: DeckId,
+}
+
+/// Sort keys of the card browser; the SQL expression of each is fixed by the repository.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CardSort {
+    /// Scheduled cards by due time, then new cards by queue position.
+    Due,
+    /// Note creation order.
+    Created,
+    /// Note front, case-folded.
+    Front,
+    /// Deck name, case-folded.
+    Deck,
+    Reps,
+    Lapses,
+}
+
+/// Value of the sort key of one row, carried by a keyset cursor.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(untagged)]
+pub enum SortValue {
+    Number(i64),
+    Text(String),
+}
+
+/// Position after which the next page starts: the last row's sort value and card id.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct CardCursor {
+    pub value: SortValue,
+    pub card_id: i64,
+}
+
+/// Which cards a browser search matches. Every user value is bound as a parameter.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct CardFilter {
+    /// FTS5 query over the note fields, already escaped by the parser.
+    pub fts: Option<String>,
+    /// Card decks (the deck filter and `deck:` resolved to ids, subdecks included); `None` =
+    /// every deck, an empty list matches nothing.
+    pub decks: Option<Vec<DeckId>>,
+    /// Tags the note must carry (case-insensitive), all of them.
+    pub tags: Vec<String>,
+    /// New cards only.
+    pub new_only: bool,
+    /// Scheduled (not new) cards due before this time.
+    pub due_before: Option<TimestampMs>,
+    pub suspended_only: bool,
+    /// Notes created at or after this time (`added:N`).
+    pub added_since: Option<TimestampMs>,
+    /// Card states (empty = any).
+    pub states: Vec<langualinker_domain::card::CardState>,
+    /// Card flags (empty = any).
+    pub flags: Vec<langualinker_domain::card::CardFlag>,
+}
+
+/// One card as the browser lists it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CardRow {
+    pub card: Card,
+    pub note: Note,
+    pub deck_name: String,
+    pub direction: langualinker_domain::note::CardDirection,
+    /// Value of the requested sort key (for the next cursor).
+    pub sort_value: SortValue,
+}
+
+/// Management read models and writes of Phase 11 (decks, presets, editor, browser).
+pub trait ManagementRepository {
+    /// Associations (ready), tips and links of the notes whose first live card is in `deck`.
+    fn deck_content_counts(&mut self, deck: DeckId) -> AppResult<ContentCounts>;
+    /// Active decks per preset.
+    fn decks_per_config(&mut self) -> AppResult<Vec<(DeckConfigId, u32)>>;
+    /// Soft-deletes every live card of the decks; returns how many cards were deleted.
+    fn soft_delete_cards_of_decks(&mut self, decks: &[DeckId], at: TimestampMs) -> AppResult<u32>;
+    /// Soft-deletes notes that no longer have a live card; returns them.
+    fn soft_delete_orphan_notes(&mut self, at: TimestampMs) -> AppResult<Vec<NoteId>>;
+    /// Tags of live notes, sorted case-insensitively.
+    fn all_tags(&mut self) -> AppResult<Vec<String>>;
+    /// Live notes with a live card in `decks` whose sort field equals `sort_field`.
+    fn notes_by_sort_field(
+        &mut self,
+        decks: &[DeckId],
+        sort_field: &str,
+        exclude: Option<NoteId>,
+    ) -> AppResult<Vec<NoteMatch>>;
+    /// Live word notes (non-sentence note types) whose first live card is in one of `decks`.
+    fn word_notes(&mut self, decks: &[DeckId]) -> AppResult<Vec<WordNote>>;
+    fn set_grammar_tip_order(
+        &mut self,
+        tip: GrammarTipId,
+        order: i64,
+        at: TimestampMs,
+    ) -> AppResult<()>;
+    fn soft_delete_grammar_tip(&mut self, tip: GrammarTipId, at: TimestampMs) -> AppResult<()>;
+    fn update_manual_association_text(
+        &mut self,
+        id: AssociationId,
+        text: &str,
+        at: TimestampMs,
+    ) -> AppResult<()>;
+    fn delete_word_link(&mut self, id: WordLinkId) -> AppResult<()>;
+    /// One page of matching live, not archived cards ordered by `sort` then card id.
+    fn search_cards(
+        &mut self,
+        filter: &CardFilter,
+        sort: CardSort,
+        descending: bool,
+        after: Option<&CardCursor>,
+        limit: u32,
+    ) -> AppResult<Vec<CardRow>>;
+    fn count_cards(&mut self, filter: &CardFilter) -> AppResult<u32>;
+    /// Ids of every matching card in the browser order.
+    fn matching_card_ids(
+        &mut self,
+        filter: &CardFilter,
+        sort: CardSort,
+        descending: bool,
+    ) -> AppResult<Vec<CardId>>;
+}
+
 /// Every repository inside one transaction.
 pub trait Repositories:
     DeckRepository
@@ -487,6 +630,7 @@ pub trait Repositories:
     + DashboardQueries
     + StudyRepository
     + SchedulerQueries
+    + ManagementRepository
 {
 }
 
@@ -505,6 +649,7 @@ impl<T> Repositories for T where
         + DashboardQueries
         + StudyRepository
         + SchedulerQueries
+        + ManagementRepository
 {
 }
 

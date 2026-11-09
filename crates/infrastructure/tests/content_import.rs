@@ -470,7 +470,10 @@ fn update_with_fifty_new_notes_preserves_progress_and_overrides() {
     );
     assert_eq!(kept_cards[0].reps, studied_removed_card.reps);
     assert_eq!(version.as_deref(), Some("2026.12.01"));
-    assert_eq!(harness.count("SELECT COUNT(*) FROM notes"), words as i64 + 50);
+    assert_eq!(
+        harness.count("SELECT COUNT(*) FROM notes"),
+        words as i64 + 50
+    );
 }
 
 /// Serves a notes file normally on the first open (validation) and fails half-way through on

@@ -59,6 +59,22 @@ pub const IMPLEMENTED: &[&str] = &[
     "get_note_content",
     "set_favorite_association",
     "resolve_word_link",
+    "get_deck",
+    "create_deck",
+    "update_deck",
+    "delete_deck",
+    "list_presets",
+    "save_preset",
+    "get_note_details",
+    "get_editor_data",
+    "check_duplicate",
+    "save_note",
+    "delete_note",
+    "update_note_content",
+    "search_words",
+    "search_cards",
+    "preview_bulk_action",
+    "apply_bulk_action",
 ];
 
 /// Lines returned by the diagnostic report.

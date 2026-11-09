@@ -120,6 +120,7 @@ export const en = {
     targetLanguages: {
       de: 'German',
       en: 'English',
+      es: 'Spanish',
     },
     counts: {
       new: 'New',
@@ -901,6 +902,7 @@ export const en = {
       samples: {
         de: 'Guten Morgen! Wie geht es dir?',
         en: 'Good morning! How are you?',
+        es: '¡Buenos días! ¿Cómo estás?',
       },
     },
     sections: 'More settings',
@@ -1110,7 +1112,7 @@ export const en = {
       pickOther: 'Choose another package',
       level: 'level {{level}}',
       origin: 'From {{file}}, converted {{date}}',
-      languages: { de: 'German', en: 'English' },
+      languages: { de: 'German', en: 'English', es: 'Spanish' },
       kinds: { words: 'words', sentences: 'sentences' },
       noteTypes: {
         Basic: 'one card per note',

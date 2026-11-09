@@ -1,6 +1,6 @@
 <script lang="ts">
   import { toErrorDto } from '../../api/errors'
-  import { DECK_TYPES, type DeckOverviewDto, type DeckType, type ErrorDto, type TargetLanguage } from '../../api/types'
+  import { DECK_TYPES, TARGET_LANGUAGES, type DeckOverviewDto, type DeckType, type ErrorDto, type TargetLanguage } from '../../api/types'
   import { useServices } from '../../app/context'
   import Dialog from '../../components/Dialog.svelte'
   import ErrorState from '../../components/ErrorState.svelte'
@@ -79,8 +79,9 @@
     <div class="field">
       <label for="{ids}-language">{i18n.t('deck.form.targetLanguage')}</label>
       <select id="{ids}-language" class="input" bind:value={targetLanguage}>
-        <option value="de">{i18n.t('deck.targetLanguages.de')}</option>
-        <option value="en">{i18n.t('deck.targetLanguages.en')}</option>
+        {#each TARGET_LANGUAGES as language (language)}
+          <option value={language}>{i18n.t(`deck.targetLanguages.${language}`)}</option>
+        {/each}
       </select>
     </div>
     <fieldset class="types">

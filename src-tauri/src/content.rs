@@ -38,6 +38,10 @@ pub static BUNDLED_FILES: &[(&str, &[u8])] = embedded![
     "en_words_a1.ndjson",
     "en_sentences_a1.json",
     "en_sentences_a1.ndjson",
+    "es_words_a1.json",
+    "es_words_a1.ndjson",
+    "es_sentences_a1.json",
+    "es_sentences_a1.ndjson",
 ];
 
 pub static BUNDLED: StaticSource = StaticSource::new(BUNDLED_FILES);
@@ -106,6 +110,7 @@ pub fn target_language(language: deck::TargetLanguage) -> TargetLanguage {
     match language {
         deck::TargetLanguage::De => TargetLanguage::De,
         deck::TargetLanguage::En => TargetLanguage::En,
+        deck::TargetLanguage::Es => TargetLanguage::Es,
     }
 }
 
@@ -113,6 +118,7 @@ pub fn domain_target_language(language: TargetLanguage) -> deck::TargetLanguage 
     match language {
         TargetLanguage::De => deck::TargetLanguage::De,
         TargetLanguage::En => deck::TargetLanguage::En,
+        TargetLanguage::Es => deck::TargetLanguage::Es,
     }
 }
 

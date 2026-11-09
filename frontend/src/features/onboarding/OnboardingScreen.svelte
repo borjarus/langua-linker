@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
-  import { ONBOARDING_STEPS, type OnboardingStateDto, type OnboardingStep, type TargetLanguage } from '../../api/types'
+  import { ONBOARDING_STEPS, TARGET_LANGUAGES, type OnboardingStateDto, type OnboardingStep, type TargetLanguage } from '../../api/types'
   import { useServices } from '../../app/context'
   import Chip from '../../components/Chip.svelte'
   import ErrorState from '../../components/ErrorState.svelte'
@@ -24,7 +24,7 @@
   const job = new JobTracker(api)
   $effect(() => job.listen())
 
-  const TARGETS: TargetLanguage[] = ['de', 'en']
+  const TARGETS: readonly TargetLanguage[] = TARGET_LANGUAGES
   const GOALS = [10, 20, 30, 50] as const
   const fromSettings = $derived(from === 'settings')
 

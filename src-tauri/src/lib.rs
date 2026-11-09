@@ -5,6 +5,7 @@ mod commands;
 mod content;
 mod diagnostics;
 mod files;
+mod manage;
 mod study;
 
 use std::path::PathBuf;
@@ -118,6 +119,22 @@ fn configure<R: Runtime>(
         study::get_note_content,
         study::set_favorite_association,
         study::resolve_word_link,
+        manage::get_deck,
+        manage::create_deck,
+        manage::update_deck,
+        manage::delete_deck,
+        manage::list_presets,
+        manage::save_preset,
+        manage::get_note_details,
+        manage::get_editor_data,
+        manage::check_duplicate,
+        manage::save_note,
+        manage::delete_note,
+        manage::update_note_content,
+        manage::search_words,
+        manage::search_cards,
+        manage::preview_bulk_action,
+        manage::apply_bulk_action,
         diagnostics::probe_secret_store,
         diagnostics::probe_file_open,
         diagnostics::probe_file_save
@@ -464,14 +481,14 @@ mod tests {
         )
         .unwrap();
         assert!(!state.completed);
-        assert_eq!(state.available_decks.len(), 4);
+        assert_eq!(state.available_decks.len(), 6);
         let guids: Vec<String> = state
             .available_decks
             .iter()
             .map(|deck| deck.guid.clone())
             .collect();
         let input = serde_json::json!({ "input": {
-            "operationId": "op-onboarding", "nativeLanguage": "pl", "targetLanguages": ["de", "en"],
+            "operationId": "op-onboarding", "nativeLanguage": "pl", "targetLanguages": ["de", "en", "es"],
             "dailyGoal": 30, "deckGuids": guids,
         }});
         let job: JobDto =
@@ -493,14 +510,14 @@ mod tests {
             std::thread::sleep(Duration::from_millis(10));
         }
         assert!(
-            matches!(status.result, Some(JobResultDto::PrepareContent { created: 3112, ref deck_ids, .. }) if deck_ids.len() == 4),
+            matches!(status.result, Some(JobResultDto::PrepareContent { created: 5024, ref deck_ids, .. }) if deck_ids.len() == 6),
             "{status:?}"
         );
         let dashboard: DashboardDto = serde_json::from_value(
             invoke(&window, "get_dashboard", serde_json::json!({})).unwrap(),
         )
         .unwrap();
-        assert_eq!(dashboard.decks.len(), 4);
+        assert_eq!(dashboard.decks.len(), 6);
         assert_eq!(dashboard.daily_goal, 30);
         assert_eq!(
             dashboard
@@ -508,7 +525,7 @@ mod tests {
                 .iter()
                 .map(|deck| deck.counts.total)
                 .sum::<u32>(),
-            3598
+            6147
         );
         // New cards shown for today respect the preset's daily limit (Phase 10).
         assert!(dashboard.decks.iter().all(|deck| deck.counts.new <= 20));
@@ -517,7 +534,7 @@ mod tests {
         )
         .unwrap();
         assert!(state.completed);
-        assert_eq!(state.installed_deck_guids.len(), 4);
+        assert_eq!(state.installed_deck_guids.len(), 6);
         let licences: Vec<AttributionDto> = serde_json::from_value(
             invoke(&window, "get_attributions", serde_json::json!({})).unwrap(),
         )
@@ -535,6 +552,165 @@ mod tests {
         )
         .unwrap_err();
         assert_eq!(error_code(error), ErrorCode::ValidationFailed);
+    }
+
+    /// Phase 11 over IPC: deck, preset, editor, details, browser and bulk commands accept the
+    /// contract inputs, answer the contract shapes and keep the editing rules (two cards for a
+    /// reversed note, idempotent retries, conflicts on stale versions, stale bulk selections).
+    #[test]
+    fn content_management_runs_end_to_end_over_ipc() {
+        use langualinker_contracts::dto::{
+            BulkPreviewDto, BulkResultDto, CardPageDto, DeckOverviewDto, DeleteDeckResultDto,
+            EditorDataDto, NoteDetailsDto, PresetDto, WordMatchDto,
+        };
+        let app = app();
+        let window = main_window(&app);
+        let call = |cmd: &str, input: serde_json::Value| {
+            invoke(&window, cmd, serde_json::json!({ "input": input }))
+        };
+        let deck: DeckOverviewDto = serde_json::from_value(
+            call(
+                "create_deck",
+                serde_json::json!({ "operationId": "d1", "name": "Hiszpański",
+                "parentId": null, "targetLanguage": "es", "deckType": "Linguistic" }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(deck.type_options.len(), 3);
+        let deck_id = deck.deck.id.clone();
+        let editor: EditorDataDto =
+            serde_json::from_value(call("get_editor_data", serde_json::json!(null)).unwrap())
+                .unwrap();
+        assert_eq!(editor.note_types.len(), 4);
+        assert!(editor.decks.iter().any(|option| option.id == deck_id));
+
+        let save = serde_json::json!({ "operationId": "n1", "noteId": null,
+            "expectedVersion": null, "deckId": deck_id, "noteTypeKind": "BasicAndReversed",
+            "front": "el perro", "back": "pies", "tags": ["zwierzęta"],
+            "manualAssociation": "Pero ro — pies szczeka", "grammarTips": ["el perro, los perros"],
+            "wordLinks": null });
+        let note: NoteDetailsDto =
+            serde_json::from_value(call("save_note", save.clone()).unwrap()).unwrap();
+        assert_eq!(note.cards.len(), 2);
+        assert_eq!(
+            note.target_language,
+            langualinker_contracts::dto::TargetLanguage::Es
+        );
+        let retried: NoteDetailsDto =
+            serde_json::from_value(call("save_note", save).unwrap()).unwrap();
+        assert_eq!(
+            retried.note.id, note.note.id,
+            "a retry returns the first note"
+        );
+
+        let words: Vec<WordMatchDto> = serde_json::from_value(
+            call(
+                "search_words",
+                serde_json::json!({ "targetLanguage": "es", "text": "perro",
+                "limit": 5 }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(words.len(), 1);
+
+        let details: NoteDetailsDto = serde_json::from_value(
+            invoke(
+                &window,
+                "get_note_details",
+                serde_json::json!({ "input": note.cards[1].id }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(details.grammar_tips.len(), 1);
+        let stale = call(
+            "delete_note",
+            serde_json::json!({ "operationId": "del-stale",
+            "noteId": note.note.id, "expectedVersion": 99 }),
+        )
+        .unwrap_err();
+        assert_eq!(error_code(stale), ErrorCode::VersionConflict);
+
+        let page: CardPageDto = serde_json::from_value(
+            call(
+                "search_cards",
+                serde_json::json!({ "query": "perro", "deckId": null,
+                "tag": null, "states": [], "flags": [], "sort": "due", "direction": "asc",
+                "cursor": null, "pageSize": 50 }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(page.total, 2);
+        let selection = serde_json::json!({ "kind": "query", "filterVersion": page.filter_version,
+            "excludedCardIds": [] });
+        let preview: BulkPreviewDto = serde_json::from_value(
+            call(
+                "preview_bulk_action",
+                serde_json::json!({ "selection": selection,
+                "action": { "type": "flag", "flag": "red" } }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!((preview.affected, preview.notes), (2, 1));
+        let applied: BulkResultDto = serde_json::from_value(
+            call(
+                "apply_bulk_action",
+                serde_json::json!({ "operationId": "b1",
+                "selection": selection, "action": { "type": "flag", "flag": "red" } }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(applied.affected, 2);
+        let stale = call(
+            "preview_bulk_action",
+            serde_json::json!({ "selection": selection,
+            "action": { "type": "suspend" } }),
+        )
+        .unwrap_err();
+        assert_eq!(error_code(stale), ErrorCode::PreviewStale);
+
+        let presets: Vec<PresetDto> =
+            serde_json::from_value(call("list_presets", serde_json::json!(null)).unwrap()).unwrap();
+        assert!(presets[0].built_in);
+        let mut config = serde_json::to_value(&presets[0].config).unwrap();
+        config["newPerDay"] = serde_json::json!(5);
+        let clone: PresetDto = serde_json::from_value(
+            call(
+                "save_preset",
+                serde_json::json!({ "operationId": "p1", "presetId": null,
+                "expectedVersion": null, "name": "Powoli", "config": config }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let moved: DeckOverviewDto = serde_json::from_value(
+            call(
+                "update_deck",
+                serde_json::json!({ "operationId": "u1", "deckId": deck_id,
+                "expectedVersion": deck.deck.version, "patch": { "presetId": clone.id } }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(moved.preset_name, "Powoli");
+        let deleted: DeleteDeckResultDto = serde_json::from_value(
+            call(
+                "delete_deck",
+                serde_json::json!({ "operationId": "x1", "deckId": deck_id,
+                "expectedVersion": moved.deck.version }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!((deleted.deleted_decks, deleted.deleted_cards), (1, 2));
+        let gone =
+            invoke(&window, "get_deck", serde_json::json!({ "input": deck_id })).unwrap_err();
+        assert_eq!(error_code(gone), ErrorCode::Deleted);
     }
 
     /// A mock app over a collection file in `dir`, opened as the real app opens it.

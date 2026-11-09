@@ -69,6 +69,18 @@ pub fn utf16_offset(text: &str, byte: usize) -> u32 {
     utf16_len(&text[..byte])
 }
 
+/// Case- and diacritic-folded form used to compare words: lowercase, combining marks removed
+/// after canonical decomposition, `ß` as `ss` (`Brücke` and `brucke`, `Straße` and `strasse` fold
+/// to the same text). Only for matching; stored text is never folded.
+pub fn fold(text: &str) -> String {
+    text.trim()
+        .to_lowercase()
+        .nfd()
+        .filter(|ch| !unicode_normalization::char::is_combining_mark(*ch))
+        .collect::<String>()
+        .replace('ß', "ss")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

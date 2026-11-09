@@ -1,6 +1,6 @@
 <script lang="ts">
   import { toErrorDto } from '../../api/errors'
-  import type { ErrorDto, SettingsDto, TargetLanguage, ThemePreference, UiLanguage } from '../../api/types'
+  import { TARGET_LANGUAGES, type ErrorDto, type SettingsDto, type TargetLanguage, type ThemePreference, type UiLanguage } from '../../api/types'
   import { savePreference } from '../../app/bootstrap'
   import { useServices } from '../../app/context'
   import { href, type RouteTarget } from '../../app/routes'
@@ -22,7 +22,7 @@
   const presets = useQuery(queries, () => ({ key: ['presets'], fetch: () => api.listPresets() }))
   const THEMES: ThemePreference[] = ['system', 'light', 'dark']
   const SCALES: TextScale[] = ['normal', 'large', 'huge']
-  const TARGETS: TargetLanguage[] = ['de', 'en']
+  const TARGETS: readonly TargetLanguage[] = TARGET_LANGUAGES
   const HOURS = Array.from({ length: 24 }, (_, hour) => hour)
   const FALLBACK_ZONES = ['Europe/Warsaw', 'Europe/Berlin', 'Europe/London', 'Europe/Dublin', 'America/New_York', 'UTC']
 

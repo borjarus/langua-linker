@@ -90,7 +90,7 @@ field: string | null, };
 
 export type NativeLanguage = "pl";
 
-export type TargetLanguage = "de" | "en";
+export type TargetLanguage = "de" | "en" | "es";
 
 export type DeckType = "Simple" | "TextWithAssociations" | "Linguistic";
 
@@ -304,3 +304,182 @@ firstCompleted: boolean, startedAt: string, finishedAt: string | null, };
 export type SetFavoriteAssociationInput = { operationId: string, noteId: string, associationId: string, };
 
 export type ResolveWordLinkInput = { operationId: string, linkId: string, wordNoteId: string, };
+
+export type HiddenSectionCountsDto = { associations: number, grammarTips: number, wordLinks: number, };
+
+export type DeckTypeOptionDto = { deckType: DeckType, capabilities: DeckCapabilitiesDto, hiddenCounts: HiddenSectionCountsDto, };
+
+export type DeckOverviewDto = { deck: DeckSummaryDto, 
+/**
+ * Every deck below this one (any depth), each parent listed before its children.
+ */
+subdecks: Array<DeckSummaryDto>, description: string, presetId: string, presetName: string, presetDependentDecks: number, 
+/**
+ * Content kept but hidden by the current deck type.
+ */
+hiddenSectionCounts: HiddenSectionCountsDto, typeOptions: Array<DeckTypeOptionDto>, };
+
+export type CreateDeckInput = { operationId: string, name: string, parentId: string | null, targetLanguage: TargetLanguage, deckType: DeckType, };
+
+export type DeckPatchDto = { name?: string, description?: string, 
+/**
+ * `null` moves the deck to the top level.
+ */
+parentId?: string | null, deckType?: DeckType, presetId?: string, };
+
+export type UpdateDeckInput = { operationId: string, deckId: string, expectedVersion: number, patch: DeckPatchDto, };
+
+export type DeleteDeckInput = { operationId: string, deckId: string, expectedVersion: number, };
+
+export type DeleteDeckResultDto = { deletedDecks: number, deletedCards: number, };
+
+export type PresetConfigDto = { newPerDay: number, reviewsPerDay: number, 
+/**
+ * 0.70–0.99.
+ */
+desiredRetention: number, maxIntervalDays: number, learningStepsMinutes: Array<number>, relearningStepsMinutes: Array<number>, 
+/**
+ * FSRS-6 weights w0–w20.
+ */
+weights: Array<number>, };
+
+export type PresetDto = { id: string, name: string, version: number, 
+/**
+ * Built-in presets can be cloned and edited like any other.
+ */
+builtIn: boolean, 
+/**
+ * Decks using this preset; a change applies to all of them.
+ */
+dependentDecks: number, config: PresetConfigDto, };
+
+export type SavePresetInput = { operationId: string, 
+/**
+ * `null` creates a preset (also used to clone one).
+ */
+presetId: string | null, expectedVersion: number | null, name: string, config: PresetConfigDto, };
+
+export type NoteDto = { id: string, guid: string, noteTypeKind: NoteTypeKind, front: string, back: string, tags: Array<string>, version: number, createdAt: string, updatedAt: string, };
+
+export type ReviewLogDto = { id: string, reviewedAt: string, rating: Rating, stateBefore: CardState, intervalSeconds: number, };
+
+export type RetrievabilityDto = { value: number, computedAt: string, };
+
+export type CardDetailsDto = { id: string, noteId: string, 
+/**
+ * The scheduling deck belongs to the card: cards of one note may sit in different decks.
+ */
+deckId: string, deckName: string, ordinal: number, direction: CardDirection, state: CardState, queue: QueueState, flag: CardFlag, dueAt: string | null, stability: number | null, difficulty: number | null, retrievability: RetrievabilityDto | null, reps: number, lapses: number, version: number, history: Array<ReviewLogDto>, };
+
+export type NoteDetailsDto = { note: NoteDto, 
+/**
+ * Deck of the note's first card; decides which sections the details and the editor show.
+ */
+deckId: string, targetLanguage: TargetLanguage, capabilities: DeckCapabilitiesDto, 
+/**
+ * Live cards; each has its own schedule.
+ */
+cards: Array<CardDetailsDto>, 
+/**
+ * Template ordinals archived by a note-type change; switching back restores them with
+ * history.
+ */
+archivedOrdinals: Array<number>, associations: Array<AssociationDto>, grammarTips: Array<GrammarTipDto>, wordLinks: Array<WordLinkDto>, };
+
+export type DeleteNoteInput = { operationId: string, noteId: string, expectedVersion: number, };
+
+export type DeleteNoteResultDto = { deletedCards: number, };
+
+export type NoteContentChange = { "type": "addTip", text: string, } | { "type": "editTip", tipId: string, text: string, } | { "type": "deleteTip", tipId: string, } | { "type": "reorderTips", tipIds: Array<string>, } | { "type": "addAssociation", text: string, } | { "type": "editAssociation", associationId: string, text: string, } | { "type": "deleteAssociation", associationId: string, } | { "type": "unlinkWord", linkId: string, };
+
+export type UpdateNoteContentInput = { operationId: string, noteId: string, change: NoteContentChange, };
+
+export type EditorDeckOptionDto = { id: string, name: string, parentId: string | null, deckType: DeckType, capabilities: DeckCapabilitiesDto, targetLanguage: TargetLanguage, };
+
+export type NoteTemplateDto = { ordinal: number, direction: CardDirection, };
+
+export type NoteTypeDto = { kind: NoteTypeKind, templates: Array<NoteTemplateDto>, };
+
+export type EditorDataDto = { decks: Array<EditorDeckOptionDto>, noteTypes: Array<NoteTypeDto>, tags: Array<string>, maxFieldLength: number, };
+
+export type WordLinkDraftDto = { startIndex: number, endIndex: number, surface: string, 
+/**
+ * `null` keeps the phrase marked but unresolved; the backend never picks a word on its own.
+ */
+wordNoteId: string | null, };
+
+export type SaveNoteInput = { operationId: string, 
+/**
+ * `null` creates a note.
+ */
+noteId: string | null, expectedVersion: number | null, deckId: string, noteTypeKind: NoteTypeKind, front: string, back: string, tags: Array<string>, manualAssociation: string | null, 
+/**
+ * Tips appended to the note; existing tips are edited on the card details.
+ */
+grammarTips: Array<string>, 
+/**
+ * Complete set of word links for a sentence; `null` keeps the stored links.
+ */
+wordLinks: Array<WordLinkDraftDto> | null, };
+
+export type SearchWordsInput = { targetLanguage: TargetLanguage, text: string, limit: number, };
+
+export type WordMatchKind = "exact" | "normalized";
+
+export type WordMatchDto = { noteId: string, lemma: string, translation: string, deckName: string, match: WordMatchKind, };
+
+export type DuplicateCheckInput = { deckId: string, front: string, excludeNoteId: string | null, };
+
+export type DuplicateNoteDto = { noteId: string, front: string, deckName: string, };
+
+export type DuplicateCheckDto = { duplicates: Array<DuplicateNoteDto>, };
+
+export type SortKey = "due" | "created" | "front" | "deck" | "reps" | "lapses";
+
+export type SortDirection = "asc" | "desc";
+
+export type SearchInput = { query: string, deckId: string | null, tag: string | null, states: Array<CardState>, flags: Array<CardFlag>, sort: SortKey, direction: SortDirection, 
+/**
+ * Opaque keyset cursor from a previous page.
+ */
+cursor: string | null, pageSize: number, };
+
+export type CardRowDto = { cardId: string, noteId: string, deckId: string, deckName: string, front: string, back: string, state: CardState, queue: QueueState, flag: CardFlag, dueAt: string | null, 
+/**
+ * Order of a new card in the new queue; `null` for cards already studied.
+ */
+position: number | null, direction: CardDirection, tags: Array<string>, };
+
+export type CardPageDto = { items: Array<CardRowDto>, nextCursor: string | null, total: number, 
+/**
+ * Snapshot token used by bulk actions over "all matches".
+ */
+filterVersion: string, };
+
+export type BulkSelection = { "kind": "ids", cardIds: Array<string>, } | { "kind": "query", filterVersion: string, excludedCardIds: Array<string>, };
+
+export type BulkAction = { "type": "suspend" } | { "type": "unsuspend" } | { "type": "flag", flag: CardFlag, } | { "type": "changeDeck", deckId: string, } | { "type": "addTag", tag: string, } | { "type": "removeTag", tag: string, } | { "type": "reposition", start: number, step: number, } | { "type": "delete" };
+
+export type BulkActionInput = { operationId: string, selection: BulkSelection, action: BulkAction, };
+
+export type BulkPreviewInput = { selection: BulkSelection, action: BulkAction, };
+
+export type BulkPreviewDto = { 
+/**
+ * Cards in the selection.
+ */
+selected: number, 
+/**
+ * Cards the action would change.
+ */
+affected: number, 
+/**
+ * Cards left as they are (already in that state, or not new for reposition).
+ */
+unchanged: number, 
+/**
+ * Notes and decks the affected cards belong to.
+ */
+notes: number, decks: number, };
+
+export type BulkResultDto = { affected: number, };

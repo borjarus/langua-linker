@@ -103,11 +103,11 @@ pub struct SessionSummary {
     pub first_completed: bool,
 }
 
-fn live_deck(tx: &mut dyn Repositories, id: DeckId) -> AppResult<Deck> {
+pub(crate) fn live_deck(tx: &mut dyn Repositories, id: DeckId) -> AppResult<Deck> {
     tx.deck(id)?.ok_or(AppError::NotFound { entity: "deck" })
 }
 
-fn live_note(tx: &mut dyn Repositories, id: NoteId) -> AppResult<Note> {
+pub(crate) fn live_note(tx: &mut dyn Repositories, id: NoteId) -> AppResult<Note> {
     let note = tx.note(id)?.ok_or(AppError::NotFound { entity: "note" })?;
     if note.deleted_at.is_some() {
         return Err(AppError::Deleted { entity: "note" });
@@ -115,7 +115,11 @@ fn live_note(tx: &mut dyn Repositories, id: NoteId) -> AppResult<Note> {
     Ok(note)
 }
 
-fn direction_of(tx: &mut dyn Repositories, note: &Note, card: &Card) -> AppResult<CardDirection> {
+pub(crate) fn direction_of(
+    tx: &mut dyn Repositories,
+    note: &Note,
+    card: &Card,
+) -> AppResult<CardDirection> {
     Ok(tx
         .templates(note.note_type_id)?
         .into_iter()
@@ -123,14 +127,14 @@ fn direction_of(tx: &mut dyn Repositories, note: &Note, card: &Card) -> AppResul
         .map_or(CardDirection::Forward, |template| template.direction))
 }
 
-fn sides(note: &Note, direction: CardDirection) -> (String, String) {
+pub(crate) fn sides(note: &Note, direction: CardDirection) -> (String, String) {
     match direction {
         CardDirection::Forward => (note.fields.front.clone(), note.fields.back.clone()),
         CardDirection::Reverse => (note.fields.back.clone(), note.fields.front.clone()),
     }
 }
 
-fn link_view(tx: &mut dyn Repositories, link: SentenceWordLink) -> AppResult<LinkView> {
+pub(crate) fn link_view(tx: &mut dyn Repositories, link: SentenceWordLink) -> AppResult<LinkView> {
     let translation = match link.word_note_id {
         Some(word) => tx
             .note(word)?
@@ -250,7 +254,7 @@ pub struct CardActionOutcome {
     pub deleted: bool,
 }
 
-fn check_operation_id(operation_id: &str) -> AppResult<()> {
+pub(crate) fn check_operation_id(operation_id: &str) -> AppResult<()> {
     if operation_id.is_empty() || operation_id.len() > 128 {
         return Err(ValidationError::new("operationId", "format").into());
     }
@@ -259,7 +263,11 @@ fn check_operation_id(operation_id: &str) -> AppResult<()> {
 
 /// Returns `true` when the operation already ran as `operation`; fails when it ran as anything
 /// else (including a rating).
-fn replayed(tx: &mut dyn Repositories, operation_id: &str, operation: &str) -> AppResult<bool> {
+pub(crate) fn replayed(
+    tx: &mut dyn Repositories,
+    operation_id: &str,
+    operation: &str,
+) -> AppResult<bool> {
     check_operation_id(operation_id)?;
     if let Some(recorded) = tx.recorded_operation(operation_id)? {
         if recorded.operation != operation {
@@ -273,7 +281,7 @@ fn replayed(tx: &mut dyn Repositories, operation_id: &str, operation: &str) -> A
     Ok(false)
 }
 
-fn record(
+pub(crate) fn record(
     tx: &mut dyn Repositories,
     operation_id: &str,
     operation: &str,

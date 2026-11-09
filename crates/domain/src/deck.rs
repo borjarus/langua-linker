@@ -10,7 +10,7 @@ coded_enum! {
 
 coded_enum! {
     /// Language being learned (L2); a property of the deck.
-    pub enum TargetLanguage { De = 1, En = 2 }
+    pub enum TargetLanguage { De = 1, En = 2, Es = 3 }
 }
 
 impl NativeLanguage {
@@ -26,6 +26,7 @@ impl TargetLanguage {
         match self {
             Self::De => "de",
             Self::En => "en",
+            Self::Es => "es",
         }
     }
 }

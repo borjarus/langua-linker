@@ -40,7 +40,7 @@ use crate::content::{capabilities, clamp, deck_type, target_language};
 // ---------------------------------------------------------------- input helpers
 
 /// Parses a transported id (`Id` is a decimal string of a positive SQLite rowid).
-fn id(field: &'static str, value: &str) -> Result<i64, ErrorDto> {
+pub(crate) fn id(field: &'static str, value: &str) -> Result<i64, ErrorDto> {
     value
         .parse::<i64>()
         .ok()
@@ -48,21 +48,21 @@ fn id(field: &'static str, value: &str) -> Result<i64, ErrorDto> {
         .ok_or_else(|| error_dto(&ValidationError::new(field, "format").into()))
 }
 
-fn app_error(error: AppError) -> ErrorDto {
+pub(crate) fn app_error(error: AppError) -> ErrorDto {
     error_dto(&error)
 }
 
-fn emit(collection: &Collection, scopes: &[CollectionScope], at: TimestampMs) {
+pub(crate) fn emit(collection: &Collection, scopes: &[CollectionScope], at: TimestampMs) {
     collection.events.collection_changed(scopes, at);
 }
 
 // ---------------------------------------------------------------- mapping
 
-fn text_id(value: i64) -> String {
+pub(crate) fn text_id(value: i64) -> String {
     value.to_string()
 }
 
-fn counts_dto(counts: QueueCounts) -> DeckCountsDto {
+pub(crate) fn counts_dto(counts: QueueCounts) -> DeckCountsDto {
     DeckCountsDto {
         new: counts.new,
         learning: counts.learning,
@@ -80,7 +80,7 @@ fn status_dto(status: SessionStatus) -> StudySessionStatus {
     }
 }
 
-fn card_state(state: card::CardState) -> CardState {
+pub(crate) fn card_state(state: card::CardState) -> CardState {
     match state {
         card::CardState::New => CardState::New,
         card::CardState::Learning => CardState::Learning,
@@ -89,7 +89,7 @@ fn card_state(state: card::CardState) -> CardState {
     }
 }
 
-fn queue_state(queue: card::QueueState) -> QueueState {
+pub(crate) fn queue_state(queue: card::QueueState) -> QueueState {
     match queue {
         card::QueueState::New => QueueState::New,
         card::QueueState::Learning => QueueState::Learning,
@@ -101,7 +101,7 @@ fn queue_state(queue: card::QueueState) -> QueueState {
     }
 }
 
-fn flag_dto(flag: card::CardFlag) -> CardFlag {
+pub(crate) fn flag_dto(flag: card::CardFlag) -> CardFlag {
     match flag {
         card::CardFlag::None => CardFlag::None,
         card::CardFlag::Red => CardFlag::Red,
@@ -114,7 +114,7 @@ fn flag_dto(flag: card::CardFlag) -> CardFlag {
     }
 }
 
-fn domain_flag(flag: CardFlag) -> card::CardFlag {
+pub(crate) fn domain_flag(flag: CardFlag) -> card::CardFlag {
     match flag {
         CardFlag::None => card::CardFlag::None,
         CardFlag::Red => card::CardFlag::Red,
@@ -127,7 +127,7 @@ fn domain_flag(flag: CardFlag) -> card::CardFlag {
     }
 }
 
-fn direction_dto(direction: note::CardDirection) -> CardDirection {
+pub(crate) fn direction_dto(direction: note::CardDirection) -> CardDirection {
     match direction {
         note::CardDirection::Forward => CardDirection::Forward,
         note::CardDirection::Reverse => CardDirection::Reverse,
@@ -143,7 +143,7 @@ fn domain_rating(rating: Rating) -> review::Rating {
     }
 }
 
-fn association_dto(association: Association) -> AssociationDto {
+pub(crate) fn association_dto(association: Association) -> AssociationDto {
     AssociationDto {
         id: text_id(association.id.0),
         note_id: text_id(association.note_id.0),
@@ -170,14 +170,14 @@ fn tip_dto(tip: GrammarTip, order: usize) -> GrammarTipDto {
     }
 }
 
-fn tips_dto(tips: Vec<GrammarTip>) -> Vec<GrammarTipDto> {
+pub(crate) fn tips_dto(tips: Vec<GrammarTip>) -> Vec<GrammarTipDto> {
     tips.into_iter()
         .enumerate()
         .map(|(order, tip)| tip_dto(tip, order))
         .collect()
 }
 
-fn link_dto(view: LinkView) -> WordLinkDto {
+pub(crate) fn link_dto(view: LinkView) -> WordLinkDto {
     let link = view.link;
     WordLinkDto {
         id: text_id(link.id.0),

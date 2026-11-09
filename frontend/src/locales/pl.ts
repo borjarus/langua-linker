@@ -122,6 +122,7 @@ export const pl: LocaleResource = {
     targetLanguages: {
       de: 'Niemiecki',
       en: 'Angielski',
+      es: 'Hiszpański',
     },
     counts: {
       new: 'Nowe',
@@ -995,6 +996,7 @@ export const pl: LocaleResource = {
       samples: {
         de: 'Guten Morgen! Wie geht es dir?',
         en: 'Good morning! How are you?',
+        es: '¡Buenos días! ¿Cómo estás?',
       },
     },
     sections: 'Więcej ustawień',
@@ -1214,7 +1216,7 @@ export const pl: LocaleResource = {
       pickOther: 'Wybierz inną paczkę',
       level: 'poziom {{level}}',
       origin: 'Z pliku {{file}}, przekonwertowano {{date}}',
-      languages: { de: 'niemiecki', en: 'angielski' },
+      languages: { de: 'niemiecki', en: 'angielski', es: 'hiszpański' },
       kinds: { words: 'słowa', sentences: 'zdania' },
       noteTypes: {
         Basic: 'jedna karta na notatkę',

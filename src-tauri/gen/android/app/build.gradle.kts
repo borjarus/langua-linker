@@ -54,6 +54,7 @@ android {
     }
     buildTypes {
         getByName("debug") {
+            applicationIdSuffix = ".beta"
             manifestPlaceholders["usesCleartextTraffic"] = "true"
             isDebuggable = true
             isJniDebuggable = true

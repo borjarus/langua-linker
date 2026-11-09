@@ -84,6 +84,8 @@ fn approved_and_confirmed_content_passes_the_release_gate() {
         "de_sentences_a1",
         "en_words_a1",
         "en_sentences_a1",
+        "es_words_a1",
+        "es_sentences_a1",
     ] {
         edit_manifest(dir.path(), stem, |manifest| {
             manifest["review"] = serde_json::json!({"status": "approved", "reviewer": "R", "reviewedAt": "2026-11-04"});

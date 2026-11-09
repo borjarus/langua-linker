@@ -282,9 +282,14 @@ impl SqliteRepos<'_> {
     pub(crate) fn fingerprint(&self) -> AppResult<String> {
         self.tx
             .query_row(
-                "SELECT (SELECT COUNT(*) || ':' || COALESCE(MAX(updated_at), 0) FROM decks) || '/' ||
-                        (SELECT COUNT(*) || ':' || COALESCE(MAX(updated_at), 0) FROM notes) || '/' ||
-                        (SELECT COUNT(*) || ':' || COALESCE(MAX(updated_at), 0) FROM cards)",
+                // Every versioned write bumps `version`, so its sum changes even when two
+                // writes share a millisecond (or the clock steps back).
+                "SELECT (SELECT COUNT(*) || ':' || COALESCE(MAX(updated_at), 0) || ':' ||
+                                COALESCE(SUM(version), 0) FROM decks) || '/' ||
+                        (SELECT COUNT(*) || ':' || COALESCE(MAX(updated_at), 0) || ':' ||
+                                COALESCE(SUM(version), 0) FROM notes) || '/' ||
+                        (SELECT COUNT(*) || ':' || COALESCE(MAX(updated_at), 0) || ':' ||
+                                COALESCE(SUM(version), 0) FROM cards)",
                 [],
                 |row| row.get(0),
             )

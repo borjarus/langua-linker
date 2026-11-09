@@ -9,7 +9,7 @@ use langualinker_application::content::ContentService;
 use langualinker_application::jobs::{
     JobDetail, JobEvent, JobKind, JobRecord, JobService, JobStatus,
 };
-use langualinker_application::ports::{Clock, CollectionScope, EventSink};
+use langualinker_application::ports::{Clock, CollectionScope, EventSink, Rng};
 use langualinker_application::{AppError, DetailValue};
 use langualinker_contracts::dto::{self, JobDto, JobEventDto, JobProgressDto, JobResultDto};
 use langualinker_contracts::{ErrorCode, ErrorDto};
@@ -36,6 +36,8 @@ pub struct Collection {
     /// Signals after committed mutations (read signals for the UI, never truth).
     pub events: Arc<dyn EventSink>,
     pub clock: Arc<dyn Clock>,
+    /// GUIDs of decks, notes, cards and snippets created by the user.
+    pub rng: Arc<dyn Rng>,
 }
 
 impl Backend {
@@ -116,6 +118,7 @@ impl Collection {
             content,
             events,
             clock,
+            rng: Arc::new(OsRng),
         })
     }
 }

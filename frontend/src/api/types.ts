@@ -8,7 +8,7 @@
  * - Long-running work returns a `JobDto`; events are signals, never durable truth.
  *
  * This file is framework-independent: no Svelte, no Tauri imports.
- * Rust is the DTO source for the types re-exported from `src/generated/contracts.ts` (Phases 7–10);
+ * Rust is the DTO source for the types re-exported from `src/generated/contracts.ts` (Phases 7–11);
  * the remaining DTOs move there as their commands become real.
  */
 
@@ -92,6 +92,49 @@ import type {
   CardDirection,
   Rating as GeneratedRating,
   CardFlag as GeneratedCardFlag,
+  SortKey as GeneratedSortKey,
+  HiddenSectionCountsDto,
+  DeckTypeOptionDto,
+  DeckOverviewDto,
+  CreateDeckInput,
+  DeckPatchDto,
+  UpdateDeckInput,
+  DeleteDeckInput,
+  DeleteDeckResultDto,
+  PresetConfigDto,
+  PresetDto,
+  SavePresetInput,
+  NoteDto,
+  ReviewLogDto,
+  RetrievabilityDto,
+  CardDetailsDto,
+  NoteDetailsDto,
+  DeleteNoteInput,
+  DeleteNoteResultDto,
+  NoteContentChange,
+  UpdateNoteContentInput,
+  EditorDeckOptionDto,
+  NoteTemplateDto,
+  NoteTypeDto,
+  EditorDataDto,
+  WordLinkDraftDto,
+  SaveNoteInput,
+  SearchWordsInput,
+  WordMatchKind,
+  WordMatchDto,
+  DuplicateCheckInput,
+  DuplicateNoteDto,
+  DuplicateCheckDto,
+  SearchInput,
+  CardRowDto,
+  CardPageDto,
+  BulkSelection,
+  BulkAction,
+  BulkActionInput,
+  BulkPreviewInput,
+  BulkPreviewDto,
+  BulkResultDto,
+  SortDirection,
 } from '../generated/contracts'
 
 export type {
@@ -169,6 +212,48 @@ export type {
   CardState,
   QueueState,
   CardDirection,
+  HiddenSectionCountsDto,
+  DeckTypeOptionDto,
+  DeckOverviewDto,
+  CreateDeckInput,
+  DeckPatchDto,
+  UpdateDeckInput,
+  DeleteDeckInput,
+  DeleteDeckResultDto,
+  PresetConfigDto,
+  PresetDto,
+  SavePresetInput,
+  NoteDto,
+  ReviewLogDto,
+  RetrievabilityDto,
+  CardDetailsDto,
+  NoteDetailsDto,
+  DeleteNoteInput,
+  DeleteNoteResultDto,
+  NoteContentChange,
+  UpdateNoteContentInput,
+  EditorDeckOptionDto,
+  NoteTemplateDto,
+  NoteTypeDto,
+  EditorDataDto,
+  WordLinkDraftDto,
+  SaveNoteInput,
+  SearchWordsInput,
+  WordMatchKind,
+  WordMatchDto,
+  DuplicateCheckInput,
+  DuplicateNoteDto,
+  DuplicateCheckDto,
+  SearchInput,
+  CardRowDto,
+  CardPageDto,
+  BulkSelection,
+  BulkAction,
+  BulkActionInput,
+  BulkPreviewInput,
+  BulkPreviewDto,
+  BulkResultDto,
+  SortDirection,
 }
 
 export const API_VERSION = '1.2'
@@ -195,6 +280,11 @@ export type DeckType = (typeof DECK_TYPES)[number]
 /** Compile-time check: the runtime list equals the Rust `DeckType` enum. */
 const deckTypesMatchRust: SameMembers<DeckType, GeneratedDeckType> = true
 void deckTypesMatchRust
+
+export const TARGET_LANGUAGES = ['de', 'en', 'es'] as const
+/** Compile-time check: the runtime list equals the Rust `TargetLanguage` enum. */
+const targetLanguagesMatchRust: SameMembers<(typeof TARGET_LANGUAGES)[number], TargetLanguage> = true
+void targetLanguagesMatchRust
 
 export const CARD_FLAGS = ['none', 'red', 'orange', 'green', 'blue', 'pink', 'turquoise', 'purple'] as const
 export type CardFlag = (typeof CARD_FLAGS)[number]
@@ -237,102 +327,12 @@ void errorCodesMatchRust
 
 export type Unsubscribe = () => void
 
-// ---------------------------------------------------------------- decks / dashboard
+// ---------------------------------------------------------------- decks / dashboard / presets
 
-export interface HiddenSectionCountsDto {
-  associations: number
-  grammarTips: number
-  wordLinks: number
-}
-
-/** A deck type the deck could switch to, with what it would hide. Hidden content is kept, never deleted. */
-export interface DeckTypeOptionDto {
-  deckType: DeckType
-  capabilities: DeckCapabilitiesDto
-  hiddenCounts: HiddenSectionCountsDto
-}
-
-export interface DeckOverviewDto {
-  deck: DeckSummaryDto
-  /** Every deck below this one (any depth), each parent listed before its children. */
-  subdecks: DeckSummaryDto[]
-  description: string
-  presetId: Id
-  presetName: string
-  presetDependentDecks: number
-  /** Content kept but hidden by the current deck type. */
-  hiddenSectionCounts: HiddenSectionCountsDto
-  typeOptions: DeckTypeOptionDto[]
-}
-
-export interface CreateDeckInput {
-  operationId: OperationId
-  name: string
-  parentId: Id | null
-  targetLanguage: TargetLanguage
-  deckType: DeckType
-}
-
-export interface UpdateDeckInput {
-  operationId: OperationId
-  deckId: Id
-  expectedVersion: number
-  patch: {
-    name?: string
-    description?: string
-    parentId?: Id | null
-    deckType?: DeckType
-    presetId?: Id
-  }
-}
-
-export interface DeleteDeckInput {
-  operationId: OperationId
-  deckId: Id
-  expectedVersion: number
-}
-
-export interface DeleteDeckResultDto {
-  deletedDecks: number
-  deletedCards: number
-}
-
-// ---------------------------------------------------------------- presets (deck options)
+// Deck overview, deck CRUD and preset DTOs come from Rust (`src/generated/contracts.ts`, Phase 11).
 
 /** Number of FSRS-6 weights w0–w20. */
 export const FSRS_WEIGHT_COUNT = 21
-
-export interface PresetConfigDto {
-  newPerDay: number
-  reviewsPerDay: number
-  /** 0.70–0.99. */
-  desiredRetention: number
-  maxIntervalDays: number
-  learningStepsMinutes: number[]
-  relearningStepsMinutes: number[]
-  /** FSRS-6 weights; exactly `FSRS_WEIGHT_COUNT` finite numbers. */
-  weights: number[]
-}
-
-export interface PresetDto {
-  id: Id
-  name: string
-  version: number
-  /** Built-in presets can be cloned and edited like any other. */
-  builtIn: boolean
-  /** Decks using this preset; a change applies to all of them. */
-  dependentDecks: number
-  config: PresetConfigDto
-}
-
-export interface SavePresetInput {
-  operationId: OperationId
-  /** `null` creates a preset (also used to clone one). */
-  presetId: Id | null
-  expectedVersion: number | null
-  name: string
-  config: PresetConfigDto
-}
 
 // ---------------------------------------------------------------- study
 
@@ -340,176 +340,7 @@ export interface SavePresetInput {
 
 // ---------------------------------------------------------------- details / editor
 
-export interface NoteDto {
-  id: Id
-  guid: Id
-  noteTypeKind: NoteTypeKind
-  front: string
-  back: string
-  tags: string[]
-  version: number
-  createdAt: IsoDateTime
-  updatedAt: IsoDateTime
-}
-
-export interface ReviewLogDto {
-  id: Id
-  reviewedAt: IsoDateTime
-  rating: Rating
-  stateBefore: CardState
-  intervalSeconds: number
-}
-
-export interface RetrievabilityDto {
-  value: number
-  computedAt: IsoDateTime
-}
-
-export interface CardDetailsDto {
-  id: Id
-  noteId: Id
-  /** The scheduling deck belongs to the card: cards of one note may sit in different decks. */
-  deckId: Id
-  deckName: string
-  ordinal: number
-  direction: CardDirection
-  state: CardState
-  queue: QueueState
-  flag: CardFlag
-  dueAt: IsoDateTime | null
-  stability: number | null
-  difficulty: number | null
-  retrievability: RetrievabilityDto | null
-  reps: number
-  lapses: number
-  version: number
-  history: ReviewLogDto[]
-}
-
-export interface NoteDetailsDto {
-  note: NoteDto
-  /** Deck of the note's first card; decides which sections the details and the editor show. */
-  deckId: Id
-  targetLanguage: TargetLanguage
-  capabilities: DeckCapabilitiesDto
-  /** Live cards; each has its own schedule. */
-  cards: CardDetailsDto[]
-  /** Template ordinals archived by a note-type change; switching back restores them with history. */
-  archivedOrdinals: number[]
-  associations: AssociationDto[]
-  grammarTips: GrammarTipDto[]
-  wordLinks: WordLinkDto[]
-}
-
-export interface DeleteNoteInput {
-  operationId: OperationId
-  noteId: Id
-  expectedVersion: number
-}
-
-export interface DeleteNoteResultDto {
-  deletedCards: number
-}
-
-/** One edit of a note's tips, associations or word links (each change is its own transaction). */
-export type NoteContentChange =
-  | { type: 'addTip'; text: string }
-  | { type: 'editTip'; tipId: Id; text: string }
-  | { type: 'deleteTip'; tipId: Id }
-  /** The complete new order; any other set of ids is rejected. */
-  | { type: 'reorderTips'; tipIds: Id[] }
-  | { type: 'addAssociation'; text: string }
-  /** Only the user's own (manual) associations can be edited. */
-  | { type: 'editAssociation'; associationId: Id; text: string }
-  | { type: 'deleteAssociation'; associationId: Id }
-  /** Removes the link; the word note itself is untouched. */
-  | { type: 'unlinkWord'; linkId: Id }
-
-export interface UpdateNoteContentInput {
-  operationId: OperationId
-  noteId: Id
-  change: NoteContentChange
-}
-
-export interface EditorDeckOptionDto {
-  id: Id
-  name: string
-  parentId: Id | null
-  deckType: DeckType
-  capabilities: DeckCapabilitiesDto
-  targetLanguage: TargetLanguage
-}
-
-/** Card template of a note type: which side is asked. */
-export interface NoteTemplateDto {
-  ordinal: number
-  direction: CardDirection
-}
-
-export interface NoteTypeDto {
-  kind: NoteTypeKind
-  templates: NoteTemplateDto[]
-}
-
-export interface EditorDataDto {
-  decks: EditorDeckOptionDto[]
-  noteTypes: NoteTypeDto[]
-  tags: string[]
-  maxFieldLength: number
-}
-
-/** A word link as the editor sends it; ranges are UTF-16 offsets in the NFC front text. */
-export interface WordLinkDraftDto {
-  startIndex: number
-  endIndex: number
-  surface: string
-  /** `null` keeps the phrase marked but unresolved; the backend never picks a word on its own. */
-  wordNoteId: Id | null
-}
-
-export interface SaveNoteInput {
-  operationId: OperationId
-  /** `null` creates a note. */
-  noteId: Id | null
-  expectedVersion: number | null
-  deckId: Id
-  noteTypeKind: NoteTypeKind
-  front: string
-  back: string
-  tags: string[]
-  manualAssociation: string | null
-  /** Tips appended to the note; existing tips are edited on the card details. */
-  grammarTips: string[]
-  /** Complete set of word links for a sentence; `null` keeps the stored links. */
-  wordLinks: WordLinkDraftDto[] | null
-}
-
-export interface SearchWordsInput {
-  targetLanguage: TargetLanguage
-  text: string
-  limit: number
-}
-
-/** `exact`: same text; `normalized`: same after case/article/diacritic folding. Never a guess. */
-export type WordMatchKind = 'exact' | 'normalized'
-
-export interface WordMatchDto {
-  noteId: Id
-  lemma: string
-  translation: string
-  deckName: string
-  match: WordMatchKind
-}
-
-export interface DuplicateCheckInput {
-  deckId: Id
-  front: string
-  excludeNoteId: Id | null
-}
-
-export interface DuplicateCheckDto {
-  duplicates: { noteId: Id; front: string; deckName: string }[]
-}
+// Note details, editor, note content and word search DTOs come from Rust (Phase 11).
 
 export interface GenerateAssociationInput {
   operationId: OperationId
@@ -519,91 +350,15 @@ export interface GenerateAssociationInput {
 
 // ---------------------------------------------------------------- browser
 
+// Card search, paging and bulk-action DTOs come from Rust (Phase 11).
+
 export const SORT_KEYS = ['due', 'created', 'front', 'deck', 'reps', 'lapses'] as const
 export type SortKey = (typeof SORT_KEYS)[number]
-
-export interface SearchInput {
-  query: string
-  deckId: Id | null
-  tag: string | null
-  states: CardState[]
-  flags: CardFlag[]
-  sort: SortKey
-  direction: 'asc' | 'desc'
-  /** Opaque keyset cursor from a previous page. */
-  cursor: string | null
-  pageSize: number
-}
-
-export interface CardRowDto {
-  cardId: Id
-  noteId: Id
-  deckId: Id
-  deckName: string
-  front: string
-  back: string
-  state: CardState
-  queue: QueueState
-  flag: CardFlag
-  dueAt: IsoDateTime | null
-  /** Order of a new card in the new queue; `null` for cards already studied. */
-  position: number | null
-  direction: CardDirection
-  tags: string[]
-}
-
-export interface CardPageDto {
-  items: CardRowDto[]
-  nextCursor: string | null
-  total: number
-  /** Snapshot token used by bulk actions over "all matches". */
-  filterVersion: string
-}
-
-export type BulkSelection =
-  | { kind: 'ids'; cardIds: Id[] }
-  | { kind: 'query'; filterVersion: string; excludedCardIds: Id[] }
-
-export type BulkAction =
-  | { type: 'suspend' }
-  | { type: 'unsuspend' }
-  | { type: 'flag'; flag: CardFlag }
-  | { type: 'changeDeck'; deckId: Id }
-  | { type: 'addTag'; tag: string }
-  | { type: 'removeTag'; tag: string }
-  /** New cards only: positions start, start+step, …; studied cards are skipped. */
-  | { type: 'reposition'; start: number; step: number }
-  | { type: 'delete' }
+/** Compile-time check: the runtime list equals the Rust `SortKey` enum. */
+const sortKeysMatchRust: SameMembers<SortKey, GeneratedSortKey> = true
+void sortKeysMatchRust
 
 export type BulkActionType = BulkAction['type']
-
-export interface BulkActionInput {
-  operationId: OperationId
-  selection: BulkSelection
-  action: BulkAction
-}
-
-export interface BulkPreviewInput {
-  selection: BulkSelection
-  action: BulkAction
-}
-
-/** What a bulk action would do, shown before the user confirms it. */
-export interface BulkPreviewDto {
-  /** Cards in the selection. */
-  selected: number
-  /** Cards the action would change. */
-  affected: number
-  /** Cards left as they are (already in that state, or not new for reposition). */
-  unchanged: number
-  /** Notes and decks the affected cards belong to. */
-  notes: number
-  decks: number
-}
-
-export interface BulkResultDto {
-  affected: number
-}
 
 // ---------------------------------------------------------------- statistics
 

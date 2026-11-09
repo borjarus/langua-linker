@@ -250,6 +250,31 @@ fn app_info_sample_round_trips_through_the_rust_dto() {
     assert_eq!(serde_json::to_value(&dto).unwrap(), call["output"]);
 }
 
+/// JSON numbers compared by value: an `f64` field writes `0.0` where the recorded sample has `0`;
+/// JavaScript reads both as the same number.
+fn integral(value: Value) -> Value {
+    match value {
+        Value::Number(number) => match number.as_f64() {
+            Some(float)
+                if float.fract() == 0.0
+                    && float.abs() < 9.0e15
+                    && !number.is_i64()
+                    && !number.is_u64() =>
+            {
+                Value::from(float as i64)
+            }
+            _ => Value::Number(number),
+        },
+        Value::Array(items) => Value::Array(items.into_iter().map(integral).collect()),
+        Value::Object(map) => Value::Object(
+            map.into_iter()
+                .map(|(key, value)| (key, integral(value)))
+                .collect(),
+        ),
+        other => other,
+    }
+}
+
 /// Checklist rule 2: the Rust output DTO reads every frozen output of the command and writes the
 /// same JSON back (`deny_unknown_fields` makes a renamed or extra field fail here).
 fn round_trips<T: DeserializeOwned + Serialize>(operation: &str) -> usize {
@@ -262,8 +287,8 @@ fn round_trips<T: DeserializeOwned + Serialize>(operation: &str) -> usize {
         let dto: T = serde_json::from_value(call["output"].clone())
             .unwrap_or_else(|error| panic!("{operation}: {error}"));
         assert_eq!(
-            serde_json::to_value(&dto).unwrap(),
-            call["output"],
+            integral(serde_json::to_value(&dto).unwrap()),
+            integral(call["output"].clone()),
             "{operation}"
         );
         count += 1;
@@ -418,5 +443,89 @@ fn event_samples_round_trip_through_their_rust_dtos() {
     assert_eq!(
         serde_json::to_value(&changed).unwrap(),
         samples["events"]["collection_changed"]
+    );
+}
+
+#[test]
+fn phase11_outputs_round_trip_through_their_rust_dtos() {
+    use langualinker_contracts::dto::{
+        BulkPreviewDto, BulkResultDto, CardPageDto, DeckOverviewDto, DeleteDeckResultDto,
+        DeleteNoteResultDto, DuplicateCheckDto, EditorDataDto, NoteDetailsDto, PresetDto,
+        WordMatchDto,
+    };
+    assert!(round_trips::<DeckOverviewDto>("getDeck") >= 1);
+    assert!(round_trips::<DeckOverviewDto>("createDeck") >= 1);
+    assert!(round_trips::<DeckOverviewDto>("updateDeck") >= 1);
+    assert!(round_trips::<DeleteDeckResultDto>("deleteDeck") >= 1);
+    assert!(round_trips::<Vec<PresetDto>>("listPresets") >= 1);
+    assert!(round_trips::<PresetDto>("savePreset") >= 1);
+    assert!(round_trips::<NoteDetailsDto>("getNoteDetails") >= 1);
+    assert!(round_trips::<EditorDataDto>("getEditorData") >= 1);
+    assert!(round_trips::<DuplicateCheckDto>("checkDuplicate") >= 1);
+    assert!(round_trips::<NoteDetailsDto>("saveNote") >= 1);
+    assert!(round_trips::<DeleteNoteResultDto>("deleteNote") >= 1);
+    assert!(round_trips::<NoteDetailsDto>("updateNoteContent") >= 1);
+    assert!(round_trips::<Vec<WordMatchDto>>("searchWords") >= 1);
+    assert!(round_trips::<CardPageDto>("searchCards") >= 1);
+    assert!(round_trips::<BulkPreviewDto>("previewBulkAction") >= 1);
+    assert!(round_trips::<BulkResultDto>("applyBulkAction") >= 1);
+}
+
+#[test]
+fn phase11_inputs_deserialize_into_their_rust_dtos() {
+    use langualinker_contracts::dto::{
+        BulkActionInput, BulkPreviewInput, CreateDeckInput, DeleteDeckInput, DeleteNoteInput,
+        DuplicateCheckInput, SaveNoteInput, SavePresetInput, SearchInput, SearchWordsInput,
+        UpdateDeckInput, UpdateNoteContentInput,
+    };
+    fn back<T: DeserializeOwned + Serialize>(input: &Value) -> Value {
+        serde_json::to_value(serde_json::from_value::<T>(input.clone()).unwrap()).unwrap()
+    }
+    let samples = samples();
+    let mut seen = 0;
+    for call in samples["calls"].as_array().expect("calls") {
+        let input = &call["args"][0];
+        let read = match call["operation"].as_str() {
+            Some("createDeck") => back::<CreateDeckInput>(input),
+            Some("updateDeck") => back::<UpdateDeckInput>(input),
+            Some("deleteDeck") => back::<DeleteDeckInput>(input),
+            Some("savePreset") => back::<SavePresetInput>(input),
+            Some("checkDuplicate") => back::<DuplicateCheckInput>(input),
+            Some("saveNote") => back::<SaveNoteInput>(input),
+            Some("deleteNote") => back::<DeleteNoteInput>(input),
+            Some("updateNoteContent") => back::<UpdateNoteContentInput>(input),
+            Some("searchWords") => back::<SearchWordsInput>(input),
+            Some("searchCards") => back::<SearchInput>(input),
+            Some("previewBulkAction") => back::<BulkPreviewInput>(input),
+            Some("applyBulkAction") => back::<BulkActionInput>(input),
+            // Bare ids.
+            Some("getDeck" | "getNoteDetails") => {
+                let _: String = serde_json::from_value(input.clone()).expect("id string");
+                input.clone()
+            }
+            _ => continue,
+        };
+        assert_eq!(&read, input, "{}", call["operation"]);
+        seen += 1;
+    }
+    assert!(seen >= 14);
+}
+
+#[test]
+fn a_deck_patch_tells_a_missing_parent_from_a_null_one() {
+    use langualinker_contracts::dto::DeckPatchDto;
+    let missing: DeckPatchDto = serde_json::from_value(serde_json::json!({"name": "A"})).unwrap();
+    assert_eq!(missing.parent_id, None);
+    let root: DeckPatchDto = serde_json::from_value(serde_json::json!({"parentId": null})).unwrap();
+    assert_eq!(root.parent_id, Some(None));
+    let moved: DeckPatchDto = serde_json::from_value(serde_json::json!({"parentId": "4"})).unwrap();
+    assert_eq!(moved.parent_id, Some(Some("4".to_owned())));
+    assert_eq!(
+        serde_json::to_value(&root).unwrap(),
+        serde_json::json!({"parentId": null})
+    );
+    assert_eq!(
+        serde_json::to_value(&missing).unwrap(),
+        serde_json::json!({"name": "A"})
     );
 }

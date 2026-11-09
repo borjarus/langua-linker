@@ -107,56 +107,9 @@ pub fn dashboard(
 ) -> AppResult<Dashboard> {
     let moment = study::study_moment(tx, now)?;
     study::unbury_expired(tx, &moment)?;
-    let (day_start, day_end) = (moment.day_start, moment.day_end);
     let decks = tx.active_decks()?;
-    let own: HashMap<DeckId, DeckCardCounts> = tx
-        .deck_card_counts(day_start, day_end)?
-        .into_iter()
-        .collect();
-    let pending: HashSet<&str> = pending.iter().map(String::as_str).collect();
-
-    let children = |parent: DeckId| {
-        decks
-            .iter()
-            .filter(move |deck| deck.parent_id == Some(parent))
-            .map(|deck| deck.id)
-    };
-    let mut result = Vec::with_capacity(decks.len());
-    for deck in &decks {
-        let mut stored = DeckCardCounts::default();
-        let mut stack = vec![deck.id];
-        let mut visited = HashSet::new();
-        while let Some(id) = stack.pop() {
-            if !visited.insert(id) {
-                continue;
-            }
-            if let Some(own) = own.get(&id) {
-                stored.total += own.total;
-                stored.mature += own.mature;
-            }
-            stack.extend(children(id));
-        }
-        let queue = study::scope_counts(tx, Some(deck.id), &moment)?;
-        let counts = DeckCardCounts {
-            new: queue.new,
-            learning: queue.learning,
-            review: queue.review,
-            overdue: queue.overdue,
-            total: stored.total,
-            mature: stored.mature,
-        };
-        let progress = if counts.total == 0 {
-            0.0
-        } else {
-            (f64::from(counts.mature) / f64::from(counts.total) * 100.0).round() / 100.0
-        };
-        result.push(DashboardDeck {
-            deck: deck.clone(),
-            counts,
-            progress,
-            preparing: deck.bundled && pending.contains(deck.guid.as_str()),
-        });
-    }
+    let ids: Vec<DeckId> = decks.iter().map(|deck| deck.id).collect();
+    let result = summaries(tx, &moment, &decks, &ids, pending)?;
     let all = study::scope_counts(tx, None, &moment)?;
     let daily_goal = tx
         .setting(DAILY_GOAL_KEY)?
@@ -184,12 +137,75 @@ pub fn dashboard(
         decks: result,
         resumable,
         streak_days: zoned_streak(tx, &moment)?,
-        studied_today: tx.reviews_since(day_start)?,
+        studied_today: tx.reviews_since(moment.day_start)?,
         due_today: all.review + all.learning,
         daily_goal,
-        next_due_at: tx.next_due_after(day_end)?,
+        next_due_at: tx.next_due_after(moment.day_end)?,
         generated_at: now,
     })
+}
+
+/// Dashboard rows of the decks `ids` (in that order): queue counts of each deck with its
+/// subdecks within today's limits, stored totals and progress rolled up without counting a deck
+/// twice. `decks` are the active decks; `pending` are deck GUIDs with an update queued.
+pub fn summaries(
+    tx: &mut dyn Repositories,
+    moment: &langualinker_domain::scheduling::StudyMoment,
+    decks: &[Deck],
+    ids: &[DeckId],
+    pending: &[String],
+) -> AppResult<Vec<DashboardDeck>> {
+    let own: HashMap<DeckId, DeckCardCounts> = tx
+        .deck_card_counts(moment.day_start, moment.day_end)?
+        .into_iter()
+        .collect();
+    let pending: HashSet<&str> = pending.iter().map(String::as_str).collect();
+    let children = |parent: DeckId| {
+        decks
+            .iter()
+            .filter(move |deck| deck.parent_id == Some(parent))
+            .map(|deck| deck.id)
+    };
+    let mut result = Vec::with_capacity(ids.len());
+    for id in ids {
+        let Some(deck) = decks.iter().find(|deck| deck.id == *id) else {
+            continue;
+        };
+        let mut stored = DeckCardCounts::default();
+        let mut stack = vec![deck.id];
+        let mut visited = HashSet::new();
+        while let Some(id) = stack.pop() {
+            if !visited.insert(id) {
+                continue;
+            }
+            if let Some(own) = own.get(&id) {
+                stored.total += own.total;
+                stored.mature += own.mature;
+            }
+            stack.extend(children(id));
+        }
+        let queue = study::scope_counts(tx, Some(deck.id), moment)?;
+        let counts = DeckCardCounts {
+            new: queue.new,
+            learning: queue.learning,
+            review: queue.review,
+            overdue: queue.overdue,
+            total: stored.total,
+            mature: stored.mature,
+        };
+        let progress = if counts.total == 0 {
+            0.0
+        } else {
+            (f64::from(counts.mature) / f64::from(counts.total) * 100.0).round() / 100.0
+        };
+        result.push(DashboardDeck {
+            deck: deck.clone(),
+            counts,
+            progress,
+            preparing: deck.bundled && pending.contains(deck.guid.as_str()),
+        });
+    }
+    Ok(result)
 }
 
 #[cfg(test)]

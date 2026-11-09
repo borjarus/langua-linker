@@ -16,10 +16,10 @@ use langualinker_anki::{FieldRef, Options, Report, convert, read_apkg};
 use langualinker_content::format::ContentKind;
 use langualinker_domain::deck::{DeckType, TargetLanguage};
 
-const USAGE: &str = "usage: apkg-convert <deck.apkg> --language de|en [options]
+const USAGE: &str = "usage: apkg-convert <deck.apkg> --language de|en|es [options]
 
   -o, --out <file>          output package (default: <deck>.ndjson next to the .apkg)
-  --language de|en          target language (L2) of the deck            [required]
+  --language de|en|es       target language (L2) of the deck            [required]
   --kind words|sentences    word or sentence notes                       [words]
   --reverse                 two cards per note: front→back and back→front
   --name <text>             deck name in LanguaLinker      [Anki deck or file name]
@@ -153,8 +153,9 @@ fn main() -> ExitCode {
                 language = match value!(arg).as_str() {
                     "de" => Some(TargetLanguage::De),
                     "en" => Some(TargetLanguage::En),
+                    "es" => Some(TargetLanguage::Es),
                     other => {
-                        eprintln!("unsupported language {other} (de|en)");
+                        eprintln!("unsupported language {other} (de|en|es)");
                         return ExitCode::from(2);
                     }
                 }

@@ -166,6 +166,8 @@ pub enum TargetLanguage {
     De,
     #[serde(rename = "en")]
     En,
+    #[serde(rename = "es")]
+    Es,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -867,6 +869,560 @@ pub struct ResolveWordLinkInput {
     pub word_note_id: String,
 }
 
+// ---------------------------------------------------------------- Phase 11: decks and presets
+
+/// Content kept but hidden by a deck type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct HiddenSectionCountsDto {
+    pub associations: u32,
+    pub grammar_tips: u32,
+    pub word_links: u32,
+}
+
+/// A deck type the deck could switch to, with what it would hide. Hidden content is kept, never
+/// deleted.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeckTypeOptionDto {
+    pub deck_type: DeckType,
+    pub capabilities: DeckCapabilitiesDto,
+    pub hidden_counts: HiddenSectionCountsDto,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeckOverviewDto {
+    pub deck: DeckSummaryDto,
+    /// Every deck below this one (any depth), each parent listed before its children.
+    pub subdecks: Vec<DeckSummaryDto>,
+    pub description: String,
+    pub preset_id: String,
+    pub preset_name: String,
+    pub preset_dependent_decks: u32,
+    /// Content kept but hidden by the current deck type.
+    pub hidden_section_counts: HiddenSectionCountsDto,
+    pub type_options: Vec<DeckTypeOptionDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CreateDeckInput {
+    pub operation_id: String,
+    pub name: String,
+    pub parent_id: Option<String>,
+    pub target_language: TargetLanguage,
+    pub deck_type: DeckType,
+}
+
+/// Reads a field that may be missing (`None`), `null` (`Some(None)`) or a value.
+mod double_option {
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn deserialize<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+    where
+        D: Deserializer<'de>,
+        T: Deserialize<'de>,
+    {
+        Option::<T>::deserialize(deserializer).map(Some)
+    }
+
+    pub fn serialize<S, T>(value: &Option<Option<T>>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+        T: Serialize,
+    {
+        match value {
+            Some(inner) => inner.serialize(serializer),
+            None => serializer.serialize_none(),
+        }
+    }
+}
+
+/// Fields an `updateDeck` changes; a missing field keeps its value.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeckPatchDto {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub description: Option<String>,
+    /// `null` moves the deck to the top level.
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        with = "double_option"
+    )]
+    #[ts(optional, as = "Option<Option<String>>")]
+    pub parent_id: Option<Option<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub deck_type: Option<DeckType>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub preset_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct UpdateDeckInput {
+    pub operation_id: String,
+    pub deck_id: String,
+    pub expected_version: u32,
+    pub patch: DeckPatchDto,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeleteDeckInput {
+    pub operation_id: String,
+    pub deck_id: String,
+    pub expected_version: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeleteDeckResultDto {
+    pub deleted_decks: u32,
+    pub deleted_cards: u32,
+}
+
+/// Scheduling options of a preset; ranges are checked by Rust (`DeckConfigOptions::validate`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PresetConfigDto {
+    pub new_per_day: u32,
+    pub reviews_per_day: u32,
+    /// 0.70–0.99.
+    pub desired_retention: f64,
+    pub max_interval_days: u32,
+    pub learning_steps_minutes: Vec<u32>,
+    pub relearning_steps_minutes: Vec<u32>,
+    /// FSRS-6 weights w0–w20.
+    pub weights: Vec<f64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct PresetDto {
+    pub id: String,
+    pub name: String,
+    pub version: u32,
+    /// Built-in presets can be cloned and edited like any other.
+    pub built_in: bool,
+    /// Decks using this preset; a change applies to all of them.
+    pub dependent_decks: u32,
+    pub config: PresetConfigDto,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SavePresetInput {
+    pub operation_id: String,
+    /// `null` creates a preset (also used to clone one).
+    pub preset_id: Option<String>,
+    pub expected_version: Option<u32>,
+    pub name: String,
+    pub config: PresetConfigDto,
+}
+
+// ---------------------------------------------------------------- Phase 11: details and editor
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NoteDto {
+    pub id: String,
+    pub guid: String,
+    pub note_type_kind: NoteTypeKind,
+    pub front: String,
+    pub back: String,
+    pub tags: Vec<String>,
+    pub version: u32,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ReviewLogDto {
+    pub id: String,
+    pub reviewed_at: String,
+    pub rating: Rating,
+    pub state_before: CardState,
+    pub interval_seconds: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RetrievabilityDto {
+    pub value: f64,
+    pub computed_at: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CardDetailsDto {
+    pub id: String,
+    pub note_id: String,
+    /// The scheduling deck belongs to the card: cards of one note may sit in different decks.
+    pub deck_id: String,
+    pub deck_name: String,
+    pub ordinal: u32,
+    pub direction: CardDirection,
+    pub state: CardState,
+    pub queue: QueueState,
+    pub flag: CardFlag,
+    pub due_at: Option<String>,
+    pub stability: Option<f64>,
+    pub difficulty: Option<f64>,
+    pub retrievability: Option<RetrievabilityDto>,
+    pub reps: u32,
+    pub lapses: u32,
+    pub version: u32,
+    pub history: Vec<ReviewLogDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NoteDetailsDto {
+    pub note: NoteDto,
+    /// Deck of the note's first card; decides which sections the details and the editor show.
+    pub deck_id: String,
+    pub target_language: TargetLanguage,
+    pub capabilities: DeckCapabilitiesDto,
+    /// Live cards; each has its own schedule.
+    pub cards: Vec<CardDetailsDto>,
+    /// Template ordinals archived by a note-type change; switching back restores them with
+    /// history.
+    pub archived_ordinals: Vec<u32>,
+    pub associations: Vec<AssociationDto>,
+    pub grammar_tips: Vec<GrammarTipDto>,
+    pub word_links: Vec<WordLinkDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeleteNoteInput {
+    pub operation_id: String,
+    pub note_id: String,
+    pub expected_version: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeleteNoteResultDto {
+    pub deleted_cards: u32,
+}
+
+/// One edit of a note's tips, associations or word links (each change is its own transaction).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum NoteContentChange {
+    AddTip {
+        text: String,
+    },
+    EditTip {
+        tip_id: String,
+        text: String,
+    },
+    DeleteTip {
+        tip_id: String,
+    },
+    /// The complete new order; any other set of ids is rejected.
+    ReorderTips {
+        tip_ids: Vec<String>,
+    },
+    AddAssociation {
+        text: String,
+    },
+    /// Only the user's own (manual) associations can be edited.
+    EditAssociation {
+        association_id: String,
+        text: String,
+    },
+    DeleteAssociation {
+        association_id: String,
+    },
+    /// Removes the link; the word note itself is untouched.
+    UnlinkWord {
+        link_id: String,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct UpdateNoteContentInput {
+    pub operation_id: String,
+    pub note_id: String,
+    pub change: NoteContentChange,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct EditorDeckOptionDto {
+    pub id: String,
+    pub name: String,
+    pub parent_id: Option<String>,
+    pub deck_type: DeckType,
+    pub capabilities: DeckCapabilitiesDto,
+    pub target_language: TargetLanguage,
+}
+
+/// Card template of a note type: which side is asked.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NoteTemplateDto {
+    pub ordinal: u32,
+    pub direction: CardDirection,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NoteTypeDto {
+    pub kind: NoteTypeKind,
+    pub templates: Vec<NoteTemplateDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct EditorDataDto {
+    pub decks: Vec<EditorDeckOptionDto>,
+    pub note_types: Vec<NoteTypeDto>,
+    pub tags: Vec<String>,
+    pub max_field_length: u32,
+}
+
+/// A word link as the editor sends it; ranges are UTF-16 offsets in the NFC front text.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WordLinkDraftDto {
+    pub start_index: u32,
+    pub end_index: u32,
+    pub surface: String,
+    /// `null` keeps the phrase marked but unresolved; the backend never picks a word on its own.
+    pub word_note_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SaveNoteInput {
+    pub operation_id: String,
+    /// `null` creates a note.
+    pub note_id: Option<String>,
+    pub expected_version: Option<u32>,
+    pub deck_id: String,
+    pub note_type_kind: NoteTypeKind,
+    pub front: String,
+    pub back: String,
+    pub tags: Vec<String>,
+    pub manual_association: Option<String>,
+    /// Tips appended to the note; existing tips are edited on the card details.
+    pub grammar_tips: Vec<String>,
+    /// Complete set of word links for a sentence; `null` keeps the stored links.
+    pub word_links: Option<Vec<WordLinkDraftDto>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SearchWordsInput {
+    pub target_language: TargetLanguage,
+    pub text: String,
+    pub limit: u32,
+}
+
+/// `exact`: same text; `normalized`: same after case/article/diacritic folding. Never a guess.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum WordMatchKind {
+    Exact,
+    Normalized,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WordMatchDto {
+    pub note_id: String,
+    pub lemma: String,
+    pub translation: String,
+    pub deck_name: String,
+    #[serde(rename = "match")]
+    #[ts(rename = "match")]
+    pub match_kind: WordMatchKind,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DuplicateCheckInput {
+    pub deck_id: String,
+    pub front: String,
+    pub exclude_note_id: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DuplicateNoteDto {
+    pub note_id: String,
+    pub front: String,
+    pub deck_name: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DuplicateCheckDto {
+    pub duplicates: Vec<DuplicateNoteDto>,
+}
+
+// ---------------------------------------------------------------- Phase 11: browser
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum SortKey {
+    Due,
+    Created,
+    Front,
+    Deck,
+    Reps,
+    Lapses,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum SortDirection {
+    Asc,
+    Desc,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SearchInput {
+    pub query: String,
+    pub deck_id: Option<String>,
+    pub tag: Option<String>,
+    pub states: Vec<CardState>,
+    pub flags: Vec<CardFlag>,
+    pub sort: SortKey,
+    pub direction: SortDirection,
+    /// Opaque keyset cursor from a previous page.
+    pub cursor: Option<String>,
+    pub page_size: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CardRowDto {
+    pub card_id: String,
+    pub note_id: String,
+    pub deck_id: String,
+    pub deck_name: String,
+    pub front: String,
+    pub back: String,
+    pub state: CardState,
+    pub queue: QueueState,
+    pub flag: CardFlag,
+    pub due_at: Option<String>,
+    /// Order of a new card in the new queue; `null` for cards already studied.
+    pub position: Option<u32>,
+    pub direction: CardDirection,
+    pub tags: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CardPageDto {
+    pub items: Vec<CardRowDto>,
+    pub next_cursor: Option<String>,
+    pub total: u32,
+    /// Snapshot token used by bulk actions over "all matches".
+    pub filter_version: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(
+    tag = "kind",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum BulkSelection {
+    Ids {
+        card_ids: Vec<String>,
+    },
+    Query {
+        filter_version: String,
+        excluded_card_ids: Vec<String>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(
+    tag = "type",
+    rename_all = "camelCase",
+    rename_all_fields = "camelCase"
+)]
+pub enum BulkAction {
+    Suspend,
+    Unsuspend,
+    Flag {
+        flag: CardFlag,
+    },
+    ChangeDeck {
+        deck_id: String,
+    },
+    AddTag {
+        tag: String,
+    },
+    RemoveTag {
+        tag: String,
+    },
+    /// New cards only: positions start, start+step, …; studied cards are skipped.
+    Reposition {
+        start: u32,
+        step: u32,
+    },
+    Delete,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct BulkActionInput {
+    pub operation_id: String,
+    pub selection: BulkSelection,
+    pub action: BulkAction,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct BulkPreviewInput {
+    pub selection: BulkSelection,
+    pub action: BulkAction,
+}
+
+/// What a bulk action would do, shown before the user confirms it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct BulkPreviewDto {
+    /// Cards in the selection.
+    pub selected: u32,
+    /// Cards the action would change.
+    pub affected: u32,
+    /// Cards left as they are (already in that state, or not new for reposition).
+    pub unchanged: u32,
+    /// Notes and decks the affected cards belong to.
+    pub notes: u32,
+    pub decks: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct BulkResultDto {
+    pub affected: u32,
+}
+
 /// Renders every Rust-owned DTO as one TypeScript module.
 pub fn typescript() -> String {
     let cfg = ts_rs::Config::new();
@@ -952,6 +1508,49 @@ pub fn typescript() -> String {
         SessionSummaryDto::decl(&cfg),
         SetFavoriteAssociationInput::decl(&cfg),
         ResolveWordLinkInput::decl(&cfg),
+        HiddenSectionCountsDto::decl(&cfg),
+        DeckTypeOptionDto::decl(&cfg),
+        DeckOverviewDto::decl(&cfg),
+        CreateDeckInput::decl(&cfg),
+        DeckPatchDto::decl(&cfg),
+        UpdateDeckInput::decl(&cfg),
+        DeleteDeckInput::decl(&cfg),
+        DeleteDeckResultDto::decl(&cfg),
+        PresetConfigDto::decl(&cfg),
+        PresetDto::decl(&cfg),
+        SavePresetInput::decl(&cfg),
+        NoteDto::decl(&cfg),
+        ReviewLogDto::decl(&cfg),
+        RetrievabilityDto::decl(&cfg),
+        CardDetailsDto::decl(&cfg),
+        NoteDetailsDto::decl(&cfg),
+        DeleteNoteInput::decl(&cfg),
+        DeleteNoteResultDto::decl(&cfg),
+        NoteContentChange::decl(&cfg),
+        UpdateNoteContentInput::decl(&cfg),
+        EditorDeckOptionDto::decl(&cfg),
+        NoteTemplateDto::decl(&cfg),
+        NoteTypeDto::decl(&cfg),
+        EditorDataDto::decl(&cfg),
+        WordLinkDraftDto::decl(&cfg),
+        SaveNoteInput::decl(&cfg),
+        SearchWordsInput::decl(&cfg),
+        WordMatchKind::decl(&cfg),
+        WordMatchDto::decl(&cfg),
+        DuplicateCheckInput::decl(&cfg),
+        DuplicateNoteDto::decl(&cfg),
+        DuplicateCheckDto::decl(&cfg),
+        SortKey::decl(&cfg),
+        SortDirection::decl(&cfg),
+        SearchInput::decl(&cfg),
+        CardRowDto::decl(&cfg),
+        CardPageDto::decl(&cfg),
+        BulkSelection::decl(&cfg),
+        BulkAction::decl(&cfg),
+        BulkActionInput::decl(&cfg),
+        BulkPreviewInput::decl(&cfg),
+        BulkPreviewDto::decl(&cfg),
+        BulkResultDto::decl(&cfg),
     ];
     let mut out = String::from(
         "// Generated from crates/contracts (Rust is the DTO source, plan Phase 7 step 28).\n\
