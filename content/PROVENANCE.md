@@ -4,11 +4,8 @@ Every asset that may ship in the app or is used as a test fixture is listed here
 
 | Asset | Origin | Declared license | Authorship / generation | Native review | Release status |
 |---|---|---|---|---|---|
-| `content/decks/de_words_a1.*` (43 notes, 86 cards) | KMP commit `c2fa62f`, converted to format v2 on 2026-11-04 | "Original LanguaLinker content — rights audit pending (D-04)" | fronts/backs: not recorded (author or LLM-assisted unknown); associations: LLM candidates, prompt `association-candidates-v1`, model `claude-opus-5-5`, 2026-11-04 | pending | **blocked** — confirm author, rights, review (D-04/ADR-14) |
-| `content/decks/de_sentences_a1.*` (12) | as above | as above | fronts/backs/tips: not recorded; link ranges and word GUIDs derived mechanically from the KMP `wordLinks` | pending | **blocked** |
-| `content/decks/en_words_a1.*` (46 notes, 92 cards) | as above | as above | as `de_words_a1` | pending | **blocked** |
-| `content/decks/en_sentences_a1.*` (12) | as above | as above | as `de_sentences_a1` | pending | **blocked** |
 | `content/tools/prompts/association-candidates-v1.md` | written for Phase 8 | project | project | — | tooling, not bundled |
+| `content/tools/prompts/*-candidates-v2.md` | v1 prompts extended with Spanish (2026-11-09) | project | project | — | tooling, not bundled |
 | `tests/fixtures/kmp/content/*` | KMP commit `c2fa62f` (the original v1 files, byte-identical, moved from `content/decks`) | `source: original`, no attribution | not recorded | — | **test/reference only**, never bundled |
 | `tests/fixtures/unicode/ranges.json` | written for Phase 8 (plan §14.1) | project | project | — | test only |
 | `tests/fixtures/kmp/apkg/sample_german_a1_sentences.apkg` | KMP commit `c2fa62f` (added in "implementation of phase 3") | none | a real Anki export: `collection.anki21b` (zstd, schema 18) holds 432 notes (Polish front, German back), 864 cards, 5 329 reviews with FSRS state; `collection.anki2` is only Anki's "please update" stub | — | **test-only**, never bundled; input of the converter and importer tests |

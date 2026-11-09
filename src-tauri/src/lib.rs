@@ -493,7 +493,7 @@ mod tests {
             std::thread::sleep(Duration::from_millis(10));
         }
         assert!(
-            matches!(status.result, Some(JobResultDto::PrepareContent { created: 113, ref deck_ids, .. }) if deck_ids.len() == 4),
+            matches!(status.result, Some(JobResultDto::PrepareContent { created: 3112, ref deck_ids, .. }) if deck_ids.len() == 4),
             "{status:?}"
         );
         let dashboard: DashboardDto = serde_json::from_value(
@@ -508,7 +508,7 @@ mod tests {
                 .iter()
                 .map(|deck| deck.counts.total)
                 .sum::<u32>(),
-            202
+            3598
         );
         // New cards shown for today respect the preset's daily limit (Phase 10).
         assert!(dashboard.decks.iter().all(|deck| deck.counts.new <= 20));

@@ -231,24 +231,24 @@ fn fresh_install_contains_the_four_decks_with_content_and_links() {
         .complete_onboarding(onboarding("op-1", &ALL))
         .unwrap();
     let outcome = result(&harness.wait(&job));
-    assert_eq!(outcome["created"], 113);
+    assert_eq!(outcome["created"], 3112);
     assert_eq!(outcome["decks"], 4);
     assert_eq!(
         harness.count("SELECT COUNT(*) FROM decks WHERE bundled = 1"),
         4
     );
-    assert_eq!(harness.count("SELECT COUNT(*) FROM notes"), 113);
-    // 89 words × 2 templates + 24 sentences × 1.
-    assert_eq!(harness.count("SELECT COUNT(*) FROM cards"), 202);
+    assert_eq!(harness.count("SELECT COUNT(*) FROM notes"), 3112);
+    // 486 words × 2 templates + 2626 sentences × 1.
+    assert_eq!(harness.count("SELECT COUNT(*) FROM cards"), 3598);
     assert_eq!(
         harness.count("SELECT COUNT(*) FROM cards WHERE state <> 0 OR due_at IS NOT NULL"),
         0
     );
     assert_eq!(
         harness.count("SELECT COUNT(*) FROM associations WHERE provenance = 1"),
-        89
+        3112
     );
-    assert_eq!(harness.count("SELECT COUNT(*) FROM bundled_notes"), 113);
+    assert_eq!(harness.count("SELECT COUNT(*) FROM bundled_notes"), 3112);
     assert_eq!(
         harness.count("SELECT COUNT(*) FROM sentence_word_links WHERE resolution <> 1"),
         0
@@ -256,7 +256,7 @@ fn fresh_install_contains_the_four_decks_with_content_and_links() {
     assert!(harness.count("SELECT COUNT(*) FROM sentence_word_links") > 50);
     assert_eq!(
         harness.count("SELECT COUNT(DISTINCT guid) FROM cards"),
-        202,
+        3598,
         "card GUIDs are generated"
     );
     assert_eq!(
@@ -315,13 +315,13 @@ fn second_import_is_idempotent() {
         (outcome["created"].as_u64(), outcome["updated"].as_u64()),
         (Some(0), Some(0))
     );
-    assert_eq!(outcome["unchanged"], 113);
+    assert_eq!(outcome["unchanged"], 3112);
     assert_eq!(
         harness.count("SELECT COUNT(*) FROM notes")
             + harness.count("SELECT COUNT(*) FROM cards") * 1_000,
         before
     );
-    assert_eq!(harness.count("SELECT COUNT(*) FROM associations"), 89);
+    assert_eq!(harness.count("SELECT COUNT(*) FROM associations"), 3112);
     assert_eq!(harness.count("SELECT COUNT(*) FROM review_logs"), 0);
     // Nothing is pending afterwards, so the next start does nothing.
     assert!(content.resume().unwrap().is_none());
@@ -344,8 +344,12 @@ fn update_with_fifty_new_notes_preserves_progress_and_overrides() {
     };
     let studied = guid_at(0);
     let edited = guid_at(1);
-    let removed_studied = guid_at(41);
-    let removed_new = guid_at(42);
+    let words = std::fs::read_to_string(content_dir().join("de_words_a1.ndjson"))
+        .unwrap()
+        .lines()
+        .count();
+    let removed_studied = guid_at(words - 2);
+    let removed_new = guid_at(words - 1);
 
     // The learner studied two notes and edited the back of another.
     let (studied_card, studied_removed_card) = {
@@ -372,7 +376,7 @@ fn update_with_fifty_new_notes_preserves_progress_and_overrides() {
                 let mut note = tx.note_by_guid(&edited)?.unwrap();
                 note.fields.back = "moja wersja".into();
                 tx.update_note(&note, TimestampMs(T0 + 10))?;
-                tx.put_content_override(note.id, "back", "2026.11.04", TimestampMs(T0 + 10))?;
+                tx.put_content_override(note.id, "back", "2026.11.09", TimestampMs(T0 + 10))?;
                 Ok((cards[0].clone(), cards[1].clone()))
             })
             .unwrap()
@@ -384,7 +388,7 @@ fn update_with_fifty_new_notes_preserves_progress_and_overrides() {
     rewrite(dir.path(), "de_words_a1", "2026.12.01", |records| {
         records[0]["back"] = "ja (zaimek)".into();
         records[1]["back"] = "ty (nowe tłumaczenie)".into();
-        records.truncate(41);
+        records.truncate(records.len() - 2);
         for n in 0..50 {
             records.push(serde_json::json!({
                 "guid": format!("dew-new-{n:03}"),
@@ -466,7 +470,7 @@ fn update_with_fifty_new_notes_preserves_progress_and_overrides() {
     );
     assert_eq!(kept_cards[0].reps, studied_removed_card.reps);
     assert_eq!(version.as_deref(), Some("2026.12.01"));
-    assert_eq!(harness.count("SELECT COUNT(*) FROM notes"), 93);
+    assert_eq!(harness.count("SELECT COUNT(*) FROM notes"), words as i64 + 50);
 }
 
 /// Serves a notes file normally on the first open (validation) and fails half-way through on
@@ -546,7 +550,7 @@ fn failure_inside_a_deck_leaves_no_partial_deck_and_restart_completes() {
     assert_eq!(job.status, JobStatus::Failed);
     // The German deck committed; the English one left nothing behind and is still pending.
     assert_eq!(harness.count("SELECT COUNT(*) FROM decks"), 1);
-    assert_eq!(harness.count("SELECT COUNT(*) FROM notes"), 43);
+    assert_eq!(harness.count("SELECT COUNT(*) FROM notes"), 151);
     assert_eq!(harness.pending(), ["bundled-en-words-a1"]);
 
     // "Restart": reopen the file and resume with an intact source.
@@ -566,7 +570,7 @@ fn failure_inside_a_deck_leaves_no_partial_deck_and_restart_completes() {
         .unwrap()
         .expect("pending deck resumes at startup");
     let outcome = result(&harness.wait(&job));
-    assert_eq!(outcome["created"], 46);
+    assert_eq!(outcome["created"], 335);
     assert_eq!(harness.count("SELECT COUNT(*) FROM decks"), 2);
     assert!(harness.pending().is_empty());
 }
@@ -592,7 +596,7 @@ fn sentence_links_resolve_when_the_word_deck_arrives_later() {
         .complete_onboarding(onboarding("op-2", &["bundled-de-words-a1"]))
         .unwrap();
     let outcome = result(&harness.wait(&job));
-    assert_eq!(outcome["created"], 43);
+    assert_eq!(outcome["created"], 151);
     assert_eq!(
         harness.count("SELECT COUNT(*) FROM sentence_word_links WHERE resolution = 1"),
         links

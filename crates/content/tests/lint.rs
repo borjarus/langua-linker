@@ -228,7 +228,7 @@ broken!(not_nfc, ["text.notNfc"], |dir| {
 
 broken!(range_out_of_bounds, ["range.invalid"], |dir| {
     edit_record(dir, "de_sentences_a1", 0, |record| {
-        record["wordLinks"][5]["end"] = 400.into()
+        record["wordLinks"][0]["end"] = 400.into()
     });
 });
 
