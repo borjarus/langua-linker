@@ -5,47 +5,65 @@
     "copiedAt": "2026-10-12",
     "note": "Assets were copied once; this repository is their source of truth from now on. See docs/migration/kmp-manifest.md."
   },
-  "expectedContentRecords": 113,
+  "expectedContentRecords": 5024,
   "files": {
     "content/decks/catalog.json": {
-      "sha256": "9ca29d9fe6a5ee48d793261188657035116e6a2dafe705ea1ced041773e90a6b",
-      "bytes": 126
+      "sha256": "a9ddc34ffea0684e7013e885d69464780fd0c1e42ac0e35b10b52fbf1c3d1479",
+      "bytes": 168
     },
     "content/decks/de_sentences_a1.json": {
-      "sha256": "058c6b055fc7286118f15140577bae67787b4ae538af8554514475e9a30bb655",
-      "bytes": 862
+      "sha256": "bfa4599e9d0f322cca0aa2ee04e1e2a2502604365d413fdd357f1b4c9970ad66",
+      "bytes": 866
     },
     "content/decks/de_sentences_a1.ndjson": {
-      "sha256": "b8b20523ed145a6d6d36a3e8292cb29b45dd7fafe5add29569717df47b872d2d",
-      "bytes": 9543,
-      "records": 12
+      "sha256": "5cdb1350998ee9122e4112b7c80d0f70c5533bad8eee1ee9cad6d8c2111383ba",
+      "bytes": 1129595,
+      "records": 1384
     },
     "content/decks/de_words_a1.json": {
-      "sha256": "a2230e10a2ebe0c712d0b71b9c368fc72b87fb6450228d1ffabdc833abb19f48",
-      "bytes": 828
+      "sha256": "963b7fe41f84ec927745ffcd95c0a2c8c2fcfd8b17c359bba0ac4fe265ef8e51",
+      "bytes": 830
     },
     "content/decks/de_words_a1.ndjson": {
-      "sha256": "b94c707f7fa64eaf0d6f09f3608e6853896c069a47222744f2f21f369008bbe2",
-      "bytes": 13708,
-      "records": 43
+      "sha256": "71f43656fe086013fe96dc0fc11a70dfebaf3699e80fc99a030dce2335e8206e",
+      "bytes": 47348,
+      "records": 151
     },
     "content/decks/en_sentences_a1.json": {
-      "sha256": "d032e8fa5016d6fb82b9d8edeace32aa042a14e0af8c5823b19e068e0ead661c",
-      "bytes": 862
+      "sha256": "37de5e77a1cf0253deeac2a54f66c265ce7a51ba6ed3a1bfe31b5577ab8bd3ad",
+      "bytes": 866
     },
     "content/decks/en_sentences_a1.ndjson": {
-      "sha256": "6ff7737c79b79de24e4ecdb5129adbc77d5addd4ea2363e8a3abf4dc722f50c8",
-      "bytes": 8964,
-      "records": 12
+      "sha256": "9da4ecdb654bee73c2cd11f50dc491bc697cc63163c60f6e2216c71472491480",
+      "bytes": 1325311,
+      "records": 1242
     },
     "content/decks/en_words_a1.json": {
-      "sha256": "adbc6da37220b0bb18044f010e8b1d922ec24b56500d89c34b9ac36da3b7ac13",
-      "bytes": 828
+      "sha256": "a8d7da7a7d27ccd1cb98ff498ffed445fdc9a50c94c0b5fea2748b11c5f7cab3",
+      "bytes": 830
     },
     "content/decks/en_words_a1.ndjson": {
-      "sha256": "b06c5100a8adba1df8f32f34378878163483976135fd864038e4956ebb4fde5c",
-      "bytes": 14061,
-      "records": 46
+      "sha256": "d424ae52767a11a6d140fd685fc6239a19755726d365c0d668f12c7fc3b2d3ce",
+      "bytes": 94782,
+      "records": 335
+    },
+    "content/decks/es_sentences_a1.json": {
+      "sha256": "8edb6b2e4bd6b04b7ec551e78c5e6d56956cff3aa0a9b342f68b3938aa3cc7f6",
+      "bytes": 1025
+    },
+    "content/decks/es_sentences_a1.ndjson": {
+      "sha256": "1632fa975eb481b4283a876e2507e26e12ce621990d6fcf843fbe5923086d2e9",
+      "bytes": 1311573,
+      "records": 1275
+    },
+    "content/decks/es_words_a1.json": {
+      "sha256": "d05cf798cd58d09ea5eef8af2d743a1bed3f61d54d4c2b648679b15c3bf146df",
+      "bytes": 835
+    },
+    "content/decks/es_words_a1.ndjson": {
+      "sha256": "14be350d72b147414901af6e0f78299657319687b9a30150a4494c41ebaff502",
+      "bytes": 193375,
+      "records": 637
     },
     "tests/fixtures/fsrs/kmp-fsrs-spec.json": {
       "sha256": "20cfc72dc21a095217da53d3fdd9adc43f78b97cefc4d3e83ca51d5c2954a54b",
