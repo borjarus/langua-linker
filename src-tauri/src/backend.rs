@@ -9,11 +9,13 @@ use langualinker_application::content::ContentService;
 use langualinker_application::jobs::{
     JobDetail, JobEvent, JobKind, JobRecord, JobService, JobStatus,
 };
-use langualinker_application::ports::{Clock, CollectionScope, EventSink, Rng};
+use langualinker_application::ports::{Clock, CollectionScope, EventSink, Rng, SecretStore};
+use langualinker_application::repositories::UnitOfWork;
 use langualinker_application::{AppError, DetailValue};
 use langualinker_contracts::dto::{self, JobDto, JobEventDto, JobProgressDto, JobResultDto};
 use langualinker_contracts::{ErrorCode, ErrorDto};
 use langualinker_domain::TimestampMs;
+use langualinker_infrastructure::backup::{BackupDirs, BackupService};
 use langualinker_infrastructure::sqlite::{DATABASE_FILE, SqliteDatabase};
 use langualinker_infrastructure::system::{OsRng, SystemClock};
 use serde_json::{Map, Value};
@@ -38,15 +40,30 @@ pub struct Collection {
     pub clock: Arc<dyn Clock>,
     /// GUIDs of decks, notes, cards and snippets created by the user.
     pub rng: Arc<dyn Rng>,
+    /// Backups, restore and reset (Phase 12).
+    pub backups: BackupService,
+    /// Platform secret store; `None` where the platform has none (tests, Linux CI).
+    pub secrets: Option<Arc<dyn SecretStore>>,
 }
 
 impl Backend {
     /// Opens `<data_dir>/collection.sqlite`, migrating it, and marks jobs a previous process left
     /// unfinished as failed.
+    #[cfg(test)]
     pub fn open<R: Runtime>(
         app: &AppHandle<R>,
         data_dir: PathBuf,
         log_dir: Option<PathBuf>,
+    ) -> Self {
+        Self::open_with(app, data_dir, log_dir, None)
+    }
+
+    /// [`Backend::open`] with the platform secret store (the app passes the native one).
+    pub fn open_with<R: Runtime>(
+        app: &AppHandle<R>,
+        data_dir: PathBuf,
+        log_dir: Option<PathBuf>,
+        secrets: Option<Arc<dyn SecretStore>>,
     ) -> Self {
         let clock = Arc::new(SystemClock);
         let collection = SqliteDatabase::open(&data_dir.join(DATABASE_FILE), clock.as_ref())
@@ -60,23 +77,40 @@ impl Backend {
                     },
                     "collection opened"
                 );
-                Collection::start(
+                Collection::start_in(
                     Arc::new(opened.database),
                     Arc::new(TauriEvents(app.clone())),
                     clock,
+                    BackupDirs::under(&data_dir),
+                    secrets,
                 )
             });
         match &collection {
             Err(error) => tracing::error!(code = error.code(), "collection could not be opened"),
             // A preparation cut short by a kill, or a newer bundled version, continues now in
             // the background; the first screen does not wait for it.
-            Ok(collection) => match collection.content.resume() {
-                Ok(Some(job)) => {
-                    tracing::info!(job_id = %job.id, "bundled content preparation resumed")
+            Ok(collection) => {
+                // The first start adopts the device's time zone for the study day (Phase 12).
+                let zone = iana_time_zone::get_timezone().unwrap_or_else(|_| "UTC".to_owned());
+                let now = collection.clock.now();
+                match collection
+                    .db
+                    .write(move |tx| langualinker_application::settings::initialize(tx, &zone, now))
+                {
+                    Ok(true) => tracing::info!("study day follows the device time zone"),
+                    Ok(false) => {}
+                    Err(error) => tracing::error!(code = error.code(), "settings not initialized"),
                 }
-                Ok(None) => {}
-                Err(error) => tracing::error!(code = error.code(), "bundled content not resumed"),
-            },
+                match collection.content.resume() {
+                    Ok(Some(job)) => {
+                        tracing::info!(job_id = %job.id, "bundled content preparation resumed")
+                    }
+                    Ok(None) => {}
+                    Err(error) => {
+                        tracing::error!(code = error.code(), "bundled content not resumed")
+                    }
+                }
+            }
         }
         Self {
             collection,
@@ -90,10 +124,28 @@ impl Backend {
 }
 
 impl Collection {
+    /// A collection whose backup folders live in a fresh temporary directory (tests).
+    #[cfg(test)]
     pub fn start(
         db: Arc<SqliteDatabase>,
         events: Arc<dyn EventSink>,
         clock: Arc<dyn Clock>,
+    ) -> Result<Self, AppError> {
+        static NEXT: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+        let dir = std::env::temp_dir().join(format!(
+            "langualinker-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+        ));
+        Self::start_in(db, events, clock, BackupDirs::under(&dir), None)
+    }
+
+    pub fn start_in(
+        db: Arc<SqliteDatabase>,
+        events: Arc<dyn EventSink>,
+        clock: Arc<dyn Clock>,
+        dirs: BackupDirs,
+        secrets: Option<Arc<dyn SecretStore>>,
     ) -> Result<Self, AppError> {
         let jobs = JobService::new(db.clone(), events.clone(), clock.clone());
         let interrupted = jobs.recover_interrupted()?;
@@ -112,13 +164,26 @@ impl Collection {
                 import: crate::content::encode_import,
             },
         );
+        let rng: Arc<dyn Rng> = Arc::new(OsRng);
+        let backups = BackupService::new(
+            db.clone(),
+            jobs.clone(),
+            events.clone(),
+            clock.clone(),
+            rng.clone(),
+            secrets.clone(),
+            dirs,
+            crate::APP_VERSION,
+        );
         Ok(Self {
             db,
             jobs,
             content,
             events,
             clock,
-            rng: Arc::new(OsRng),
+            rng,
+            backups,
+            secrets,
         })
     }
 }
@@ -297,6 +362,7 @@ mod tests {
                 reason: "secretStore",
             },
             AppError::PreviewStale,
+            AppError::BackupCorrupt { reason: "checksum" },
             AppError::UnsupportedFormat { format: "apkg" },
             AppError::Cancelled,
             AppError::NotImplemented {

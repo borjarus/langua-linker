@@ -10,6 +10,8 @@ pub mod learning;
 pub mod management;
 pub mod ports;
 pub mod repositories;
+pub mod settings;
+pub mod stats;
 pub mod study;
 
 pub use error::{AppError, AppResult, DetailValue};

@@ -4,7 +4,8 @@
 //! held in memory until a newer pick replaces them.
 
 use std::collections::VecDeque;
-use std::io::Read;
+use std::io::{Read, Write};
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use langualinker_application::AppError;
@@ -22,6 +23,9 @@ pub struct PickedFile {
     pub token: String,
     pub name: String,
     pub bytes: Arc<Vec<u8>>,
+    /// A restore archive copied into the staging folder, or a picked backup folder (Phase 12);
+    /// `bytes` is empty then.
+    pub path: Option<PathBuf>,
 }
 
 #[derive(Default)]
@@ -30,12 +34,22 @@ pub struct PickedFiles(Mutex<VecDeque<PickedFile>>);
 impl PickedFiles {
     /// Registers file contents under a new random token.
     pub fn register(&self, name: String, bytes: Vec<u8>) -> PickedFile {
+        self.insert(name, bytes, None)
+    }
+
+    /// Registers a file or folder held at `path` (restore archives, backup folders).
+    pub fn register_path(&self, name: String, path: PathBuf) -> PickedFile {
+        self.insert(name, Vec::new(), Some(path))
+    }
+
+    fn insert(&self, name: String, bytes: Vec<u8>, path: Option<PathBuf>) -> PickedFile {
         let mut token = [0u8; 12];
         getrandom_token(&mut token);
         let file = PickedFile {
             token: token.iter().map(|byte| format!("{byte:02x}")).collect(),
             name,
             bytes: Arc::new(bytes),
+            path,
         };
         let mut files = self
             .0
@@ -144,6 +158,120 @@ pub fn pick_import_file<R: Runtime>(
         return Err(ValidationError::new("file", "tooLarge").into());
     }
     Ok(Some((name, bytes)))
+}
+
+fn dialog_available<R: Runtime>(app: &AppHandle<R>) -> Result<(), AppError> {
+    if app.try_state::<tauri_plugin_dialog::Dialog<R>>().is_none() {
+        return Err(AppError::PermissionDenied {
+            reason: "filePicker",
+        });
+    }
+    Ok(())
+}
+
+/// Shows the picker for a backup archive and copies it into `staging` right away (the picked
+/// URI may stop being readable). Returns the display name, the staged copy and its size.
+pub fn pick_restore_file<R: Runtime>(
+    app: &AppHandle<R>,
+    staging: &Path,
+) -> Result<Option<(String, PathBuf, u64)>, AppError> {
+    use langualinker_infrastructure::backup::{BACKUP_EXTENSION, MAX_BACKUP_BYTES};
+    dialog_available(app)?;
+    let mut dialog = app.dialog().file();
+    if cfg!(not(any(target_os = "android", target_os = "ios"))) {
+        dialog = dialog.add_filter("LanguaLinker backup", &[BACKUP_EXTENSION]);
+    }
+    let Some(path) = dialog.blocking_pick_file() else {
+        return Ok(None);
+    };
+    let name = display_name(&path);
+    let mut token = [0u8; 12];
+    getrandom_token(&mut token);
+    let target = staging.join(format!(
+        "picked-{}.{BACKUP_EXTENSION}",
+        token
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect::<String>()
+    ));
+    let mut options = OpenOptions::new();
+    options.read(true);
+    let copied = app.fs().open(path.clone(), options).and_then(|file| {
+        let mut out = std::fs::File::create(&target)?;
+        let copied = std::io::copy(&mut file.take(MAX_BACKUP_BYTES + 1), &mut out)?;
+        out.flush()?;
+        Ok(copied)
+    });
+    release_access(app, path);
+    let copied = copied.map_err(|error| {
+        let _ = std::fs::remove_file(&target);
+        match error.kind() {
+            std::io::ErrorKind::StorageFull => AppError::StorageFull,
+            _ => AppError::PermissionDenied { reason: "fileRead" },
+        }
+    })?;
+    if copied > MAX_BACKUP_BYTES {
+        let _ = std::fs::remove_file(&target);
+        return Err(ValidationError::new("file", "tooLarge").into());
+    }
+    Ok(Some((name, target, copied)))
+}
+
+/// Shows the folder picker for external backups. Desktop only: mobile folder grants (Android
+/// tree URIs, iOS bookmarks) are not plain paths, so mobile users save copies with *Share*.
+pub fn pick_backup_folder<R: Runtime>(
+    app: &AppHandle<R>,
+) -> Result<Option<(String, PathBuf)>, AppError> {
+    if cfg!(any(target_os = "android", target_os = "ios")) {
+        return Err(AppError::PermissionDenied {
+            reason: "externalFolder",
+        });
+    }
+    dialog_available(app)?;
+    let Some(folder) = app.dialog().file().blocking_pick_folder() else {
+        return Ok(None);
+    };
+    match folder {
+        FilePath::Path(path) => Ok(Some((display_name(&FilePath::Path(path.clone())), path))),
+        FilePath::Url(_) => Err(AppError::PermissionDenied {
+            reason: "externalFolder",
+        }),
+    }
+}
+
+/// Saves a copy of `source` where the user chooses (outside the app sandbox). `Ok(false)` when
+/// the user closed the dialog.
+pub fn save_copy<R: Runtime>(
+    app: &AppHandle<R>,
+    source: &Path,
+    file_name: &str,
+) -> Result<bool, AppError> {
+    dialog_available(app)?;
+    let Some(path) = app
+        .dialog()
+        .file()
+        .set_file_name(file_name)
+        .blocking_save_file()
+    else {
+        return Ok(false);
+    };
+    let mut options = OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    let written = std::fs::File::open(source).and_then(|mut input| {
+        let mut out = app.fs().open(path.clone(), options)?;
+        std::io::copy(&mut input, &mut out)?;
+        out.flush()?;
+        out.sync_all()
+    });
+    release_access(app, path);
+    written.map_err(|error| match error.kind() {
+        std::io::ErrorKind::StorageFull => AppError::StorageFull,
+        std::io::ErrorKind::NotFound => AppError::NotFound { entity: "backup" },
+        _ => AppError::PermissionDenied {
+            reason: "fileWrite",
+        },
+    })?;
+    Ok(true)
 }
 
 /// iOS keeps security-scoped access open until it is released explicitly.

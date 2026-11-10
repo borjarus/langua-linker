@@ -271,6 +271,13 @@ fn read_onboarding(tx: &mut dyn Repositories) -> AppResult<Option<StoredOnboardi
         .transpose()
 }
 
+/// Target language codes chosen at onboarding (empty before it).
+pub fn onboarding_target_languages(tx: &mut dyn Repositories) -> AppResult<Vec<String>> {
+    Ok(read_onboarding(tx)?
+        .map(|stored| stored.target_languages)
+        .unwrap_or_default())
+}
+
 fn content_error(issues: &Issues) -> AppError {
     let issue = issues.first_error();
     if let Some(issue) = issue {

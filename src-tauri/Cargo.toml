@@ -18,6 +18,8 @@ tauri-build = { version = "=2.7.1", features = [] }
 
 [dependencies]
 chrono.workspace = true
+# Device time zone for the first study-day calendar (Phase 12).
+iana-time-zone = "0.1.65"
 langualinker-application = { path = "../crates/application" }
 langualinker-content = { path = "../crates/content" }
 langualinker-contracts = { path = "../crates/contracts" }

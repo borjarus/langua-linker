@@ -207,6 +207,10 @@ pub struct JobContext<U: UnitOfWork> {
 }
 
 impl<U: UnitOfWork> JobContext<U> {
+    pub fn id(&self) -> &JobId {
+        &self.id
+    }
+
     /// Persists progress and emits it. Fails with `Cancelled` when a cancel was requested before
     /// the commit phase; the work should return that error unchanged.
     pub fn progress(&self, done: u64, total: u64) -> AppResult<()> {
@@ -290,6 +294,16 @@ impl<U: UnitOfWork> JobService<U> {
             }
             Ok(unfinished.len())
         })
+    }
+
+    /// Jobs running in this process.
+    pub fn running(&self) -> Vec<JobId> {
+        self.running
+            .lock()
+            .expect("job registry")
+            .keys()
+            .cloned()
+            .collect()
     }
 
     pub fn get(&self, id: &JobId) -> AppResult<JobRecord> {

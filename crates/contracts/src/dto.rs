@@ -10,6 +10,9 @@ use ts_rs::TS;
 
 use crate::ErrorDto;
 
+mod settings;
+pub use settings::*;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
 pub enum JobKind {
@@ -1551,6 +1554,45 @@ pub fn typescript() -> String {
         BulkPreviewInput::decl(&cfg),
         BulkPreviewDto::decl(&cfg),
         BulkResultDto::decl(&cfg),
+        StatsRange::decl(&cfg),
+        StatsInput::decl(&cfg),
+        RatioDto::decl(&cfg),
+        ReviewDayDto::decl(&cfg),
+        ForecastDayDto::decl(&cfg),
+        ForecastAssumptionsDto::decl(&cfg),
+        CardStatesDto::decl(&cfg),
+        MaturityDto::decl(&cfg),
+        TrueRetentionDto::decl(&cfg),
+        StabilityBucketDto::decl(&cfg),
+        DifficultyStabilityPointDto::decl(&cfg),
+        StatsDto::decl(&cfg),
+        UiLanguage::decl(&cfg),
+        ThemePreference::decl(&cfg),
+        PermissionState::decl(&cfg),
+        ConsentState::decl(&cfg),
+        AiProviderOptionDto::decl(&cfg),
+        AiQuotaDto::decl(&cfg),
+        AiSettingsDto::decl(&cfg),
+        BackupLocation::decl(&cfg),
+        BackupSettingsDto::decl(&cfg),
+        SettingsDto::decl(&cfg),
+        SettingsPatch::decl(&cfg),
+        UpdateSettingsInput::decl(&cfg),
+        ResetScope::decl(&cfg),
+        ResetPreviewInput::decl(&cfg),
+        CollectionCountsDto::decl(&cfg),
+        ResetPreviewDto::decl(&cfg),
+        ResetInput::decl(&cfg),
+        BackupKind::decl(&cfg),
+        BackupDto::decl(&cfg),
+        BackupInput::decl(&cfg),
+        ShareTarget::decl(&cfg),
+        ShareFileInput::decl(&cfg),
+        ShareResultDto::decl(&cfg),
+        RestoreSource::decl(&cfg),
+        ValidateRestoreInput::decl(&cfg),
+        RestorePreviewDto::decl(&cfg),
+        RestoreInput::decl(&cfg),
     ];
     let mut out = String::from(
         "// Generated from crates/contracts (Rust is the DTO source, plan Phase 7 step 28).\n\

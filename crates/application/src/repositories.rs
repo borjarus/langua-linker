@@ -614,6 +614,86 @@ pub trait ManagementRepository {
     ) -> AppResult<Vec<CardId>>;
 }
 
+/// One valid (not undone) rating as statistics read it (plan Phase 12 step 1).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ReviewFact {
+    pub card_id: CardId,
+    pub reviewed_at: TimestampMs,
+    pub duration_ms: i64,
+    pub rating: langualinker_domain::review::Rating,
+    pub kind: langualinker_domain::review::ReviewKind,
+    /// Card state before the rating.
+    pub state_before: langualinker_domain::card::CardState,
+    /// Interval in days the card had before the rating (young/mature split).
+    pub interval_before_days: i64,
+    /// Due time before the rating (`None` for a new card).
+    pub due_before: Option<TimestampMs>,
+}
+
+/// Memory and schedule of one live, not archived card.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CardFact {
+    pub card_id: CardId,
+    pub deck_id: DeckId,
+    pub state: langualinker_domain::card::CardState,
+    pub queue: langualinker_domain::card::QueueState,
+    pub due_at: Option<TimestampMs>,
+    pub stability: Option<f64>,
+    pub difficulty: Option<f64>,
+    /// Current interval in days.
+    pub interval_days: i64,
+}
+
+/// Read models of the statistics screen. `decks: None` means every deck; a card belongs to the
+/// deck it is in now, and ratings follow their card.
+pub trait StatsQueries {
+    /// Valid ratings at or after `since`, oldest first (cards deleted later included).
+    fn review_facts(
+        &mut self,
+        decks: Option<&[DeckId]>,
+        since: TimestampMs,
+    ) -> AppResult<Vec<ReviewFact>>;
+    /// Live, not archived cards.
+    fn card_facts(&mut self, decks: Option<&[DeckId]>) -> AppResult<Vec<CardFact>>;
+    /// A valid rating exists in `[from, to)`.
+    fn has_review_in(
+        &mut self,
+        decks: Option<&[DeckId]>,
+        from: TimestampMs,
+        to: TimestampMs,
+    ) -> AppResult<bool>;
+    /// Time of the oldest valid rating.
+    fn first_review_at(&mut self, decks: Option<&[DeckId]>) -> AppResult<Option<TimestampMs>>;
+}
+
+/// Size of the collection as reset and restore previews show it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct CollectionCounts {
+    pub decks: u32,
+    /// Live notes with at least one live card.
+    pub notes: u32,
+    pub cards: u32,
+    /// Valid ratings.
+    pub reviews: u32,
+}
+
+/// Collection-wide writes of Phase 12 (settings, consent withdrawal, progress reset).
+pub trait MaintenanceRepository {
+    /// Stores the IANA zone and the minutes after midnight at which a study day starts.
+    fn set_collection_calendar(&mut self, zone: &str, cutoff_minutes: u32) -> AppResult<()>;
+    /// Blocks queued and in-flight LLM requests before they reach the network (AI consent
+    /// withdrawn). Returns how many were blocked.
+    fn block_pending_llm_requests(&mut self, at: TimestampMs) -> AppResult<u64>;
+    fn collection_counts(&mut self) -> AppResult<CollectionCounts>;
+    /// Returns every live card to New (FSRS memory, reps, lapses, steps and due dates cleared,
+    /// queue positions renumbered; suspended cards stay suspended), deletes the review history,
+    /// undo entries and study sessions. Notes, cards, decks and presets remain. Returns the cards
+    /// reset.
+    fn reset_progress(&mut self, at: TimestampMs) -> AppResult<u64>;
+    /// Time of the newest valid rating.
+    fn newest_review_at(&mut self) -> AppResult<Option<TimestampMs>>;
+}
+
 /// Every repository inside one transaction.
 pub trait Repositories:
     DeckRepository
@@ -631,6 +711,8 @@ pub trait Repositories:
     + StudyRepository
     + SchedulerQueries
     + ManagementRepository
+    + StatsQueries
+    + MaintenanceRepository
 {
 }
 
@@ -650,6 +732,8 @@ impl<T> Repositories for T where
         + StudyRepository
         + SchedulerQueries
         + ManagementRepository
+        + StatsQueries
+        + MaintenanceRepository
 {
 }
 

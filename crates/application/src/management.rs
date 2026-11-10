@@ -242,7 +242,8 @@ pub fn create_deck(
         // A new deck cannot close a cycle; only the depth below the parent matters.
         langualinker_domain::deck::check_reparent(DeckId(0), Some(parent), parent_of)?;
     }
-    let config = tx.default_config()?;
+    // The preset chosen in the settings (Phase 12), or the built-in one.
+    let config_id = crate::settings::default_preset(tx)?;
     let deck = tx.insert_deck(
         &NewDeck {
             guid: rng.guid(),
@@ -252,7 +253,7 @@ pub fn create_deck(
             native_language: NativeLanguage::Pl,
             target_language: input.target_language,
             deck_type: input.deck_type,
-            config_id: config.id,
+            config_id,
             content_version: None,
             bundled: false,
         },

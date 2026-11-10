@@ -8,7 +8,7 @@
  * - Long-running work returns a `JobDto`; events are signals, never durable truth.
  *
  * This file is framework-independent: no Svelte, no Tauri imports.
- * Rust is the DTO source for the types re-exported from `src/generated/contracts.ts` (Phases 7–11);
+ * Rust is the DTO source for the types re-exported from `src/generated/contracts.ts` (Phases 7–12);
  * the remaining DTOs move there as their commands become real.
  */
 
@@ -135,6 +135,45 @@ import type {
   BulkPreviewDto,
   BulkResultDto,
   SortDirection,
+  RatioDto,
+  ReviewDayDto,
+  ForecastDayDto,
+  ForecastAssumptionsDto,
+  StabilityBucketDto,
+  DifficultyStabilityPointDto,
+  StatsDto,
+  StatsInput,
+  PermissionState,
+  ConsentState,
+  AiProviderOptionDto,
+  AiQuotaDto,
+  AiSettingsDto,
+  BackupLocation,
+  BackupSettingsDto,
+  SettingsDto,
+  SettingsPatch,
+  UpdateSettingsInput,
+  ResetScope,
+  ResetPreviewInput,
+  ResetPreviewDto,
+  ResetInput,
+  BackupKind,
+  BackupDto,
+  BackupInput,
+  ShareTarget,
+  ShareFileInput,
+  ShareResultDto,
+  RestoreSource,
+  ValidateRestoreInput,
+  RestorePreviewDto,
+  RestoreInput,
+  UiLanguage,
+  ThemePreference,
+  CardStatesDto,
+  MaturityDto,
+  TrueRetentionDto,
+  CollectionCountsDto,
+  StatsRange as GeneratedStatsRange,
 } from '../generated/contracts'
 
 export type {
@@ -254,6 +293,44 @@ export type {
   BulkPreviewDto,
   BulkResultDto,
   SortDirection,
+  RatioDto,
+  ReviewDayDto,
+  ForecastDayDto,
+  ForecastAssumptionsDto,
+  StabilityBucketDto,
+  DifficultyStabilityPointDto,
+  StatsDto,
+  StatsInput,
+  PermissionState,
+  ConsentState,
+  AiProviderOptionDto,
+  AiQuotaDto,
+  AiSettingsDto,
+  BackupLocation,
+  BackupSettingsDto,
+  SettingsDto,
+  SettingsPatch,
+  UpdateSettingsInput,
+  ResetScope,
+  ResetPreviewInput,
+  ResetPreviewDto,
+  ResetInput,
+  BackupKind,
+  BackupDto,
+  BackupInput,
+  ShareTarget,
+  ShareFileInput,
+  ShareResultDto,
+  RestoreSource,
+  ValidateRestoreInput,
+  RestorePreviewDto,
+  RestoreInput,
+  UiLanguage,
+  ThemePreference,
+  CardStatesDto,
+  MaturityDto,
+  TrueRetentionDto,
+  CollectionCountsDto,
 }
 
 export const API_VERSION = '1.2'
@@ -271,9 +348,6 @@ export type Rating = (typeof RATINGS)[number]
 /** Compile-time check: the runtime list equals the Rust `Rating` enum. */
 const ratingsMatchRust: SameMembers<Rating, GeneratedRating> = true
 void ratingsMatchRust
-
-export type UiLanguage = 'pl' | 'en'
-export type ThemePreference = 'system' | 'light' | 'dark'
 
 export const DECK_TYPES = ['Simple', 'TextWithAssociations', 'Linguistic'] as const
 export type DeckType = (typeof DECK_TYPES)[number]
@@ -362,183 +436,15 @@ export type BulkActionType = BulkAction['type']
 
 // ---------------------------------------------------------------- statistics
 
+// Statistics, settings, reset, backup and restore DTOs come from Rust (Phase 12).
+
 export const STATS_RANGES = ['1m', '3m', '1y', 'all'] as const
 export type StatsRange = (typeof STATS_RANGES)[number]
-
-export interface StatsInput {
-  /** `null` = the whole collection; a deck includes its subdecks. */
-  deckId: Id | null
-  range: StatsRange
-}
-
-export interface RatioDto {
-  passed: number
-  total: number
-}
-
-export interface ReviewDayDto {
-  day: StudyDay
-  count: number
-  activeMs: number
-}
-
-/** One study day of the due forecast. */
-export interface ForecastDayDto {
-  day: StudyDay
-  /** Cards whose stored due date falls on this day (day 0 also holds the overdue ones). */
-  stored: number
-  /** Reviews expected on this day once the deck limits carry the backlog forward. */
-  projected: number
-}
-
-/** What the projected forecast assumes; shown next to the chart. */
-export interface ForecastAssumptionsDto {
-  reviewsPerDay: number
-  newPerDay: number
-  /** New cards are not part of the forecast: they are introduced by the user's daily limit. */
-  includesNew: boolean
-}
-
-/** Stability histogram bucket in days, `[minDays, maxDays)`; `maxDays: null` is open-ended. */
-export interface StabilityBucketDto {
-  minDays: number
-  maxDays: number | null
-  count: number
-}
-
-export interface DifficultyStabilityPointDto {
-  cardId: Id
-  /** Days. */
-  stability: number
-  /** FSRS difficulty, 1–10. */
-  difficulty: number
-}
-
-export interface StatsDto {
-  range: StatsRange
-  deckId: Id | null
-  /** Every study day of the range, oldest first, including days without reviews. */
-  reviewsByDay: ReviewDayDto[]
-  forecast: ForecastDayDto[]
-  forecastAssumptions: ForecastAssumptionsDto
-  /** Cards already past their due day; part of `forecast[0].stored`. */
-  overdue: number
-  cardStates: Record<CardState | 'Suspended', number>
-  /** Review cards split by interval: young below `matureThresholdDays`, mature from it. */
-  maturity: { young: number; mature: number }
-  matureThresholdDays: number
-  /** `null` = not enough data; never rendered as 0%. */
-  trueRetention: { young: RatioDto | null; mature: RatioDto | null }
-  stability: StabilityBucketDto[]
-  /** Studied cards only; the advanced D-vs-S view. */
-  difficultyStability: DifficultyStabilityPointDto[]
-  streakDays: number
-  longestStreakDays: number
-  generatedAt: IsoDateTime
-}
+/** Compile-time check: the runtime list equals the Rust `StatsRange` enum. */
+const statsRangesMatchRust: SameMembers<StatsRange, GeneratedStatsRange> = true
+void statsRangesMatchRust
 
 // ---------------------------------------------------------------- settings / onboarding / privacy
-
-export type PermissionState = 'granted' | 'denied' | 'prompt' | 'unsupported'
-export type ConsentState = 'unset' | 'granted' | 'declined'
-
-export interface AiProviderOptionDto {
-  id: string
-  name: string
-  requiresKey: boolean
-  /** Suggested models; empty = the user types the model name. */
-  models: string[]
-  /** The user supplies an HTTPS endpoint (OpenAI-compatible servers). */
-  customEndpoint: boolean
-}
-
-export interface AiQuotaDto {
-  used: number
-  limit: number
-  resetsAt: IsoDateTime
-}
-
-export interface AiSettingsDto {
-  consent: ConsentState
-  provider: string | null
-  model: string | null
-  endpoint: string | null
-  /** Secrets never cross into JavaScript; only their presence does. */
-  hasApiKey: boolean
-  providers: AiProviderOptionDto[]
-  /** `null` = the provider reports no limit. */
-  quota: AiQuotaDto | null
-}
-
-export type BackupLocation = 'app' | 'external'
-
-export interface BackupSettingsDto {
-  /** A backup is made automatically once a day after studying. */
-  automatic: boolean
-  /** Newest backups kept; older ones are removed (safety copies are kept separately). */
-  retention: number
-  target: BackupLocation
-  /** Display name of the chosen external folder; never a raw path. */
-  externalFolder: string | null
-}
-
-export interface SettingsDto {
-  uiLanguage: UiLanguage
-  nativeLanguage: NativeLanguage
-  /** Suggested target language for new decks; each deck keeps its own. */
-  defaultTargetLanguage: TargetLanguage
-  theme: ThemePreference
-  dailyGoal: number
-  /** IANA zone used to compute the study day. */
-  timeZone: string
-  /** Hour (0–23) at which a new study day starts. */
-  dayCutoffHour: number
-  /** Preset given to new decks. */
-  defaultPresetId: Id
-  notifications: PermissionState
-  reminderTime: string | null
-  ttsEnabled: boolean
-  /** Speech rate, 0.5–1.5. */
-  ttsRate: number
-  ai: AiSettingsDto
-  telemetryOptIn: boolean
-  backup: BackupSettingsDto
-  version: number
-}
-
-export type SettingsPatch = Partial<
-  Pick<
-    SettingsDto,
-    | 'uiLanguage'
-    | 'defaultTargetLanguage'
-    | 'theme'
-    | 'dailyGoal'
-    | 'timeZone'
-    | 'dayCutoffHour'
-    | 'defaultPresetId'
-    | 'reminderTime'
-    | 'ttsEnabled'
-    | 'ttsRate'
-    | 'telemetryOptIn'
-  >
-> & {
-  aiConsent?: ConsentState
-  aiProvider?: string
-  aiModel?: string | null
-  /** HTTPS only; `null` clears it. */
-  aiEndpoint?: string | null
-  backupAutomatic?: boolean
-  backupRetention?: number
-  backupTarget?: BackupLocation
-  /** File token of a folder chosen with `pickFile({ purpose: 'backupFolder' })`. */
-  backupFolderToken?: string
-}
-
-export interface UpdateSettingsInput {
-  operationId: OperationId
-  expectedVersion: number
-  patch: SettingsPatch
-}
 
 export interface SetAiApiKeyInput {
   operationId: OperationId
@@ -554,30 +460,6 @@ export const ONBOARDING_STEPS = ['nativeLanguage', 'targetLanguage', 'goal', 'de
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number]
 const onboardingStepsMatchRust: SameMembers<OnboardingStep, GeneratedOnboardingStep> = true
 void onboardingStepsMatchRust
-
-export type ResetScope = 'progress' | 'everything'
-
-export interface ResetPreviewInput {
-  scope: ResetScope
-}
-
-/** What a reset would remove; the user confirms it with a fresh backup or the phrase. */
-export interface ResetPreviewDto {
-  scope: ResetScope
-  counts: { decks: number; notes: number; cards: number; reviews: number }
-  /** Typed by the user when no safety backup is made. */
-  confirmationPhrase: string
-  latestBackupAt: IsoDateTime | null
-  previewToken: string
-}
-
-export interface ResetInput {
-  operationId: OperationId
-  previewToken: string
-  /** A backup created for this reset (job result); either it or the phrase is required. */
-  safetyBackupId: Id | null
-  confirmationPhrase: string | null
-}
 
 // ---------------------------------------------------------------- transfer / backup
 
@@ -630,56 +512,5 @@ export interface ExportDeckInput {
   format: 'csv'
   /** Adds due date, interval and reps columns. */
   includeScheduling: boolean
-}
-
-export type BackupKind = 'manual' | 'automatic' | 'safety'
-
-export interface BackupDto {
-  id: Id
-  createdAt: IsoDateTime
-  sizeBytes: number
-  schemaVersion: number
-  cardCount: number
-  location: BackupLocation
-  kind: BackupKind
-}
-
-export interface BackupInput {
-  operationId: OperationId
-}
-
-export type ShareTarget = { kind: 'backup'; backupId: Id } | { kind: 'export'; jobId: Id }
-
-export interface ShareFileInput {
-  operationId: OperationId
-  target: ShareTarget
-}
-
-export interface ShareResultDto {
-  /** `false` when the user closed the share sheet; not an error. */
-  shared: boolean
-}
-
-export type RestoreSource = { kind: 'file'; fileToken: string } | { kind: 'backup'; backupId: Id }
-
-export interface ValidateRestoreInput {
-  source: RestoreSource
-}
-
-export interface RestorePreviewDto {
-  fileName: string
-  createdAt: IsoDateTime
-  schemaVersion: number
-  counts: { decks: number; notes: number; cards: number; reviews: number }
-  /** What the restore replaces. */
-  current: { decks: number; notes: number; cards: number; reviews: number }
-  compatible: boolean
-  issues: ErrorDto[]
-  previewToken: string
-}
-
-export interface RestoreInput {
-  operationId: OperationId
-  previewToken: string
 }
 

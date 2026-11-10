@@ -27,6 +27,7 @@ use rusqlite::{Connection, ErrorCode, TransactionBehavior};
 
 pub use migrations::{MIGRATIONS, Migration, MigrationReport};
 use repos::SqliteRepos;
+pub(crate) use repos::collection_counts;
 
 /// File name of the collection inside the app data directory.
 pub const DATABASE_FILE: &str = "collection.sqlite";
@@ -142,6 +143,51 @@ impl SqliteDatabase {
         result
             .recv()
             .map_err(|_| AppError::Internal("database thread stopped".into()))?
+    }
+
+    /// Writes a consistent copy of the collection to `target` with `VACUUM INTO` (plan Phase 12
+    /// step 10): one read transaction on the worker, WAL content included, never a raw file copy
+    /// of a live database. `target` must not exist.
+    pub fn snapshot_to(&self, target: &Path) -> AppResult<()> {
+        let target = target
+            .to_str()
+            .ok_or_else(|| AppError::Internal("snapshot path is not UTF-8".into()))?
+            .to_owned();
+        self.with_connection(move |conn| {
+            conn.execute("VACUUM INTO ?1", [target])
+                .map(drop)
+                .map_err(map_sqlite)
+        })
+    }
+
+    /// Replaces the whole collection with the database at `source` (restore, delete everything).
+    /// The SQLite backup API copies every page into the open connection in one step, i.e. one
+    /// write transaction: a crash or kill during the copy leaves the previous collection intact
+    /// (the WAL/journal rolls it back), and no other request runs in between because they share
+    /// the worker. `source` must already be at this build's schema version.
+    pub fn replace_with(&self, source: &Path) -> AppResult<()> {
+        let source = source.to_owned();
+        self.with_connection(move |conn| {
+            let from = Connection::open_with_flags(
+                &source,
+                rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY
+                    | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX,
+            )
+            .map_err(map_sqlite)?;
+            {
+                let backup = rusqlite::backup::Backup::new(&from, conn).map_err(map_sqlite)?;
+                // -1 copies every page in one step.
+                match backup.step(-1).map_err(map_sqlite)? {
+                    rusqlite::backup::StepResult::Done => {}
+                    _ => return Err(AppError::DbBusy),
+                }
+            }
+            // Old pages must not linger in the WAL after a privacy reset.
+            if conn.is_autocommit() {
+                let _ = conn.query_row("PRAGMA wal_checkpoint(TRUNCATE)", [], |_| Ok(()));
+            }
+            Ok(())
+        })
     }
 
     fn transaction<T, F>(&self, behavior: TransactionBehavior, work: F) -> AppResult<T>

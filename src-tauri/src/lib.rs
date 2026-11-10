@@ -6,14 +6,18 @@ mod content;
 mod diagnostics;
 mod files;
 mod manage;
+mod settings;
 mod study;
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use backend::Backend;
 use diagnostics::SecretService;
+use langualinker_application::ports::SecretStore as SecretPort;
 use langualinker_contracts::{API_VERSION, AppInfoDto};
 use langualinker_infrastructure::logging;
+use langualinker_infrastructure::secrets::SecretStore;
 use tauri::{AppHandle, Builder, Emitter, Manager, Runtime};
 
 pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -73,8 +77,13 @@ fn log_dir<R: Runtime>(app: &tauri::App<R>) -> Option<PathBuf> {
 /// The collection lives in the variant's app data directory, so dev/beta/release never share it.
 fn open_backend<R: Runtime>(app: &tauri::App<R>) -> Backend {
     let log_dir = log_dir(app);
+    // The AI key lives in the platform store (ADR-07); delete-everything removes it there.
+    let secrets = SecretStore::native(&app.config().identifier)
+        .map(|store| Arc::new(store) as Arc<dyn SecretPort>)
+        .inspect_err(|error| tracing::warn!(%error, "no platform secret store"))
+        .ok();
     match app.path().app_data_dir() {
-        Ok(data_dir) => Backend::open(app.handle(), data_dir, log_dir),
+        Ok(data_dir) => Backend::open_with(app.handle(), data_dir, log_dir, secrets),
         Err(error) => {
             tracing::error!("app data directory unavailable");
             Backend {
@@ -135,6 +144,16 @@ fn configure<R: Runtime>(
         manage::search_cards,
         manage::preview_bulk_action,
         manage::apply_bulk_action,
+        settings::get_stats,
+        settings::get_settings,
+        settings::update_settings,
+        settings::preview_reset,
+        settings::reset_collection,
+        settings::list_backups,
+        settings::create_backup,
+        settings::validate_restore,
+        settings::restore_backup,
+        settings::share_file,
         diagnostics::probe_secret_store,
         diagnostics::probe_file_open,
         diagnostics::probe_file_save
@@ -145,15 +164,42 @@ fn configure<R: Runtime>(
                 start_diagnostics(app);
             }
             app.manage(SecretService(app.config().identifier.clone()));
-            app.manage(backend(app));
+            let opened = backend(app);
+            // A backup that became due while the app was closed runs now (Phase 12 step 12).
+            settings::automatic_backup(&opened);
+            app.manage(opened);
             app.manage(files::PickedFiles::default());
             announce_ready(app.handle())?;
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if matches!(event, tauri::WindowEvent::Focused(true)) {
+                foreground(window.app_handle());
+            }
         })
         .invoke_handler(move |invoke| match commands::reject_pending(invoke) {
             Some(invoke) => generated(invoke),
             None => true,
         })
+}
+
+/// The app came back to the foreground: start an automatic backup if one became due. Checked at
+/// most once an hour; nothing runs while the app is closed (no native scheduler).
+fn foreground<R: Runtime>(app: &AppHandle<R>) {
+    use std::sync::atomic::{AtomicI64, Ordering};
+    static LAST_CHECK: AtomicI64 = AtomicI64::new(0);
+    let now = chrono::Utc::now().timestamp_millis();
+    let last = LAST_CHECK.load(Ordering::Relaxed);
+    if now - last < 3_600_000
+        || LAST_CHECK
+            .compare_exchange(last, now, Ordering::Relaxed, Ordering::Relaxed)
+            .is_err()
+    {
+        return;
+    }
+    if let Some(backend) = app.try_state::<Backend>() {
+        settings::automatic_backup(&backend);
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -166,8 +212,17 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init());
     configure(builder, true, open_backend)
-        .run(tauri::generate_context!())
-        .expect("error while running LanguaLinker");
+        .build(tauri::generate_context!())
+        .expect("error while building LanguaLinker")
+        .run(|app, event| {
+            // Mobile: returning from the background does not always focus a window.
+            #[cfg(mobile)]
+            if matches!(event, tauri::RunEvent::Resumed) {
+                foreground(app);
+            }
+            #[cfg(not(mobile))]
+            let _ = (app, event);
+        });
 }
 
 #[cfg(test)]
@@ -1052,6 +1107,218 @@ mod tests {
         )
         .unwrap_err();
         assert_eq!(error_code(missing), ErrorCode::NotFound);
+    }
+
+    /// Phase 12 over IPC on a collection file: settings are versioned and idempotent, statistics
+    /// answer in the contract shape, a backup is listed, validated and restored (the restore job
+    /// stays readable across the swap), and a reset needs the phrase from its preview.
+    #[test]
+    fn settings_statistics_backup_restore_and_reset_run_over_ipc() {
+        use langualinker_contracts::dto::{
+            BackupDto, JobResultDto, ResetPreviewDto, RestorePreviewDto, SettingsDto, StatsDto,
+        };
+        let dir = std::env::temp_dir().join(format!("ll-phase12-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let app = app_at(&dir);
+        let window = main_window(&app);
+        let call = |cmd: &str, input: serde_json::Value| {
+            invoke(&window, cmd, serde_json::json!({ "input": input }))
+        };
+
+        let settings: SettingsDto =
+            serde_json::from_value(invoke(&window, "get_settings", serde_json::json!({})).unwrap())
+                .unwrap();
+        assert_eq!(settings.version, 1);
+        assert_eq!(settings.backup.retention, 3);
+        assert_eq!(settings.ai.providers.len(), 2);
+        assert!(!settings.ai.has_api_key);
+        let update = serde_json::json!({ "operationId": "s1", "expectedVersion": 1,
+            "patch": { "dailyGoal": 25, "uiLanguage": "en", "dayCutoffHour": 5, "aiEndpoint": null } });
+        let updated: SettingsDto =
+            serde_json::from_value(call("update_settings", update.clone()).unwrap()).unwrap();
+        assert_eq!(
+            (updated.daily_goal, updated.day_cutoff_hour, updated.version),
+            (25, 5, 2)
+        );
+        // A retry does not apply the patch again (and does not conflict).
+        let retried: SettingsDto =
+            serde_json::from_value(call("update_settings", update).unwrap()).unwrap();
+        assert_eq!(retried.version, 2);
+        let stale = call(
+            "update_settings",
+            serde_json::json!({ "operationId": "s2", "expectedVersion": 1, "patch": { "dailyGoal": 5 } }),
+        )
+        .unwrap_err();
+        assert_eq!(error_code(stale), ErrorCode::VersionConflict);
+        let invalid = call(
+            "update_settings",
+            serde_json::json!({ "operationId": "s3", "expectedVersion": 2, "patch": { "timeZone": "Nowhere/City" } }),
+        )
+        .unwrap_err();
+        assert_eq!(error_code(invalid), ErrorCode::ValidationFailed);
+
+        let deck: langualinker_contracts::dto::DeckOverviewDto = serde_json::from_value(
+            call(
+                "create_deck",
+                serde_json::json!({ "operationId": "d1", "name": "Angielski", "parentId": null,
+                    "targetLanguage": "en", "deckType": "Simple" }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let note = serde_json::json!({ "operationId": "n1", "noteId": null, "expectedVersion": null,
+            "deckId": deck.deck.id, "noteTypeKind": "BasicAndReversed", "front": "the dog",
+            "back": "pies", "tags": [], "manualAssociation": null, "grammarTips": [], "wordLinks": null });
+        call("save_note", note).unwrap();
+
+        let stats: StatsDto = serde_json::from_value(
+            call(
+                "get_stats",
+                serde_json::json!({ "deckId": deck.deck.id, "range": "1m" }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(stats.reviews_by_day.len(), 30);
+        assert_eq!(stats.card_states.new, 2);
+        assert_eq!(stats.true_retention.young, None);
+        let missing = call(
+            "get_stats",
+            serde_json::json!({ "deckId": "999", "range": "all" }),
+        )
+        .unwrap_err();
+        assert_eq!(error_code(missing), ErrorCode::NotFound);
+
+        let job: JobDto = serde_json::from_value(
+            call("create_backup", serde_json::json!({ "operationId": "b1" })).unwrap(),
+        )
+        .unwrap();
+        let done = wait_for_job(&window, &job);
+        let Some(JobResultDto::Backup { backup_id }) = done.result else {
+            panic!("{done:?}");
+        };
+        let list: Vec<BackupDto> =
+            serde_json::from_value(invoke(&window, "list_backups", serde_json::json!({})).unwrap())
+                .unwrap();
+        assert_eq!(list.len(), 1);
+        assert_eq!(
+            (list[0].id.as_str(), list[0].card_count),
+            (backup_id.as_str(), 2)
+        );
+        assert!(list[0].created_at.ends_with('Z'));
+
+        // Delete the note after the backup; the restore brings it back.
+        let page: langualinker_contracts::dto::CardPageDto = serde_json::from_value(
+            call(
+                "search_cards",
+                serde_json::json!({ "query": "dog", "deckId": null,
+                "tag": null, "states": [], "flags": [], "sort": "due", "direction": "asc",
+                "cursor": null, "pageSize": 10 }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let details: langualinker_contracts::dto::NoteDetailsDto = serde_json::from_value(
+            invoke(
+                &window,
+                "get_note_details",
+                serde_json::json!({ "input": page.items[0].card_id }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        call(
+            "delete_note",
+            serde_json::json!({ "operationId": "del", "noteId": details.note.id,
+                "expectedVersion": details.note.version }),
+        )
+        .unwrap();
+        let preview: RestorePreviewDto = serde_json::from_value(
+            call(
+                "validate_restore",
+                serde_json::json!({ "source": { "kind": "backup", "backupId": backup_id } }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!((preview.counts.cards, preview.current.cards), (2, 0));
+        let restore: JobDto = serde_json::from_value(
+            call(
+                "restore_backup",
+                serde_json::json!({ "operationId": "r1", "previewToken": preview.preview_token }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let restored = wait_for_job(&window, &restore);
+        assert_eq!(restored.status, JobStatus::Succeeded, "{restored:?}");
+        assert!(matches!(
+            restored.result,
+            Some(JobResultDto::Restore { .. })
+        ));
+        let stats: StatsDto = serde_json::from_value(
+            call(
+                "get_stats",
+                serde_json::json!({ "deckId": null, "range": "all" }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(stats.card_states.new, 2, "the note is back");
+        let corrupt = call(
+            "validate_restore",
+            serde_json::json!({ "source": { "kind": "file", "fileToken": "unknown" } }),
+        )
+        .unwrap_err();
+        assert_eq!(error_code(corrupt), ErrorCode::NotFound);
+
+        let reset: ResetPreviewDto = serde_json::from_value(
+            call(
+                "preview_reset",
+                serde_json::json!({ "scope": "everything" }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            reset.confirmation_phrase, "DELETE EVERYTHING",
+            "the UI language is English"
+        );
+        assert!(reset.latest_backup_at.is_some());
+        let wrong = call(
+            "reset_collection",
+            serde_json::json!({ "operationId": "x1", "previewToken": reset.preview_token,
+                "safetyBackupId": null, "confirmationPhrase": "nope" }),
+        )
+        .unwrap_err();
+        assert_eq!(error_code(wrong), ErrorCode::ValidationFailed);
+        let job: JobDto = serde_json::from_value(
+            call(
+                "reset_collection",
+                serde_json::json!({ "operationId": "x2", "previewToken": reset.preview_token,
+                    "safetyBackupId": null, "confirmationPhrase": "DELETE EVERYTHING" }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(wait_for_job(&window, &job).status, JobStatus::Succeeded);
+        let after: SettingsDto =
+            serde_json::from_value(invoke(&window, "get_settings", serde_json::json!({})).unwrap())
+                .unwrap();
+        assert_eq!(after.daily_goal, 20, "settings are back to their defaults");
+        assert_eq!(
+            after.ui_language,
+            langualinker_contracts::dto::UiLanguage::En
+        );
+        let list: Vec<BackupDto> =
+            serde_json::from_value(invoke(&window, "list_backups", serde_json::json!({})).unwrap())
+                .unwrap();
+        assert!(
+            list.len() >= 2,
+            "backups and the restore's safety copy stay"
+        );
+        drop(app);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

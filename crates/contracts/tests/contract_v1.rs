@@ -529,3 +529,53 @@ fn a_deck_patch_tells_a_missing_parent_from_a_null_one() {
         serde_json::json!({"name": "A"})
     );
 }
+
+#[test]
+fn phase12_outputs_round_trip_through_their_rust_dtos() {
+    use langualinker_contracts::dto::{
+        AiSettingsDto, BackupDto, ResetPreviewDto, RestorePreviewDto, SettingsDto, ShareResultDto,
+        StatsDto,
+    };
+    assert!(round_trips::<StatsDto>("getStats") >= 1);
+    assert!(round_trips::<SettingsDto>("getSettings") >= 1);
+    assert!(round_trips::<SettingsDto>("updateSettings") >= 1);
+    assert!(round_trips::<AiSettingsDto>("setAiApiKey") >= 1);
+    assert!(round_trips::<SettingsDto>("requestNotificationPermission") >= 1);
+    assert!(round_trips::<ResetPreviewDto>("previewReset") >= 1);
+    assert!(round_trips::<JobDto>("resetCollection") >= 1);
+    assert!(round_trips::<Vec<BackupDto>>("listBackups") >= 1);
+    assert!(round_trips::<JobDto>("createBackup") >= 1);
+    assert!(round_trips::<RestorePreviewDto>("validateRestore") >= 1);
+    assert!(round_trips::<JobDto>("restoreBackup") >= 1);
+    assert!(round_trips::<ShareResultDto>("shareFile") >= 1);
+}
+
+#[test]
+fn phase12_inputs_deserialize_into_their_rust_dtos() {
+    use langualinker_contracts::dto::{
+        BackupInput, ResetInput, ResetPreviewInput, RestoreInput, ShareFileInput, StatsInput,
+        UpdateSettingsInput, ValidateRestoreInput,
+    };
+    fn back<T: DeserializeOwned + Serialize>(input: &Value) -> Value {
+        serde_json::to_value(serde_json::from_value::<T>(input.clone()).unwrap()).unwrap()
+    }
+    let samples = samples();
+    let mut seen = 0;
+    for call in samples["calls"].as_array().expect("calls") {
+        let input = &call["args"][0];
+        let read = match call["operation"].as_str() {
+            Some("getStats") => back::<StatsInput>(input),
+            Some("updateSettings") => back::<UpdateSettingsInput>(input),
+            Some("previewReset") => back::<ResetPreviewInput>(input),
+            Some("resetCollection") => back::<ResetInput>(input),
+            Some("createBackup") => back::<BackupInput>(input),
+            Some("shareFile") => back::<ShareFileInput>(input),
+            Some("validateRestore") => back::<ValidateRestoreInput>(input),
+            Some("restoreBackup") => back::<RestoreInput>(input),
+            _ => continue,
+        };
+        assert_eq!(&read, input, "{}", call["operation"]);
+        seen += 1;
+    }
+    assert!(seen >= 9);
+}

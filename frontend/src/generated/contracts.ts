@@ -483,3 +483,205 @@ unchanged: number,
 notes: number, decks: number, };
 
 export type BulkResultDto = { affected: number, };
+
+export type StatsRange = "1m" | "3m" | "1y" | "all";
+
+export type StatsInput = { 
+/**
+ * `null` = the whole collection; a deck includes its subdecks.
+ */
+deckId: string | null, range: StatsRange, };
+
+export type RatioDto = { passed: number, total: number, };
+
+export type ReviewDayDto = { day: string, count: number, activeMs: number, };
+
+export type ForecastDayDto = { day: string, 
+/**
+ * Cards whose stored due date falls on this day (day 0 also holds the overdue ones).
+ */
+stored: number, 
+/**
+ * Reviews expected on this day once the deck limits carry the backlog forward.
+ */
+projected: number, };
+
+export type ForecastAssumptionsDto = { reviewsPerDay: number, newPerDay: number, 
+/**
+ * New cards are not part of the forecast: they are introduced by the user's daily limit.
+ */
+includesNew: boolean, };
+
+export type CardStatesDto = { New: number, Learning: number, Review: number, Relearning: number, Suspended: number, };
+
+export type MaturityDto = { young: number, mature: number, };
+
+export type TrueRetentionDto = { young: RatioDto | null, mature: RatioDto | null, };
+
+export type StabilityBucketDto = { minDays: number, maxDays: number | null, count: number, };
+
+export type DifficultyStabilityPointDto = { cardId: string, 
+/**
+ * Days.
+ */
+stability: number, 
+/**
+ * FSRS difficulty, 1–10.
+ */
+difficulty: number, };
+
+export type StatsDto = { range: StatsRange, deckId: string | null, 
+/**
+ * Every study day of the range, oldest first, including days without reviews.
+ */
+reviewsByDay: Array<ReviewDayDto>, forecast: Array<ForecastDayDto>, forecastAssumptions: ForecastAssumptionsDto, 
+/**
+ * Cards already past their due day; part of `forecast[0].stored`.
+ */
+overdue: number, cardStates: CardStatesDto, 
+/**
+ * Review cards split by interval: young below `matureThresholdDays`, mature from it.
+ */
+maturity: MaturityDto, matureThresholdDays: number, trueRetention: TrueRetentionDto, stability: Array<StabilityBucketDto>, 
+/**
+ * Studied cards only; the advanced D-vs-S view.
+ */
+difficultyStability: Array<DifficultyStabilityPointDto>, streakDays: number, longestStreakDays: number, generatedAt: string, };
+
+export type UiLanguage = "pl" | "en";
+
+export type ThemePreference = "system" | "light" | "dark";
+
+export type PermissionState = "granted" | "denied" | "prompt" | "unsupported";
+
+export type ConsentState = "unset" | "granted" | "declined";
+
+export type AiProviderOptionDto = { id: string, name: string, requiresKey: boolean, 
+/**
+ * Suggested models; empty = the user types the model name.
+ */
+models: Array<string>, 
+/**
+ * The user supplies an HTTPS endpoint (OpenAI-compatible servers).
+ */
+customEndpoint: boolean, };
+
+export type AiQuotaDto = { used: number, limit: number, resetsAt: string, };
+
+export type AiSettingsDto = { consent: ConsentState, provider: string | null, model: string | null, endpoint: string | null, 
+/**
+ * Secrets never cross into JavaScript; only their presence does.
+ */
+hasApiKey: boolean, providers: Array<AiProviderOptionDto>, 
+/**
+ * `null` = the provider reports no limit.
+ */
+quota: AiQuotaDto | null, };
+
+export type BackupLocation = "app" | "external";
+
+export type BackupSettingsDto = { 
+/**
+ * A backup is made automatically once a day after studying.
+ */
+automatic: boolean, 
+/**
+ * Newest backups kept; older ones are removed (safety copies are kept separately).
+ */
+retention: number, target: BackupLocation, 
+/**
+ * Display name of the chosen external folder; never a raw path.
+ */
+externalFolder: string | null, };
+
+export type SettingsDto = { uiLanguage: UiLanguage, nativeLanguage: NativeLanguage, 
+/**
+ * Suggested target language for new decks; each deck keeps its own.
+ */
+defaultTargetLanguage: TargetLanguage, theme: ThemePreference, dailyGoal: number, 
+/**
+ * IANA zone used to compute the study day.
+ */
+timeZone: string, 
+/**
+ * Hour (0–23) at which a new study day starts.
+ */
+dayCutoffHour: number, 
+/**
+ * Preset given to new decks.
+ */
+defaultPresetId: string, notifications: PermissionState, reminderTime: string | null, ttsEnabled: boolean, 
+/**
+ * Speech rate, 0.5–1.5.
+ */
+ttsRate: number, ai: AiSettingsDto, telemetryOptIn: boolean, backup: BackupSettingsDto, version: number, };
+
+export type SettingsPatch = { uiLanguage?: UiLanguage, defaultTargetLanguage?: TargetLanguage, theme?: ThemePreference, dailyGoal?: number, timeZone?: string, dayCutoffHour?: number, defaultPresetId?: string, 
+/**
+ * `null` turns the reminder off.
+ */
+reminderTime?: string | null, ttsEnabled?: boolean, ttsRate?: number, telemetryOptIn?: boolean, aiConsent?: ConsentState, aiProvider?: string, 
+/**
+ * `null` clears the model.
+ */
+aiModel?: string | null, 
+/**
+ * HTTPS only; `null` clears it.
+ */
+aiEndpoint?: string | null, backupAutomatic?: boolean, backupRetention?: number, backupTarget?: BackupLocation, 
+/**
+ * File token of a folder chosen with `pickFile({ purpose: 'backupFolder' })`.
+ */
+backupFolderToken?: string, };
+
+export type UpdateSettingsInput = { operationId: string, expectedVersion: number, patch: SettingsPatch, };
+
+export type ResetScope = "progress" | "everything";
+
+export type ResetPreviewInput = { scope: ResetScope, };
+
+export type CollectionCountsDto = { decks: number, notes: number, cards: number, reviews: number, };
+
+export type ResetPreviewDto = { scope: ResetScope, counts: CollectionCountsDto, 
+/**
+ * Typed by the user when no safety backup is made.
+ */
+confirmationPhrase: string, latestBackupAt: string | null, previewToken: string, };
+
+export type ResetInput = { operationId: string, previewToken: string, 
+/**
+ * A backup created for this reset (job result); either it or the phrase is required.
+ */
+safetyBackupId: string | null, confirmationPhrase: string | null, };
+
+export type BackupKind = "manual" | "automatic" | "safety";
+
+export type BackupDto = { id: string, createdAt: string, 
+/**
+ * Archive size; a JSON number (sizes above 4 GiB stay exact up to 2^53).
+ */
+sizeBytes: number, schemaVersion: number, cardCount: number, location: BackupLocation, kind: BackupKind, };
+
+export type BackupInput = { operationId: string, };
+
+export type ShareTarget = { "kind": "backup", backupId: string, } | { "kind": "export", jobId: string, };
+
+export type ShareFileInput = { operationId: string, target: ShareTarget, };
+
+export type ShareResultDto = { 
+/**
+ * `false` when the user closed the share sheet; not an error.
+ */
+shared: boolean, };
+
+export type RestoreSource = { "kind": "file", fileToken: string, } | { "kind": "backup", backupId: string, };
+
+export type ValidateRestoreInput = { source: RestoreSource, };
+
+export type RestorePreviewDto = { fileName: string, createdAt: string, schemaVersion: number, counts: CollectionCountsDto, 
+/**
+ * What the restore replaces.
+ */
+current: CollectionCountsDto, compatible: boolean, issues: Array<ErrorDto>, previewToken: string, };
+
+export type RestoreInput = { operationId: string, previewToken: string, };

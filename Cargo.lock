@@ -2195,6 +2195,7 @@ name = "langualinker"
 version = "0.3.0-beta.2"
 dependencies = [
  "chrono",
+ "iana-time-zone",
  "keyring-core",
  "langualinker-application",
  "langualinker-content",
@@ -2290,6 +2291,7 @@ dependencies = [
  "langualinker-content",
  "langualinker-domain",
  "rusqlite",
+ "serde",
  "serde_json",
  "sha2",
  "tempfile",

@@ -34,7 +34,10 @@ use super::{codec, map_sqlite};
 
 mod bundled;
 mod management;
+mod stats;
 mod study;
+
+pub(crate) use stats::collection_counts;
 
 /// Update sequence number for local changes not yet synchronized (Anki convention).
 const LOCAL_USN: i64 = -1;

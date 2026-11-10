@@ -1,6 +1,7 @@
 //! AppApi commands (contract v1). Every command of `crates/contracts/v1/catalogue.json` is
-//! registered (integration checklist rule 1): the ones implemented in Phases 7–8 are below and the
-//! learning commands of Phase 10 are in `study.rs`; every
+//! registered (integration checklist rule 1): the ones implemented in Phases 7–8 are below, the
+//! learning commands of Phase 10 are in `study.rs`, management (Phase 11) in `manage.rs` and
+//! statistics, settings, backup and restore (Phase 12) in `settings.rs`; every
 //! other one answers `NOT_IMPLEMENTED` until its phase arrives — never demo data and never
 //! "command not found" (which would reach the UI as `INTERNAL`).
 
@@ -75,6 +76,16 @@ pub const IMPLEMENTED: &[&str] = &[
     "search_cards",
     "preview_bulk_action",
     "apply_bulk_action",
+    "get_stats",
+    "get_settings",
+    "update_settings",
+    "preview_reset",
+    "reset_collection",
+    "list_backups",
+    "create_backup",
+    "validate_restore",
+    "restore_backup",
+    "share_file",
 ];
 
 /// Lines returned by the diagnostic report.
@@ -250,19 +261,51 @@ pub async fn get_dashboard(backend: State<'_, Backend>) -> Result<DashboardDto, 
     .await
 }
 
-/// System file picker. Only `import` is real so far; restore and backup folders arrive with
-/// backups (Phase 12).
+/// System file picker: deck packages to import, backup archives to restore (copied into the
+/// staging folder right away) and, on desktop, a folder for external backups.
 #[tauri::command]
 pub async fn pick_file<R: Runtime>(
     app: AppHandle<R>,
+    backend: State<'_, Backend>,
     files: State<'_, PickedFiles>,
     input: Value,
 ) -> Result<Option<FileHandleDto>, ErrorDto> {
     let input: PickFileInput = parse_input(input)?;
-    if input.purpose != FilePurpose::Import {
-        return Err(error_dto(&AppError::NotImplemented {
-            operation: "pickFile",
-        }));
+    match input.purpose {
+        FilePurpose::Import => {}
+        FilePurpose::Restore => {
+            let staging = backend
+                .collection()?
+                .backups
+                .staging_dir()
+                .map_err(|error| error_dto(&error))?;
+            let picked = blocking(move || {
+                crate::files::pick_restore_file(&app, &staging).map_err(|error| error_dto(&error))
+            })
+            .await?;
+            return Ok(picked.map(|(name, path, size)| {
+                let file = files.register_path(name, path);
+                FileHandleDto {
+                    token: file.token,
+                    name: file.name,
+                    size_bytes: u32::try_from(size).unwrap_or(u32::MAX),
+                }
+            }));
+        }
+        FilePurpose::BackupFolder => {
+            let picked = blocking(move || {
+                crate::files::pick_backup_folder(&app).map_err(|error| error_dto(&error))
+            })
+            .await?;
+            return Ok(picked.map(|(name, path)| {
+                let folder = files.register_path(name, path);
+                FileHandleDto {
+                    token: folder.token,
+                    name: folder.name,
+                    size_bytes: 0,
+                }
+            }));
+        }
     }
     let picked =
         blocking(move || crate::files::pick_import_file(&app).map_err(|error| error_dto(&error)))

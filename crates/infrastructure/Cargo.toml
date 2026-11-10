@@ -12,6 +12,7 @@ keyring-core = "=1.0.1"
 langualinker-application = { path = "../application" }
 langualinker-domain = { path = "../domain" }
 rusqlite.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 sha2 = "0.10.9"
 thiserror.workspace = true
