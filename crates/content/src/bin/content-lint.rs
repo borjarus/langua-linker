@@ -11,14 +11,19 @@
 //!
 //! A file instead of a directory is linted as an import package (`apkg-convert` output):
 //! `content-lint my-deck.ndjson`.
+//!
+//! A directory holding `decks.7z` (the encrypted bundled content) is linted from the archive,
+//! decrypted with `LANGUA_DECKS_PASSWORD` or the `.env` password. `--update-manifests` needs the
+//! plain files: unpack with `content-pack`, update and lint `content/decks-src`, then pack.
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use langualinker_content::archive::{ARCHIVE_FILE, PASSWORD_VAR, find_password};
 use langualinker_content::check::{Mode, Severity, parse_note_type};
 use langualinker_content::format::{CATALOG_FILE, Catalog, DeckManifest};
 use langualinker_content::reader::NoteReader;
-use langualinker_content::{DirSource, Issues, Package, lint};
+use langualinker_content::{ArchiveSource, DirSource, Issues, Package, lint};
 
 fn update_manifests(dir: &Path) -> Result<(), String> {
     let catalog: Catalog = read(&dir.join(CATALOG_FILE))?;
@@ -69,12 +74,36 @@ fn main() -> ExitCode {
         eprintln!("usage: content-lint <content-dir> [--release] [--update-manifests]");
         return ExitCode::from(2);
     };
+    let archive = dir.is_dir() && dir.join(ARCHIVE_FILE).is_file();
+    if update && archive {
+        eprintln!(
+            "error: {} is encrypted — run content-pack unpack, update content/decks-src, then pack",
+            dir.display()
+        );
+        return ExitCode::FAILURE;
+    }
     if update && let Err(error) = update_manifests(&dir) {
         eprintln!("error: {error}");
         return ExitCode::FAILURE;
     }
     let issues = if dir.is_file() {
         lint_package(&dir)
+    } else if archive {
+        let start = std::env::current_dir().unwrap_or_default();
+        let Some(password) = find_password(&start) else {
+            eprintln!("error: no password — set {PASSWORD_VAR} or add it to .env");
+            return ExitCode::FAILURE;
+        };
+        // Decrypt up front so a wrong password reads as such, not as missing files.
+        match ArchiveSource::open_path(&dir, password)
+            .and_then(|source| source.names().map(|_| source))
+        {
+            Ok(source) => lint(&source, mode),
+            Err(error) => {
+                eprintln!("error: {}: {error}", dir.display());
+                return ExitCode::FAILURE;
+            }
+        }
     } else {
         lint(&DirSource::new(&dir), mode)
     };

@@ -11,6 +11,9 @@ langualinker-domain = { path = "../domain" }
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+# Encrypted bundled content (content/decks/decks.7z): AES-256 + LZMA2. 0.20 is the last line
+# that builds on the pinned toolchain (later releases need Rust 1.93).
+sevenz-rust2 = { version = "=0.20.2", default-features = false, features = ["aes256", "compress"] }
 
 [dev-dependencies]
 tempfile = "3.23.0"
@@ -18,3 +21,7 @@ tempfile = "3.23.0"
 [[bin]]
 name = "content-lint"
 path = "src/bin/content-lint.rs"
+
+[[bin]]
+name = "content-pack"
+path = "src/bin/content-pack.rs"

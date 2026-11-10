@@ -104,7 +104,7 @@ cargo bench -p langualinker-infrastructure --bench due_query   # 50 000 cards / 
 - `src-tauri`: Tauri composition root and commands.
 - `frontend`: Svelte 5 + TypeScript SPA.
 - `docs/migration`: KMP migration evidence and decisions ([kmp-manifest.md](docs/migration/kmp-manifest.md)).
-- `content/decks`: bundled decks in format v2 (catalog, manifests, NDJSON; [ADR-14](docs/adr/ADR-14-bundled-content.md)); lint with `cargo run -p langualinker-content --bin content-lint -- content/decks [--release]`. Rights and native review pending — see [content/PROVENANCE.md](content/PROVENANCE.md).
+- `content/decks`: bundled decks in format v2 (catalog, manifests, NDJSON; [ADR-14](docs/adr/ADR-14-bundled-content.md)), committed only as the encrypted archive `content/decks/decks.7z`. Building the app, the tests and the linter need the password: `LANGUA_DECKS_PASSWORD=…` in `.env` at the repository root (never committed) or in the environment. Lint with `cargo run -p langualinker-content --bin content-lint -- content/decks [--release]`. To edit: `cargo run -p langualinker-content --bin content-pack -- unpack` (plain copy in the git-ignored `content/decks-src`), edit, `content-lint content/decks-src --update-manifests`, then `content-pack -- pack`. Rights and native review pending — see [content/PROVENANCE.md](content/PROVENANCE.md).
 - `crates/anki`: `apkg-convert`, converts an Anki `.apkg` export into a deck package with due dates, FSRS state and review history, imported in the app under Settings → Import & export. List what is inside first, then convert (German on the back in Anki → swap the fields):
 
   ```sh

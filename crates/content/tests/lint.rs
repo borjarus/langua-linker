@@ -9,8 +9,26 @@ use langualinker_content::reader::sha256_hex;
 use langualinker_content::{DirSource, Mode, Severity, lint};
 use serde_json::Value;
 
+/// The bundled content, decrypted once per test binary into a plain directory (the committed
+/// `content/decks` holds only the encrypted archive).
 fn content_dir() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../content/decks")
+    static DIR: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    DIR.get_or_init(|| {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let password = langualinker_content::archive::find_password(&root)
+            .expect("LANGUA_DECKS_PASSWORD (environment or .env) decrypts content/decks/decks.7z");
+        let dir = Path::new(env!("CARGO_TARGET_TMPDIR"))
+            .join(concat!(env!("CARGO_CRATE_NAME"), "-bundled-content"));
+        let _ = std::fs::remove_dir_all(&dir);
+        langualinker_content::archive::unpack_to_dir(
+            &root.join("content/decks/decks.7z"),
+            &dir,
+            &password,
+        )
+        .unwrap();
+        dir
+    })
+    .clone()
 }
 
 fn copy() -> tempfile::TempDir {

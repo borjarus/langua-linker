@@ -6,7 +6,7 @@ Every asset that may ship in the app or is used as a test fixture is listed here
 |---|---|---|---|---|---|
 | `content/tools/prompts/association-candidates-v1.md` | written for Phase 8 | project | project | — | tooling, not bundled |
 | `content/tools/prompts/*-candidates-v2.md` | v1 prompts extended with Spanish (2026-11-09) | project | project | — | tooling, not bundled |
-| `tests/fixtures/kmp/content/*` | KMP commit `c2fa62f` (the original v1 files, byte-identical, moved from `content/decks`) | `source: original`, no attribution | not recorded | — | **test/reference only**, never bundled |
+| `tests/fixtures/kmp/content.7z` | KMP commit `c2fa62f` (the original v1 files, byte-identical, moved from `content/decks`; encrypted like the bundled content, ADR-14 §14) | `source: original`, no attribution | not recorded | — | **test/reference only**, never bundled |
 | `tests/fixtures/unicode/ranges.json` | written for Phase 8 (plan §14.1) | project | project | — | test only |
 | `tests/fixtures/kmp/apkg/sample_german_a1_sentences.apkg` | KMP commit `c2fa62f` (added in "implementation of phase 3") | none | a real Anki export: `collection.anki21b` (zstd, schema 18) holds 432 notes (Polish front, German back), 864 cards, 5 329 reviews with FSRS state; `collection.anki2` is only Anki's "please update" stub | — | **test-only**, never bundled; input of the converter and importer tests |
 | `tests/fixtures/kmp/schema/*` | KMP commit `c2fa62f` | project code | project | — | test/reference only |

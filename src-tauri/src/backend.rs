@@ -102,7 +102,7 @@ impl Collection {
         }
         let content = ContentService::new(
             db.clone(),
-            Arc::new(crate::content::BUNDLED),
+            Arc::new(crate::content::bundled()),
             jobs.clone(),
             events.clone(),
             clock.clone(),

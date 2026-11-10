@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Verifies migrated reference assets (bundled content, KMP schema, APKG, FSRS spec) against
-// scripts/fixtures.lock.json: SHA-256, size and NDJSON record counts.
+// scripts/fixtures.lock.json: SHA-256 and size (plus record counts of plain NDJSON files).
 //   node scripts/verify-fixtures.mjs            check (CI)
 //   node scripts/verify-fixtures.mjs --update   rewrite the lock after a reviewed change
 import { createHash } from 'node:crypto'
@@ -52,15 +52,10 @@ for (const path of Object.keys(current)) {
   if (!lock.files[path]) problems.push(`${path}: not in fixtures.lock.json (review, then run with --update)`)
 }
 
-const records = Object.entries(current)
-  .filter(([path]) => path.startsWith('content/decks/') && path.endsWith('.ndjson'))
-  .reduce((sum, [, entry]) => sum + (entry.records ?? 0), 0)
-if (records !== lock.expectedContentRecords) {
-  problems.push(`content/decks: ${records} NDJSON records, expected ${lock.expectedContentRecords}`)
-}
-
 if (problems.length > 0) {
   console.error(problems.join('\n'))
   process.exit(1)
 }
-console.log(`Fixtures verified: ${Object.keys(current).length} files, ${records} bundled content records.`)
+// Bundled content is encrypted (content/decks/decks.7z); its record counts are checked by
+// content-lint against each manifest's expectedNotes.
+console.log(`Fixtures verified: ${Object.keys(current).length} files.`)

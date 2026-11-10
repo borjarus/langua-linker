@@ -5,7 +5,7 @@ use langualinker_application::content::{
     ImportOutcome, OnboardingState, PackagePreview, PrepareOutcome,
 };
 use langualinker_application::dashboard::Dashboard;
-use langualinker_content::StaticSource;
+use langualinker_content::ArchiveSource;
 use langualinker_content::check::{parse_deck_type, parse_note_type, parse_target_language};
 use langualinker_content::format::ContentKind;
 use langualinker_contracts::dto::{
@@ -20,31 +20,17 @@ use langualinker_domain::note;
 
 use crate::backend::iso;
 
-macro_rules! embedded {
-    ($($name:literal),+ $(,)?) => {
-        &[$(($name, include_bytes!(concat!("../../content/decks/", $name)) as &[u8])),+]
-    };
+/// The encrypted bundled content (`content/decks/decks.7z`, ADR-14), compiled into the app so
+/// Android/iOS need no asset path. It is decrypted in memory on the first read.
+pub static BUNDLED_ARCHIVE: &[u8] = include_bytes!("../../content/decks/decks.7z");
+
+/// Archive password, embedded by `build.rs` from `LANGUA_DECKS_PASSWORD` / `.env`.
+const BUNDLED_PASSWORD: &str = env!("LANGUA_DECKS_PASSWORD");
+
+/// The bundled content source; nothing is decrypted until the content service reads a file.
+pub fn bundled() -> ArchiveSource {
+    ArchiveSource::embedded(BUNDLED_ARCHIVE, BUNDLED_PASSWORD)
 }
-
-/// Every file of `content/decks`; `embedded_files_are_the_whole_content_directory` fails when a
-/// file is added there but not here.
-pub static BUNDLED_FILES: &[(&str, &[u8])] = embedded![
-    "catalog.json",
-    "de_words_a1.json",
-    "de_words_a1.ndjson",
-    "de_sentences_a1.json",
-    "de_sentences_a1.ndjson",
-    "en_words_a1.json",
-    "en_words_a1.ndjson",
-    "en_sentences_a1.json",
-    "en_sentences_a1.ndjson",
-    "es_words_a1.json",
-    "es_words_a1.ndjson",
-    "es_sentences_a1.json",
-    "es_sentences_a1.ndjson",
-];
-
-pub static BUNDLED: StaticSource = StaticSource::new(BUNDLED_FILES);
 
 /// Main runtime dependencies shown on the Licences screen. A generated full list (cargo-about,
 /// npm licence report) replaces it with the release audit (plan Phase 16/17).
@@ -339,28 +325,41 @@ mod tests {
     use std::path::Path;
 
     use langualinker_application::content::ContentWarning;
-    use langualinker_content::{Mode, lint};
+    use langualinker_content::{ContentSource, Mode, lint};
     use langualinker_domain::DeckId;
 
     use super::*;
 
     #[test]
-    fn embedded_files_are_the_whole_content_directory() {
+    fn content_directory_holds_only_the_encrypted_archive() {
         let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../content/decks");
         let on_disk: BTreeSet<String> = std::fs::read_dir(dir)
             .unwrap()
             .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
             .collect();
-        let embedded: BTreeSet<String> = BUNDLED_FILES
-            .iter()
-            .map(|(name, _)| (*name).to_owned())
-            .collect();
-        assert_eq!(embedded, on_disk);
+        assert_eq!(on_disk, BTreeSet::from(["decks.7z".to_owned()]));
+    }
+
+    #[test]
+    fn embedded_archive_holds_the_catalog_and_every_deck() {
+        let source = bundled();
+        let names: BTreeSet<String> = source.names().unwrap().into_iter().collect();
+        let mut catalog = String::new();
+        std::io::Read::read_to_string(&mut source.open("catalog.json").unwrap(), &mut catalog)
+            .unwrap();
+        let catalog: langualinker_content::format::Catalog =
+            serde_json::from_str(&catalog).unwrap();
+        let mut expected = BTreeSet::from(["catalog.json".to_owned()]);
+        for stem in &catalog.decks {
+            expected.insert(format!("{stem}.json"));
+            expected.insert(format!("{stem}.ndjson"));
+        }
+        assert_eq!(names, expected);
     }
 
     #[test]
     fn embedded_content_passes_the_dev_gate() {
-        let issues = lint(&BUNDLED, Mode::Dev);
+        let issues = lint(&bundled(), Mode::Dev);
         assert!(issues.0.is_empty(), "{:?}", issues.0);
     }
 

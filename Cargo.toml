@@ -31,3 +31,11 @@ tracing = "=0.1.44"
 unicode-normalization = "0.1.24"
 tracing-appender = "=0.2.5"
 tracing-subscriber = { version = "=0.3.23", features = ["env-filter", "fmt"] }
+# The bundled content archive is decrypted with 2^19 SHA-256 rounds; unoptimised that takes
+# seconds in debug builds and tests.
+[profile.dev.package.sha2]
+opt-level = 3
+[profile.dev.package.aes]
+opt-level = 3
+[profile.dev.package.lzma-rust2]
+opt-level = 3

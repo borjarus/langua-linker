@@ -9,3 +9,5 @@
 /frontend/dist-beta/
 /frontend/test-results/
 /frontend/playwright-report/
+# Plain working copy of the encrypted bundled content (content-pack unpack).
+/content/decks-src/

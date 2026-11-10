@@ -58,6 +58,9 @@ jobs:
 
   rust:
     runs-on: ubuntu-latest
+    # Decrypts the bundled content (content/decks/decks.7z) for the build, tests and content-lint.
+    env:
+      LANGUA_DECKS_PASSWORD: ${{ secrets.LANGUA_DECKS_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - name: Install Tauri Linux dependencies
@@ -66,7 +69,7 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
       # Toolchain version and components come from rust-toolchain.toml.
       - run: rustup show active-toolchain
-      # Reused KMP assets and bundled content must match their reviewed checksums.
+      # Reused KMP assets and the encrypted bundled content must match their reviewed checksums.
       - run: node scripts/verify-fixtures.mjs
       - uses: Swatinem/rust-cache@v2
       # tauri::generate_context! embeds frontendDist at compile time; the frontend job builds the real one.

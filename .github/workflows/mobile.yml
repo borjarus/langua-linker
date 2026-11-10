@@ -4,6 +4,10 @@ name: Mobile builds
 on:
   workflow_dispatch:
 
+# Decrypts the bundled content (content/decks/decks.7z) compiled into the app.
+env:
+  LANGUA_DECKS_PASSWORD: ${{ secrets.LANGUA_DECKS_PASSWORD }}
+
 jobs:
   android-debug-apk:
     runs-on: ubuntu-latest
