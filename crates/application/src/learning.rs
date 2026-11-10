@@ -14,6 +14,7 @@ use langualinker_domain::{
     AssociationId, CardId, DeckId, NoteId, SessionId, TimestampMs, ValidationError, WordLinkId,
 };
 
+use crate::llm::{self, Generation};
 use crate::repositories::{RecordedOperation, Repositories, SessionStatus, StudySession};
 use crate::study::{self, StudyView};
 use crate::{AppError, AppResult};
@@ -52,6 +53,8 @@ pub struct StudyCard {
     pub back: String,
     /// Empty when the deck type hides the section.
     pub associations: Vec<Association>,
+    /// Requested associations not attached yet (placeholders, Phase 13).
+    pub generations: Vec<Generation>,
     pub grammar_tips: Vec<GrammarTip>,
     pub word_links: Vec<LinkView>,
 }
@@ -70,6 +73,7 @@ pub struct NoteContent {
     pub note: Note,
     pub deck: Deck,
     pub associations: Vec<Association>,
+    pub generations: Vec<Generation>,
     pub grammar_tips: Vec<GrammarTip>,
 }
 
@@ -158,10 +162,10 @@ pub fn study_card(tx: &mut dyn Repositories, card: Card) -> AppResult<StudyCard>
     let direction = direction_of(tx, &note, &card)?;
     let (front, back) = sides(&note, direction);
     let capabilities = deck.deck_type.capabilities();
-    let associations = if capabilities.associations {
-        tx.associations(note.id)?
+    let (associations, generations) = if capabilities.associations {
+        (tx.associations(note.id)?, llm::generations(tx, note.id)?)
     } else {
-        Vec::new()
+        (Vec::new(), Vec::new())
     };
     let grammar_tips = if capabilities.grammar_tips {
         tx.grammar_tips(note.id)?
@@ -182,6 +186,7 @@ pub fn study_card(tx: &mut dyn Repositories, card: Card) -> AppResult<StudyCard>
         front,
         back,
         associations,
+        generations,
         grammar_tips,
         word_links,
     })
@@ -218,10 +223,10 @@ pub fn note_content(tx: &mut dyn Repositories, note_id: NoteId) -> AppResult<Not
         .ok_or(AppError::NotFound { entity: "card" })?;
     let deck = live_deck(tx, card.deck_id)?;
     let capabilities = deck.deck_type.capabilities();
-    let associations = if capabilities.associations {
-        tx.associations(note.id)?
+    let (associations, generations) = if capabilities.associations {
+        (tx.associations(note.id)?, llm::generations(tx, note.id)?)
     } else {
-        Vec::new()
+        (Vec::new(), Vec::new())
     };
     let grammar_tips = if capabilities.grammar_tips {
         tx.grammar_tips(note.id)?
@@ -232,6 +237,7 @@ pub fn note_content(tx: &mut dyn Repositories, note_id: NoteId) -> AppResult<Not
         note,
         deck,
         associations,
+        generations,
         grammar_tips,
     })
 }

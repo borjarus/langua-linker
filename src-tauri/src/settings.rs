@@ -5,6 +5,7 @@
 use std::sync::Arc;
 
 use langualinker_application::AppError;
+use langualinker_application::llm;
 use langualinker_application::ports::{CollectionScope, SecretStore};
 use langualinker_application::repositories::{CollectionCounts, RecordedOperation, UnitOfWork};
 use langualinker_application::settings::{
@@ -14,8 +15,8 @@ use langualinker_application::settings::{
 use langualinker_application::stats::{self, Stats};
 use langualinker_contracts::ErrorDto;
 use langualinker_contracts::dto::{
-    AiProviderOptionDto, AiSettingsDto, BackupDto, BackupInput, BackupKind, BackupLocation,
-    BackupSettingsDto, CardStatesDto, CollectionCountsDto, ConsentState,
+    AiProviderOptionDto, AiQuotaDto, AiSettingsDto, BackupDto, BackupInput, BackupKind,
+    BackupLocation, BackupSettingsDto, CardStatesDto, CollectionCountsDto, ConsentState,
     DifficultyStabilityPointDto, ForecastAssumptionsDto, ForecastDayDto, JobDto, MaturityDto,
     NativeLanguage, PermissionState, RatioDto, ResetInput, ResetPreviewDto, ResetPreviewInput,
     ResetScope, RestoreInput, RestorePreviewDto, RestoreSource, ReviewDayDto, SettingsDto,
@@ -170,11 +171,23 @@ fn target_dto(target: BackupTarget) -> BackupLocation {
     }
 }
 
-fn has_api_key(secrets: Option<&Arc<dyn SecretStore>>) -> bool {
+pub(crate) fn has_api_key(secrets: Option<&Arc<dyn SecretStore>>) -> bool {
     secrets.is_some_and(|store| store.has(AI_KEY_SECRET).unwrap_or(false))
 }
 
-fn settings_dto(settings: Settings, has_key: bool) -> SettingsDto {
+/// The settings with the AI key presence and today's local AI call count.
+pub(crate) fn read_settings(
+    db: &langualinker_infrastructure::sqlite::SqliteDatabase,
+    secrets: Option<&Arc<dyn SecretStore>>,
+    now: TimestampMs,
+) -> Result<SettingsDto, ErrorDto> {
+    let (settings, quota) = db
+        .read(move |tx| Ok((app_settings::read(tx)?, llm::quota(tx, now)?)))
+        .map_err(app_error)?;
+    Ok(settings_dto(settings, has_api_key(secrets), quota))
+}
+
+fn settings_dto(settings: Settings, has_key: bool, quota: llm::Quota) -> SettingsDto {
     let doc = settings.doc;
     SettingsDto {
         ui_language: ui_language_dto(doc.ui_language),
@@ -206,7 +219,12 @@ fn settings_dto(settings: Settings, has_key: bool) -> SettingsDto {
                     custom_endpoint: provider.custom_endpoint,
                 })
                 .collect(),
-            quota: None,
+            // The local daily call limit (cost guard, Phase 13); BYOK providers report none.
+            quota: Some(AiQuotaDto {
+                used: quota.used,
+                limit: quota.limit,
+                resets_at: iso(quota.resets_at),
+            }),
         },
         telemetry_opt_in: doc.telemetry_opt_in,
         backup: BackupSettingsDto {
@@ -285,11 +303,8 @@ pub async fn get_stats(backend: State<'_, Backend>, input: Value) -> Result<Stat
 pub async fn get_settings(backend: State<'_, Backend>) -> Result<SettingsDto, ErrorDto> {
     let collection = backend.collection()?;
     let (db, secrets) = (collection.db.clone(), collection.secrets.clone());
-    blocking(move || {
-        let settings = db.read(|tx| app_settings::read(tx)).map_err(app_error)?;
-        Ok(settings_dto(settings, has_api_key(secrets.as_ref())))
-    })
-    .await
+    let now = collection.clock.now();
+    blocking(move || read_settings(&db, secrets.as_ref(), now)).await
 }
 
 #[tauri::command]
@@ -399,13 +414,8 @@ pub async fn update_settings(
     }
     let collection_db = collection.db.clone();
     let secrets = collection.secrets.clone();
-    blocking(move || {
-        let settings = collection_db
-            .read(|tx| app_settings::read(tx))
-            .map_err(app_error)?;
-        Ok(settings_dto(settings, has_api_key(secrets.as_ref())))
-    })
-    .await
+    let now = collection.clock.now();
+    blocking(move || read_settings(&collection_db, secrets.as_ref(), now)).await
 }
 
 // ---------------------------------------------------------------- reset

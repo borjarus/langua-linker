@@ -9,13 +9,17 @@ use langualinker_application::content::ContentService;
 use langualinker_application::jobs::{
     JobDetail, JobEvent, JobKind, JobRecord, JobService, JobStatus,
 };
-use langualinker_application::ports::{Clock, CollectionScope, EventSink, Rng, SecretStore};
+use langualinker_application::llm::LlmService;
+use langualinker_application::ports::{
+    Clock, CollectionScope, EventSink, LlmClient, Rng, SecretStore,
+};
 use langualinker_application::repositories::UnitOfWork;
 use langualinker_application::{AppError, DetailValue};
 use langualinker_contracts::dto::{self, JobDto, JobEventDto, JobProgressDto, JobResultDto};
 use langualinker_contracts::{ErrorCode, ErrorDto};
 use langualinker_domain::TimestampMs;
 use langualinker_infrastructure::backup::{BackupDirs, BackupService};
+use langualinker_infrastructure::llm::HttpLlmClient;
 use langualinker_infrastructure::sqlite::{DATABASE_FILE, SqliteDatabase};
 use langualinker_infrastructure::system::{OsRng, SystemClock};
 use serde_json::{Map, Value};
@@ -44,6 +48,8 @@ pub struct Collection {
     pub backups: BackupService,
     /// Platform secret store; `None` where the platform has none (tests, Linux CI).
     pub secrets: Option<Arc<dyn SecretStore>>,
+    /// AI associations and their outbox (Phase 13).
+    pub llm: LlmService<SqliteDatabase>,
 }
 
 impl Backend {
@@ -83,6 +89,7 @@ impl Backend {
                     clock,
                     BackupDirs::under(&data_dir),
                     secrets,
+                    Arc::new(HttpLlmClient::new()),
                 )
             });
         match &collection {
@@ -101,6 +108,15 @@ impl Backend {
                     Ok(false) => {}
                     Err(error) => tracing::error!(code = error.code(), "settings not initialized"),
                 }
+                // AI requests cut short by a kill go back to the queue; due ones run now.
+                match collection.llm.recover_interrupted() {
+                    Ok(0) => {}
+                    Ok(count) => {
+                        tracing::warn!(count, "AI requests interrupted by the previous run")
+                    }
+                    Err(error) => tracing::error!(code = error.code(), "AI outbox not recovered"),
+                }
+                resume_outbox(collection);
                 match collection.content.resume() {
                     Ok(Some(job)) => {
                         tracing::info!(job_id = %job.id, "bundled content preparation resumed")
@@ -137,7 +153,14 @@ impl Collection {
             std::process::id(),
             NEXT.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
         ));
-        Self::start_in(db, events, clock, BackupDirs::under(&dir), None)
+        Self::start_in(
+            db,
+            events,
+            clock,
+            BackupDirs::under(&dir),
+            None,
+            Arc::new(HttpLlmClient::new()),
+        )
     }
 
     pub fn start_in(
@@ -146,6 +169,7 @@ impl Collection {
         clock: Arc<dyn Clock>,
         dirs: BackupDirs,
         secrets: Option<Arc<dyn SecretStore>>,
+        llm_client: Arc<dyn LlmClient>,
     ) -> Result<Self, AppError> {
         let jobs = JobService::new(db.clone(), events.clone(), clock.clone());
         let interrupted = jobs.recover_interrupted()?;
@@ -175,6 +199,15 @@ impl Collection {
             dirs,
             crate::APP_VERSION,
         );
+        let llm = LlmService::new(
+            db.clone(),
+            jobs.clone(),
+            events.clone(),
+            clock.clone(),
+            rng.clone(),
+            llm_client,
+            secrets.clone(),
+        );
         Ok(Self {
             db,
             jobs,
@@ -184,8 +217,20 @@ impl Collection {
             rng,
             backups,
             secrets,
+            llm,
         })
     }
+}
+
+/// Runs AI requests whose retry time has come (start, foreground, periodic check while the app
+/// runs). Off the caller's thread; nothing happens while the app is closed.
+pub fn resume_outbox(collection: &Collection) {
+    let llm = collection.llm.clone();
+    tauri::async_runtime::spawn_blocking(move || match llm.resume() {
+        Ok(Some(job)) => tracing::info!(job_id = %job.id, "AI outbox resumed"),
+        Ok(None) => {}
+        Err(error) => tracing::warn!(code = error.code(), "AI outbox not resumed"),
+    });
 }
 
 /// Emits backend signals to every window. A failed emit is logged; it never fails the mutation

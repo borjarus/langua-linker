@@ -51,6 +51,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "scheduler",
         sql: include_str!("../../migrations/0003_scheduler.sql"),
     },
+    Migration {
+        version: 4,
+        name: "llm_outbox",
+        sql: include_str!("../../migrations/0004_llm_outbox.sql"),
+    },
 ];
 
 /// Highest schema version this build understands.
@@ -413,7 +418,7 @@ mod tests {
                  VALUES (3, 5, 0);",
         )
         .unwrap();
-        let report = migrate(&mut conn, None, MIGRATIONS, 2).unwrap();
+        let report = migrate(&mut conn, None, &MIGRATIONS[..3], 2).unwrap();
         assert_eq!((report.from_version, report.to_version), (2, 3));
         let (restricted, changes): (bool, String) = conn
             .query_row(
@@ -429,6 +434,83 @@ mod tests {
         assert!(
             conn.execute("UPDATE study_sessions SET restricted = 2 WHERE id = 3", [])
                 .is_err()
+        );
+    }
+
+    /// v3 → v4 (Phase 13): the never-written v1 outbox is rebuilt with its new columns and
+    /// statuses; associations, the cache and notes are untouched; deleting a note removes its
+    /// requests, deleting an association only unlinks them.
+    #[test]
+    fn v3_collection_upgrades_to_the_llm_outbox() {
+        let mut conn = memory();
+        migrate(&mut conn, None, &MIGRATIONS[..3], 1).unwrap();
+        insert_deck(&conn);
+        conn.execute_batch(
+            "INSERT INTO notes (id, guid, note_type_id, fields, sort_field, created_at, updated_at)
+                 VALUES (7, 'n7', 1, '{\"front\":\"Hund\",\"back\":\"pies\"}', 'hund', 0, 0);
+             INSERT INTO associations (id, guid, note_id, text, provenance, native_language,
+                     target_language, created_at, updated_at)
+                 VALUES (4, 'a4', 7, 'Hund — chód', 1, 'pl', 'de', 0, 0);
+             INSERT INTO association_cache (cache_key, text, model, prompt_version, moderation,
+                     created_at)
+                 VALUES ('k0', 'cached', 'm', 'v1', 1, 0);",
+        )
+        .unwrap();
+        let report = migrate(&mut conn, None, MIGRATIONS, 2).unwrap();
+        assert_eq!((report.from_version, report.to_version), (3, 4));
+        conn.execute_batch(
+            "INSERT INTO llm_requests (id, note_id, operation_id, variant, status, prompt_kind,
+                     prompt_version, provider, model, cache_key, source_hash, association_id,
+                     created_at, updated_at)
+                 VALUES (1, 7, 'op', 0, 'done', 'wordSubstitution', 'word-substitution-v1',
+                     'anthropic', 'm', 'k1', 'h', 4, 0, 0);
+             INSERT INTO llm_calls (request_id, started_at, duration_ms, provider, model, outcome)
+                 VALUES (1, 0, 900, 'anthropic', 'm', 'ok');",
+        )
+        .unwrap();
+        // Statuses, variants and (operation, variant) are constrained.
+        let bad = [
+            "INSERT INTO llm_requests (note_id, operation_id, variant, status, prompt_kind,
+                 prompt_version, provider, model, cache_key, source_hash, created_at, updated_at)
+             VALUES (7, 'op', 0, 'queued', 'k', 'v', 'p', 'm', 'c', 'h', 0, 0)",
+            "INSERT INTO llm_requests (note_id, operation_id, variant, status, prompt_kind,
+                 prompt_version, provider, model, cache_key, source_hash, created_at, updated_at)
+             VALUES (7, 'op2', 3, 'queued', 'k', 'v', 'p', 'm', 'c', 'h', 0, 0)",
+            "UPDATE llm_requests SET status = 'lost' WHERE id = 1",
+        ];
+        for sql in bad {
+            assert!(conn.execute(sql, []).is_err(), "{sql}");
+        }
+        let cached: String = conn
+            .query_row(
+                "SELECT text FROM association_cache WHERE cache_key = 'k0'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(cached, "cached");
+        conn.execute("DELETE FROM associations WHERE id = 4", [])
+            .unwrap();
+        let unlinked: Option<i64> = conn
+            .query_row(
+                "SELECT association_id FROM llm_requests WHERE id = 1",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
+        assert_eq!(unlinked, None);
+        conn.execute("DELETE FROM notes WHERE id = 7", []).unwrap();
+        let (requests, calls): (i64, i64) = conn
+            .query_row(
+                "SELECT (SELECT COUNT(*) FROM llm_requests), (SELECT COUNT(*) FROM llm_calls)",
+                [],
+                |r| Ok((r.get(0)?, r.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(
+            (requests, calls),
+            (0, 1),
+            "the call log keeps no link to content"
         );
     }
 }

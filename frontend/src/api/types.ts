@@ -8,7 +8,7 @@
  * - Long-running work returns a `JobDto`; events are signals, never durable truth.
  *
  * This file is framework-independent: no Svelte, no Tauri imports.
- * Rust is the DTO source for the types re-exported from `src/generated/contracts.ts` (Phases 7–12);
+ * Rust is the DTO source for the types re-exported from `src/generated/contracts.ts` (Phases 7–13);
  * the remaining DTOs move there as their commands become real.
  */
 
@@ -80,6 +80,8 @@ import type {
   NextDeckDto,
   SessionSummaryDto,
   SetFavoriteAssociationInput,
+  GenerateAssociationInput,
+  SetAiApiKeyInput,
   ResolveWordLinkInput,
   AssociationProvenance,
   AssociationStatus,
@@ -241,6 +243,8 @@ export type {
   NextDeckDto,
   SessionSummaryDto,
   SetFavoriteAssociationInput,
+  GenerateAssociationInput,
+  SetAiApiKeyInput,
   ResolveWordLinkInput,
   AssociationProvenance,
   AssociationStatus,
@@ -416,12 +420,6 @@ export const FSRS_WEIGHT_COUNT = 21
 
 // Note details, editor, note content and word search DTOs come from Rust (Phase 11).
 
-export interface GenerateAssociationInput {
-  operationId: OperationId
-  noteId: Id
-  variants: number
-}
-
 // ---------------------------------------------------------------- browser
 
 // Card search, paging and bulk-action DTOs come from Rust (Phase 11).
@@ -445,12 +443,6 @@ const statsRangesMatchRust: SameMembers<StatsRange, GeneratedStatsRange> = true
 void statsRangesMatchRust
 
 // ---------------------------------------------------------------- settings / onboarding / privacy
-
-export interface SetAiApiKeyInput {
-  operationId: OperationId
-  /** Written to the platform SecretStore; `null` removes the key. Never read back. */
-  apiKey: string | null
-}
 
 export interface RequestPermissionInput {
   operationId: OperationId

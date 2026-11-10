@@ -496,6 +496,14 @@ pub fn update(
     Ok(effects)
 }
 
+/// The AI key was stored or removed (the key itself lives in the platform store): the document
+/// version goes up so an open form re-reads `hasApiKey` instead of overwriting a newer state.
+pub fn api_key_changed(tx: &mut dyn Repositories, at: TimestampMs) -> AppResult<()> {
+    let mut doc = load_doc(tx)?;
+    doc.version += 1;
+    store_doc(tx, &doc, at)
+}
+
 /// Phrase typed to confirm a reset without a fresh backup, in the UI language.
 pub fn confirmation_phrase(language: UiLanguage, everything: bool) -> &'static str {
     match (language, everything) {

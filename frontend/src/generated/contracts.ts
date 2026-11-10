@@ -303,6 +303,18 @@ firstCompleted: boolean, startedAt: string, finishedAt: string | null, };
 
 export type SetFavoriteAssociationInput = { operationId: string, noteId: string, associationId: string, };
 
+export type GenerateAssociationInput = { operationId: string, noteId: string, 
+/**
+ * 1–3 variants; each becomes its own placeholder and association.
+ */
+variants: number, };
+
+export type SetAiApiKeyInput = { operationId: string, 
+/**
+ * Written to the platform SecretStore; `null` removes the key. Never read back.
+ */
+apiKey: string | null, };
+
 export type ResolveWordLinkInput = { operationId: string, linkId: string, wordNoteId: string, };
 
 export type HiddenSectionCountsDto = { associations: number, grammarTips: number, wordLinks: number, };

@@ -8,6 +8,7 @@ use langualinker_application::AppError;
 use langualinker_application::learning::{
     self, CardAction, LinkView, NoteContent, SessionSummary, StudyCard, StudyScreen,
 };
+use langualinker_application::llm::{self, Generation, GenerationState};
 use langualinker_application::ports::CollectionScope;
 use langualinker_application::repositories::{SessionStatus, UnitOfWork};
 use langualinker_application::study::{
@@ -154,11 +155,43 @@ pub(crate) fn association_dto(association: Association) -> AssociationDto {
             content::AssociationProvenance::Manual => AssociationProvenance::Manual,
         },
         favorite: association.is_favorite,
-        // Stored associations are ready; pending generations arrive with the outbox (Phase 13).
+        // Stored associations are ready; requests not attached yet are placeholders (below).
         status: AssociationStatus::Ready,
         model: association.model,
         error: None,
     }
+}
+
+/// A requested association that is not attached yet (Phase 13): pending, offline queued,
+/// failed or blocked. Its id is `llm-<request id>`; deleting it dismisses the request.
+pub(crate) fn generation_dto(generation: Generation) -> AssociationDto {
+    AssociationDto {
+        id: generation.placeholder_id(),
+        note_id: text_id(generation.note_id.0),
+        text: String::new(),
+        provenance: AssociationProvenance::Generated,
+        favorite: false,
+        status: match generation.state {
+            GenerationState::Pending => AssociationStatus::Pending,
+            GenerationState::OfflineQueued => AssociationStatus::OfflineQueued,
+            GenerationState::Error => AssociationStatus::Error,
+            GenerationState::Blocked => AssociationStatus::Blocked,
+        },
+        model: Some(generation.model),
+        error: generation.error.as_ref().map(error_dto),
+    }
+}
+
+/// Stored associations first, then placeholders in request order.
+pub(crate) fn associations_dto(
+    stored: Vec<Association>,
+    generations: Vec<Generation>,
+) -> Vec<AssociationDto> {
+    stored
+        .into_iter()
+        .map(association_dto)
+        .chain(generations.into_iter().map(generation_dto))
+        .collect()
 }
 
 fn tip_dto(tip: GrammarTip, order: usize) -> GrammarTipDto {
@@ -220,7 +253,7 @@ fn study_card_dto(card: StudyCard) -> StudyCardDto {
         front: card.front,
         back: card.back,
         target_language: target_language(card.deck.target_language),
-        associations: card.associations.into_iter().map(association_dto).collect(),
+        associations: associations_dto(card.associations, card.generations),
         grammar_tips: tips_dto(card.grammar_tips),
         word_links: card.word_links.into_iter().map(link_dto).collect(),
     }
@@ -305,11 +338,7 @@ fn note_content_dto(content: NoteContent) -> NoteContentDto {
         back: content.note.fields.back,
         target_language: target_language(content.deck.target_language),
         capabilities: capabilities(content.deck.deck_type),
-        associations: content
-            .associations
-            .into_iter()
-            .map(association_dto)
-            .collect(),
+        associations: associations_dto(content.associations, content.generations),
         grammar_tips: tips_dto(content.grammar_tips),
     }
 }
@@ -641,15 +670,22 @@ pub async fn set_favorite_association(
     let association = AssociationId(id("associationId", &input.association_id)?);
     let collection = backend.collection()?;
     let (db, now) = (collection.db.clone(), collection.clock.now());
-    let associations = blocking(move || {
+    let (associations, generations) = blocking(move || {
         db.write(move |tx| {
-            learning::set_favorite_association(tx, &input.operation_id, note, association, now)
+            let associations = learning::set_favorite_association(
+                tx,
+                &input.operation_id,
+                note,
+                association,
+                now,
+            )?;
+            Ok((associations, llm::generations(tx, note)?))
         })
         .map_err(app_error)
     })
     .await?;
     emit(collection, &[CollectionScope::Notes], now);
-    Ok(associations.into_iter().map(association_dto).collect())
+    Ok(associations_dto(associations, generations))
 }
 
 #[tauri::command]

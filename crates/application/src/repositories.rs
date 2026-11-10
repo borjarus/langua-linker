@@ -19,8 +19,8 @@ use langualinker_domain::{
     ReviewLogId, SessionId, TimestampMs, WordLinkId,
 };
 
-use crate::AppResult;
 use crate::jobs::{JobId, JobRecord, NewJob};
+use crate::{AppError, AppResult};
 
 pub trait DeckRepository {
     fn insert_deck(&mut self, deck: &NewDeck, at: TimestampMs) -> AppResult<Deck>;
@@ -694,6 +694,145 @@ pub trait MaintenanceRepository {
     fn newest_review_at(&mut self) -> AppResult<Option<TimestampMs>>;
 }
 
+// ---------------------------------------------------------------- LLM outbox (Phase 13)
+
+/// Status of an outbox row (`llm_requests.status`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum LlmRequestStatus {
+    /// Waiting to be sent (new, after a retryable failure, or offline).
+    Queued,
+    /// A provider call is in flight.
+    Sending,
+    /// The association was attached (or found in the cache).
+    Done,
+    Failed,
+    /// Moderation blocked it, or AI consent was withdrawn.
+    Blocked,
+    /// The learner removed the placeholder, or the note changed under it.
+    Dismissed,
+}
+
+impl LlmRequestStatus {
+    pub const ALL: [Self; 6] = [
+        Self::Queued,
+        Self::Sending,
+        Self::Done,
+        Self::Failed,
+        Self::Blocked,
+        Self::Dismissed,
+    ];
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Queued => "queued",
+            Self::Sending => "sending",
+            Self::Done => "done",
+            Self::Failed => "failed",
+            Self::Blocked => "blocked",
+            Self::Dismissed => "dismissed",
+        }
+    }
+
+    pub fn parse(value: &str) -> AppResult<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|status| status.as_str() == value)
+            .ok_or_else(|| AppError::Internal(format!("unknown LLM request status {value}")))
+    }
+}
+
+/// One association variant the learner asked for (an outbox row).
+#[derive(Debug, Clone, PartialEq)]
+pub struct LlmRequestRow {
+    pub id: i64,
+    pub note_id: NoteId,
+    pub job_id: Option<i64>,
+    pub operation_id: String,
+    pub variant: u8,
+    pub status: LlmRequestStatus,
+    pub attempts: u32,
+    pub offline_retries: u32,
+    pub next_attempt_at: Option<TimestampMs>,
+    pub prompt_kind: String,
+    pub prompt_version: String,
+    pub provider: String,
+    pub model: String,
+    pub cache_key: String,
+    pub source_hash: String,
+    pub association_id: Option<AssociationId>,
+    /// Contract error code of the last failure (`CODE` or `CODE:reason`).
+    pub error_code: Option<String>,
+    pub created_at: TimestampMs,
+    pub updated_at: TimestampMs,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct NewLlmRequest {
+    pub note_id: NoteId,
+    pub operation_id: String,
+    pub variant: u8,
+    pub prompt_kind: String,
+    pub prompt_version: String,
+    pub provider: String,
+    pub model: String,
+    pub cache_key: String,
+    pub source_hash: String,
+}
+
+/// A moderated answer kept for reuse (`association_cache`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CachedAssociation {
+    pub text: String,
+    pub model: String,
+    pub prompt_version: String,
+}
+
+/// One provider call, without content.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LlmCall {
+    pub request_id: Option<i64>,
+    pub started_at: TimestampMs,
+    pub duration_ms: i64,
+    pub provider: String,
+    pub model: String,
+    /// `ok` or the failure class (`notSent`, `timeout`, `invalidOutput`, ...).
+    pub outcome: String,
+}
+
+pub trait LlmRepository {
+    /// Inserts a queued row; `None` when `(operation_id, variant)` already exists (a retry).
+    fn insert_llm_request(
+        &mut self,
+        request: &NewLlmRequest,
+        at: TimestampMs,
+    ) -> AppResult<Option<i64>>;
+    fn llm_request(&mut self, id: i64) -> AppResult<Option<LlmRequestRow>>;
+    fn llm_requests_of_operation(&mut self, operation_id: &str) -> AppResult<Vec<LlmRequestRow>>;
+    fn llm_requests_with_status(
+        &mut self,
+        status: LlmRequestStatus,
+    ) -> AppResult<Vec<LlmRequestRow>>;
+    /// Rows a card shows as placeholders: queued, sending, failed and blocked, oldest first.
+    fn visible_llm_requests(&mut self, note: NoteId) -> AppResult<Vec<LlmRequestRow>>;
+    /// Queued rows whose retry time has come (or that have none), oldest first.
+    fn due_llm_requests(&mut self, now: TimestampMs, limit: u32) -> AppResult<Vec<i64>>;
+    fn update_llm_request(&mut self, row: &LlmRequestRow, at: TimestampMs) -> AppResult<()>;
+    /// Cache keys the note already used: its associations (deleted ones too) and its requests.
+    fn used_cache_keys(&mut self, note: NoteId) -> AppResult<Vec<String>>;
+    fn cached_association(&mut self, cache_key: &str) -> AppResult<Option<CachedAssociation>>;
+    fn put_cached_association(
+        &mut self,
+        cache_key: &str,
+        entry: &CachedAssociation,
+        at: TimestampMs,
+    ) -> AppResult<()>;
+    fn insert_llm_call(&mut self, call: &LlmCall) -> AppResult<()>;
+    /// Calls that reached the provider (anything but `notSent`) since `since`.
+    fn llm_calls_since(&mut self, since: TimestampMs) -> AppResult<u32>;
+    /// Durations of successful calls since `since`, for the latency measurement.
+    fn llm_call_durations(&mut self, since: TimestampMs) -> AppResult<Vec<i64>>;
+}
+
 /// Every repository inside one transaction.
 pub trait Repositories:
     DeckRepository
@@ -713,6 +852,7 @@ pub trait Repositories:
     + ManagementRepository
     + StatsQueries
     + MaintenanceRepository
+    + LlmRepository
 {
 }
 
@@ -734,6 +874,7 @@ impl<T> Repositories for T where
         + ManagementRepository
         + StatsQueries
         + MaintenanceRepository
+        + LlmRepository
 {
 }
 

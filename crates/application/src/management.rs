@@ -520,6 +520,8 @@ pub struct NoteDetails {
     /// Ordinals of cards archived by a note-type change.
     pub archived_ordinals: Vec<u32>,
     pub associations: Vec<Association>,
+    /// Requested associations not attached yet (placeholders, Phase 13).
+    pub generations: Vec<crate::llm::Generation>,
     pub grammar_tips: Vec<GrammarTip>,
     pub word_links: Vec<LinkView>,
     pub computed_at: TimestampMs,
@@ -590,6 +592,7 @@ pub fn note_details(
         });
     }
     let associations = tx.associations(note.id)?;
+    let generations = crate::llm::generations(tx, note.id)?;
     let grammar_tips = tx.grammar_tips(note.id)?;
     let mut word_links = Vec::new();
     for link in tx.word_links(note.id)? {
@@ -602,6 +605,7 @@ pub fn note_details(
         cards,
         archived_ordinals,
         associations,
+        generations,
         grammar_tips,
         word_links,
         computed_at: now,
@@ -978,6 +982,8 @@ pub enum NoteContentChange {
     /// Only the user's own (manual) associations can be edited.
     EditAssociation(AssociationId, String),
     DeleteAssociation(AssociationId),
+    /// Removes a requested association that is not attached yet (its outbox row, Phase 13).
+    DismissGeneration(i64),
     /// Removes the link; the word note is untouched.
     UnlinkWord(WordLinkId),
 }
@@ -1084,6 +1090,9 @@ pub fn update_note_content(
         NoteContentChange::DeleteAssociation(id) => {
             let association = association_of(tx, *id)?;
             tx.soft_delete_association(association.id, now)?;
+        }
+        NoteContentChange::DismissGeneration(request) => {
+            crate::llm::dismiss(tx, note.id, *request, now)?;
         }
         NoteContentChange::UnlinkWord(id) => {
             let link = tx

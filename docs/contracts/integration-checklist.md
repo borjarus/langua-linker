@@ -16,6 +16,8 @@ Approved at the Phase 6 gate as the condition for replacing demo data with Rust,
 
 > **Phase 10 (2026-11-05).** Every Dashboard, Study and Summary operation of phase ≤ 10 is real in Rust ([ADR-16](../adr/ADR-16-learning-flow.md)); the screens are ticked after the Android device run. Still answering `NOT_IMPLEMENTED` on these screens: `createDeck` (11), `generateAssociation` (13), `getSettings`/`updateSettings` (12) — TTS stays enabled and the reminder offer stays hidden while settings are unavailable.
 
+> **Phase 13 (2026-11-10).** `generateAssociation` and `setAiApiKey` are real in Rust ([ADR-18](../adr/ADR-18-llm-associations.md)), so every operation of the Study, Card, Editor and AI screens up to phase 13 is real; TTS (15) is still a platform adapter. Before ticking them: Android run with a real key (airplane mode → offline queued → reconnect → attached; a kill while sending), the key absent from app files and backups on the device.
+
 Tick a screen when all its operations are real in the production build and its checks pass on a device. "Phase" is the plan phase that connects the operation (`backendPhase` in `operations.ts`).
 
 | Screen | Operations (phase) | Before switching the screen | Done |

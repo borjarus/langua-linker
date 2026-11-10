@@ -31,6 +31,24 @@ pub enum AppError {
     BackupCorrupt { reason: &'static str },
     #[error("cancelled")]
     Cancelled,
+    /// The request could not leave the device (no connection, DNS); nothing was sent.
+    #[error("network unavailable")]
+    NetworkUnavailable,
+    /// The AI provider answered with an error (`status` is the HTTP status, 0 = none).
+    #[error("provider error {status}")]
+    ProviderError { status: i64 },
+    /// No answer in time after the request was sent; the provider may still have charged it.
+    #[error("provider timeout")]
+    ProviderTimeout,
+    /// The provider's answer did not match the expected JSON or length.
+    #[error("invalid provider output")]
+    InvalidProviderOutput,
+    /// Input or output failed moderation (or the provider declined); nothing is shown.
+    #[error("moderation blocked")]
+    ModerationBlocked,
+    /// The local daily call limit (or the provider's quota) is used up.
+    #[error("quota exceeded")]
+    QuotaExceeded { resets_at: i64 },
     #[error("{operation} is not implemented yet")]
     NotImplemented { operation: &'static str },
     /// Unexpected failure; the text is for logs only (it must not contain user content).
@@ -69,6 +87,12 @@ impl AppError {
             Self::UnsupportedFormat { .. } => "UNSUPPORTED_FORMAT",
             Self::BackupCorrupt { .. } => "BACKUP_CORRUPT",
             Self::Cancelled => "CANCELLED",
+            Self::NetworkUnavailable => "NETWORK_UNAVAILABLE",
+            Self::ProviderError { .. } => "PROVIDER_ERROR",
+            Self::ProviderTimeout => "PROVIDER_TIMEOUT",
+            Self::InvalidProviderOutput => "INVALID_PROVIDER_OUTPUT",
+            Self::ModerationBlocked => "MODERATION_BLOCKED",
+            Self::QuotaExceeded { .. } => "QUOTA_EXCEEDED",
             Self::NotImplemented { .. } => "NOT_IMPLEMENTED",
             Self::Internal(_) => "INTERNAL",
         }
@@ -96,7 +120,14 @@ impl AppError {
             }
             Self::NotImplemented { operation } => vec![("operation", Text(operation))],
             Self::UnsupportedFormat { format } => vec![("format", Text(format))],
-            Self::DbBusy
+            Self::ProviderError { status } if *status > 0 => vec![("status", Number(*status))],
+            Self::QuotaExceeded { resets_at } => vec![("resetsAt", Number(*resets_at))],
+            Self::ProviderError { .. }
+            | Self::NetworkUnavailable
+            | Self::ProviderTimeout
+            | Self::InvalidProviderOutput
+            | Self::ModerationBlocked
+            | Self::DbBusy
             | Self::StorageFull
             | Self::PreviewStale
             | Self::Cancelled

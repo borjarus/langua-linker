@@ -864,6 +864,24 @@ pub struct SetFavoriteAssociationInput {
     pub association_id: String,
 }
 
+/// Queues new AI associations of a note (Phase 13); the answer is a job of kind `llm`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GenerateAssociationInput {
+    pub operation_id: String,
+    pub note_id: String,
+    /// 1–3 variants; each becomes its own placeholder and association.
+    pub variants: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SetAiApiKeyInput {
+    pub operation_id: String,
+    /// Written to the platform SecretStore; `null` removes the key. Never read back.
+    pub api_key: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ResolveWordLinkInput {
@@ -1510,6 +1528,8 @@ pub fn typescript() -> String {
         RatingCountsDto::decl(&cfg),
         SessionSummaryDto::decl(&cfg),
         SetFavoriteAssociationInput::decl(&cfg),
+        GenerateAssociationInput::decl(&cfg),
+        SetAiApiKeyInput::decl(&cfg),
         ResolveWordLinkInput::decl(&cfg),
         HiddenSectionCountsDto::decl(&cfg),
         DeckTypeOptionDto::decl(&cfg),

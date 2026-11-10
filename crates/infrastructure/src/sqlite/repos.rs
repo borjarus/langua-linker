@@ -33,6 +33,7 @@ use rusqlite::{OptionalExtension, Row, Transaction, params, params_from_iter};
 use super::{codec, map_sqlite};
 
 mod bundled;
+mod llm;
 mod management;
 mod stats;
 mod study;

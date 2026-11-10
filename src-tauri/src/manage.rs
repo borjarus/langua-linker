@@ -36,7 +36,7 @@ use crate::backend::{Backend, Collection, iso};
 use crate::commands::{blocking, operation_id, parse_input};
 use crate::content::{capabilities, clamp, deck_type, domain_target_language, target_language};
 use crate::study::{
-    app_error, association_dto, card_state, direction_dto, domain_flag, emit, flag_dto, id,
+    app_error, associations_dto, card_state, direction_dto, domain_flag, emit, flag_dto, id,
     link_dto, queue_state, text_id, tips_dto,
 };
 
@@ -212,11 +212,7 @@ fn details_dto(details: NoteDetails) -> NoteDetailsDto {
             })
             .collect(),
         archived_ordinals: details.archived_ordinals,
-        associations: details
-            .associations
-            .into_iter()
-            .map(association_dto)
-            .collect(),
+        associations: associations_dto(details.associations, details.generations),
         grammar_tips: tips_dto(details.grammar_tips),
         word_links: details.word_links.into_iter().map(link_dto).collect(),
     }
@@ -689,7 +685,14 @@ pub async fn update_note_content(
             text,
         } => AppChange::EditAssociation(AssociationId(id("associationId", &association_id)?), text),
         NoteContentChange::DeleteAssociation { association_id } => {
-            AppChange::DeleteAssociation(AssociationId(id("associationId", &association_id)?))
+            match langualinker_application::llm::parse_placeholder_id(&association_id) {
+                // A requested association not attached yet: dismiss its outbox row.
+                Some(request) => AppChange::DismissGeneration(request),
+                None => AppChange::DeleteAssociation(AssociationId(id(
+                    "associationId",
+                    &association_id,
+                )?)),
+            }
         }
         NoteContentChange::UnlinkWord { link_id } => {
             AppChange::UnlinkWord(WordLinkId(id("linkId", &link_id)?))

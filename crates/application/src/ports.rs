@@ -51,24 +51,84 @@ pub trait EventSink: Send + Sync {
     fn collection_changed(&self, scopes: &[CollectionScope], at: TimestampMs);
 }
 
-/// A request to the association provider (Phase 13). Prompts are built in Rust; the key is read
-/// from the [`SecretStore`] by the adapter and never passes through the UI.
+/// Wire protocol of an association provider (settings `AI_PROVIDERS`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LlmProtocol {
+    /// Anthropic Messages API (`api.anthropic.com`).
+    Anthropic,
+    /// OpenAI-compatible chat completions at a user-supplied HTTPS endpoint.
+    OpenAiCompatible,
+}
+
+/// A request to the association provider (Phase 13). Prompts are built in Rust; the card text is
+/// only inside `user`, as data. The key travels separately as [`ApiKey`].
 #[derive(Debug, Clone, PartialEq)]
 pub struct LlmRequest {
-    pub prompt_version: String,
+    pub protocol: LlmProtocol,
+    /// HTTPS base URL for [`LlmProtocol::OpenAiCompatible`]; ignored otherwise.
+    pub endpoint: Option<String>,
     pub model: String,
-    pub prompt: String,
-    pub max_output_chars: usize,
+    pub prompt_version: String,
+    pub system: String,
+    pub user: String,
+    /// JSON Schema of the expected answer (sent where the protocol supports it).
+    pub schema: serde_json::Value,
+    /// Output token cap sent to the provider (pinned per prompt version).
+    pub max_tokens: u32,
+    /// Sampling temperature where the protocol accepts one (`None` = provider default).
+    pub temperature: Option<f32>,
+}
+
+/// The provider key, read from the [`SecretStore`] by the service. `Debug` never shows it.
+#[derive(Clone, PartialEq, Eq)]
+pub struct ApiKey(pub String);
+
+impl std::fmt::Debug for ApiKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("ApiKey(<redacted>)")
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LlmResponse {
+    /// The answer text (the JSON the prompt asked for, not yet parsed).
     pub text: String,
+    /// Model that answered, as the provider reports it.
     pub model: String,
 }
 
+/// Failure classes of a provider call. `NotSent` is the only one where the provider certainly
+/// did not receive (and cannot charge) the request.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LlmFailure {
+    /// No connection, DNS or TLS failure before the request was written.
+    NotSent,
+    /// Sent, but no complete answer in time.
+    Timeout,
+    /// The key was rejected (401/403).
+    Unauthorized,
+    /// The provider's quota or billing limit (402, `insufficient_quota`).
+    Quota,
+    /// Retryable provider failure: rate limit, overload, 5xx (`status` = HTTP status).
+    Unavailable { status: u16 },
+    /// Non-retryable provider error (other 4xx).
+    Rejected { status: u16 },
+    /// The provider declined to answer for safety reasons.
+    Refused,
+    /// The answer was cut off, too large or not in the expected envelope.
+    Malformed,
+    /// The caller cancelled while waiting.
+    Cancelled,
+}
+
 pub trait LlmClient: Send + Sync {
-    fn generate(&self, request: &LlmRequest) -> AppResult<LlmResponse>;
+    /// One provider call. `cancelled` is polled while waiting; returning `true` aborts the call.
+    fn generate(
+        &self,
+        request: &LlmRequest,
+        key: Option<&ApiKey>,
+        cancelled: &dyn Fn() -> bool,
+    ) -> Result<LlmResponse, LlmFailure>;
 }
 
 /// Local notifications (Phase 15).

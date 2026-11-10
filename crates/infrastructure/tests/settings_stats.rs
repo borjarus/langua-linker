@@ -543,8 +543,10 @@ fn withdrawing_ai_consent_blocks_queued_requests_before_the_network() {
             .unwrap();
         for (op, status) in [("a", "queued"), ("b", "sending"), ("c", "done")] {
             conn.execute(
-                "INSERT INTO llm_requests (note_id, operation_id, status, prompt_version, model,
-                     cache_key, created_at, updated_at) VALUES (?1, ?2, ?3, 'p1', 'm', 'k', 0, 0)",
+                "INSERT INTO llm_requests (note_id, operation_id, variant, status, prompt_kind,
+                     prompt_version, provider, model, cache_key, source_hash, created_at,
+                     updated_at)
+                 VALUES (?1, ?2, 0, ?3, 'wordSubstitution', 'p1', 'anthropic', 'm', 'k', 'h', 0, 0)",
                 params![note, op, status],
             )
             .unwrap();

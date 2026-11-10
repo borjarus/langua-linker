@@ -1,5 +1,6 @@
 //! Tauri composition root. Desktop (`main.rs`) and mobile (`mobile_entry_point`) both call `run()`.
 
+mod ai;
 mod backend;
 mod commands;
 mod content;
@@ -154,6 +155,8 @@ fn configure<R: Runtime>(
         settings::validate_restore,
         settings::restore_backup,
         settings::share_file,
+        ai::generate_association,
+        ai::set_ai_api_key,
         diagnostics::probe_secret_store,
         diagnostics::probe_file_open,
         diagnostics::probe_file_save
@@ -169,6 +172,9 @@ fn configure<R: Runtime>(
             settings::automatic_backup(&opened);
             app.manage(opened);
             app.manage(files::PickedFiles::default());
+            if diagnostics {
+                start_outbox_ticker(app.handle().clone());
+            }
             announce_ready(app.handle())?;
             Ok(())
         })
@@ -183,12 +189,47 @@ fn configure<R: Runtime>(
         })
 }
 
-/// The app came back to the foreground: start an automatic backup if one became due. Checked at
-/// most once an hour; nothing runs while the app is closed (no native scheduler).
+/// How often a running app looks for AI requests waiting for a connection (Phase 13): there is
+/// no reliable "back online" signal on every platform, so a cheap periodic check stands in for it.
+const OUTBOX_CHECK: std::time::Duration = std::time::Duration::from_secs(60);
+
+/// Periodic outbox check while the app runs (the real app only; tests drive the outbox directly).
+fn start_outbox_ticker<R: Runtime>(app: AppHandle<R>) {
+    let spawned = std::thread::Builder::new()
+        .name("ai-outbox".into())
+        .spawn(move || {
+            loop {
+                std::thread::sleep(OUTBOX_CHECK);
+                if let Some(backend) = app.try_state::<Backend>()
+                    && let Ok(collection) = backend.collection()
+                {
+                    backend::resume_outbox(collection);
+                }
+            }
+        });
+    if spawned.is_err() {
+        tracing::warn!("AI outbox ticker not started");
+    }
+}
+
+/// The app came back to the foreground: queued AI requests whose retry time has come run now
+/// (at most every 15 s), and an automatic backup starts if one became due (checked at most once
+/// an hour). Nothing runs while the app is closed (no native scheduler).
 fn foreground<R: Runtime>(app: &AppHandle<R>) {
     use std::sync::atomic::{AtomicI64, Ordering};
     static LAST_CHECK: AtomicI64 = AtomicI64::new(0);
+    static LAST_OUTBOX: AtomicI64 = AtomicI64::new(0);
     let now = chrono::Utc::now().timestamp_millis();
+    let last_outbox = LAST_OUTBOX.load(Ordering::Relaxed);
+    if now - last_outbox >= 15_000
+        && LAST_OUTBOX
+            .compare_exchange(last_outbox, now, Ordering::Relaxed, Ordering::Relaxed)
+            .is_ok()
+        && let Some(backend) = app.try_state::<Backend>()
+        && let Ok(collection) = backend.collection()
+    {
+        backend::resume_outbox(collection);
+    }
     let last = LAST_CHECK.load(Ordering::Relaxed);
     if now - last < 3_600_000
         || LAST_CHECK
@@ -512,7 +553,7 @@ mod tests {
         let window = main_window(&app);
         let about = invoke(&window, "get_about_info", serde_json::json!({})).unwrap();
         let about: AboutDto = serde_json::from_value(about).unwrap();
-        assert_eq!(about.schema_version, Some(3));
+        assert_eq!(about.schema_version, Some(4));
         assert_eq!(about.api_version, API_VERSION);
         assert_eq!(
             (about.fsrs_version.as_str(), about.content_version.as_str()),
@@ -1440,5 +1481,214 @@ mod tests {
             let message = denied.expect_err(command).to_string();
             assert!(message.contains("not allowed"), "{command}: {message}");
         }
+    }
+
+    /// Answers every call with a fixed association; a card containing "offline" never leaves
+    /// the device.
+    struct ScriptedLlm;
+
+    impl langualinker_application::ports::LlmClient for ScriptedLlm {
+        fn generate(
+            &self,
+            request: &langualinker_application::ports::LlmRequest,
+            key: Option<&langualinker_application::ports::ApiKey>,
+            _: &dyn Fn() -> bool,
+        ) -> Result<
+            langualinker_application::ports::LlmResponse,
+            langualinker_application::ports::LlmFailure,
+        > {
+            assert_eq!(key.map(|key| key.0.as_str()), Some("sk-ipc-test-key"));
+            if request.user.contains("offline") {
+                return Err(langualinker_application::ports::LlmFailure::NotSent);
+            }
+            Ok(langualinker_application::ports::LlmResponse {
+                text: r#"{"association":"„dog” jak „dok”: pies śpi w doku."}"#.into(),
+                model: "claude-haiku-5-5".into(),
+            })
+        }
+    }
+
+    fn ai_backend(app: &tauri::App<MockRuntime>) -> Backend {
+        let clock = Arc::new(SystemClock);
+        let db = SqliteDatabase::open_in_memory(clock.as_ref())
+            .expect("in-memory collection")
+            .database;
+        let events = Arc::new(backend::TauriEvents(app.handle().clone()));
+        let secrets: Arc<dyn langualinker_application::ports::SecretStore> = Arc::new(
+            langualinker_infrastructure::secrets::SecretStore::with_store(
+                keyring_core::mock::Store::new().unwrap(),
+                "ipc-test",
+            ),
+        );
+        let dir = std::env::temp_dir().join(format!("ll-phase13-{}", std::process::id()));
+        Backend {
+            collection: backend::Collection::start_in(
+                Arc::new(db),
+                events,
+                clock,
+                langualinker_infrastructure::backup::BackupDirs::under(&dir),
+                Some(secrets),
+                Arc::new(ScriptedLlm),
+            ),
+            log_dir: None,
+        }
+    }
+
+    /// Phase 13 over IPC: consent and key gate generation, the key is stored but never returned,
+    /// a generated association reaches the card, an offline request shows as a queued
+    /// placeholder that can be dismissed, and the daily call count is reported.
+    #[test]
+    fn ai_associations_run_over_ipc() {
+        use langualinker_contracts::dto::{AssociationStatus, NoteContentDto, SettingsDto};
+        let app = configure(mock_builder(), false, ai_backend)
+            .build(tauri::generate_context!(test = true))
+            .expect("mock app builds");
+        app.manage(ai_backend(&app));
+        app.manage(files::PickedFiles::default());
+        let window = main_window(&app);
+        let call = |cmd: &str, input: serde_json::Value| {
+            invoke(&window, cmd, serde_json::json!({ "input": input }))
+        };
+        let settings = || -> SettingsDto {
+            serde_json::from_value(invoke(&window, "get_settings", serde_json::json!({})).unwrap())
+                .unwrap()
+        };
+
+        let deck: langualinker_contracts::dto::DeckOverviewDto = serde_json::from_value(
+            call(
+                "create_deck",
+                serde_json::json!({ "operationId": "d1", "name": "Angielski", "parentId": null,
+                    "targetLanguage": "en", "deckType": "TextWithAssociations" }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let save = |operation: &str, front: &str| -> String {
+            let note = serde_json::json!({ "operationId": operation, "noteId": null,
+                "expectedVersion": null, "deckId": deck.deck.id, "noteTypeKind": "BasicAndReversed",
+                "front": front, "back": "pies", "tags": [], "manualAssociation": null,
+                "grammarTips": [], "wordLinks": null });
+            let saved = call("save_note", note).unwrap();
+            saved["note"]["id"].as_str().unwrap().to_owned()
+        };
+        let note = save("n1", "the dog");
+        let generate = |operation: &str, note: &str| {
+            call(
+                "generate_association",
+                serde_json::json!({ "operationId": operation, "noteId": note, "variants": 1 }),
+            )
+        };
+
+        // No consent yet: refused before anything is queued.
+        let denied = generate("g0", &note).unwrap_err();
+        assert_eq!(denied["details"]["reason"], "aiConsent");
+        assert_eq!(error_code(denied), ErrorCode::PermissionDenied);
+        let initial = settings();
+        let quota = initial.ai.quota.clone().expect("local daily limit");
+        assert_eq!((quota.used, quota.limit), (0, 100));
+        call(
+            "update_settings",
+            serde_json::json!({ "operationId": "s1", "expectedVersion": initial.version,
+                "patch": { "aiConsent": "granted", "aiProvider": "anthropic" } }),
+        )
+        .unwrap();
+        let no_key = generate("g1", &note).unwrap_err();
+        assert_eq!(no_key["details"]["reason"], "apiKey");
+
+        // The key goes to the secret store; only its presence comes back.
+        let invalid = call(
+            "set_ai_api_key",
+            serde_json::json!({ "operationId": "k0", "apiKey": "has space" }),
+        )
+        .unwrap_err();
+        assert!(!invalid.to_string().contains("has space"));
+        assert_eq!(error_code(invalid), ErrorCode::ValidationFailed);
+        let before = settings().version;
+        let stored = call(
+            "set_ai_api_key",
+            serde_json::json!({ "operationId": "k1", "apiKey": "sk-ipc-test-key" }),
+        )
+        .unwrap();
+        assert!(
+            !stored.to_string().contains("sk-ipc-test-key"),
+            "never returned"
+        );
+        let stored: langualinker_contracts::dto::AiSettingsDto =
+            serde_json::from_value(stored).unwrap();
+        assert!(stored.has_api_key);
+        let after = settings().version;
+        assert_eq!(
+            after,
+            before + 1,
+            "an open form re-reads after a key change"
+        );
+        let _: langualinker_contracts::dto::AiSettingsDto = serde_json::from_value(
+            call(
+                "set_ai_api_key",
+                serde_json::json!({ "operationId": "k1", "apiKey": "sk-ipc-test-key" }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(settings().version, after, "a retry changes nothing");
+
+        let job: JobDto = serde_json::from_value(generate("g2", &note).unwrap()).unwrap();
+        assert_eq!(job.kind, langualinker_contracts::dto::JobKind::Llm);
+        assert_eq!(wait_for_job(&window, &job).status, JobStatus::Succeeded);
+        let content: NoteContentDto = serde_json::from_value(
+            invoke(
+                &window,
+                "get_note_content",
+                serde_json::json!({ "input": note }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(content.associations.len(), 1);
+        let generated = &content.associations[0];
+        assert_eq!(generated.status, AssociationStatus::Ready);
+        assert_eq!(generated.model.as_deref(), Some("claude-haiku-5-5"));
+        assert!(generated.text.contains("dok"));
+
+        // Offline: a queued placeholder that the card can remove.
+        let offline = save("n2", "offline word");
+        let job: JobDto = serde_json::from_value(generate("g3", &offline).unwrap()).unwrap();
+        let finished = wait_for_job(&window, &job);
+        assert_eq!(finished.status, JobStatus::Failed);
+        assert_eq!(
+            finished.error.map(|error| error.code),
+            Some(ErrorCode::NetworkUnavailable)
+        );
+        let content: NoteContentDto = serde_json::from_value(
+            invoke(
+                &window,
+                "get_note_content",
+                serde_json::json!({ "input": offline }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let placeholder = &content.associations[0];
+        assert_eq!(placeholder.status, AssociationStatus::OfflineQueued);
+        assert!(placeholder.id.starts_with("llm-"));
+        call(
+            "update_note_content",
+            serde_json::json!({ "operationId": "c1", "noteId": offline,
+                "change": { "type": "deleteAssociation", "associationId": placeholder.id } }),
+        )
+        .unwrap();
+        let content: NoteContentDto = serde_json::from_value(
+            invoke(
+                &window,
+                "get_note_content",
+                serde_json::json!({ "input": offline }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert!(content.associations.is_empty());
+
+        let quota = settings().ai.quota.expect("local daily limit");
+        assert_eq!(quota.used, 1, "the offline try did not reach the provider");
     }
 }

@@ -11,6 +11,12 @@ getrandom = "0.3.4"
 keyring-core = "=1.0.1"
 langualinker-application = { path = "../application" }
 langualinker-domain = { path = "../domain" }
+# AI provider client (Phase 13, ADR-18): rustls with ring and the Mozilla root store, so no
+# platform verifier has to be initialised over JNI on Android and no CMake/NASM is needed.
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "http2"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
+webpki-roots = "1"
+tokio = { version = "1.53", default-features = false, features = ["rt", "time", "macros", "net", "io-util"] }
 rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true

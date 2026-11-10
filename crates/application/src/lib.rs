@@ -7,6 +7,7 @@ pub mod dashboard;
 pub mod error;
 pub mod jobs;
 pub mod learning;
+pub mod llm;
 pub mod management;
 pub mod ports;
 pub mod repositories;
