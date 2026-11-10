@@ -72,6 +72,26 @@ describe('Tauri adapter', () => {
     await expect(missing.getStats({ deckId: null, range: '1m' })).rejects.toMatchObject({ dto: { code: 'INTERNAL' } })
   })
 
+  it('waits while the backend is still starting, then answers; gives up after the startup wait', async () => {
+    const starting = 'state not managed for field `backend` on command `get_dashboard`. You must call `.manage()` before using this command'
+    const invoke = vi
+      .fn()
+      .mockRejectedValueOnce(starting)
+      .mockRejectedValueOnce(starting)
+      .mockResolvedValueOnce({ decks: [] })
+    const api = createTauriAppApi(invoke, vi.fn(), { totalMs: 1_000, stepMs: 1 })
+    await expect(api.getDashboard()).resolves.toEqual({ decks: [] })
+    expect(invoke).toHaveBeenCalledTimes(3)
+
+    const never = createTauriAppApi(vi.fn(async () => Promise.reject(starting)), vi.fn(), { totalMs: 20, stepMs: 5 })
+    await expect(never.getDashboard()).rejects.toMatchObject({ dto: { code: 'INTERNAL' } })
+
+    // Any other failure is reported at once, without retrying.
+    const failing = vi.fn(async () => Promise.reject({ code: 'DB_BUSY', messageKey: 'errors.DB_BUSY', retryable: true, details: {} }))
+    await expect(createTauriAppApi(failing, vi.fn(), { totalMs: 1_000, stepMs: 1 }).getDashboard()).rejects.toMatchObject({ dto: { code: 'DB_BUSY' } })
+    expect(failing).toHaveBeenCalledTimes(1)
+  })
+
   it('cleans up listeners registered after unsubscribe (async registration)', async () => {
     const unlisten = vi.fn()
     let resolveRegistration!: (fn: () => void) => void

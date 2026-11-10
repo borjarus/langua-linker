@@ -170,6 +170,7 @@
                 <button type="button" class="btn btn-ghost danger" disabled={keySaving} onclick={() => saveKey(null)}><Icon name="trash" />{i18n.t('ai.key.remove')}</button>
               {/if}
               <p class="muted hint">{i18n.t('ai.key.hint')}</p>
+              {#if provider.id === 'gemini'}<p class="muted hint">{i18n.t('ai.key.whereGemini')}</p>{/if}
               {#if keyError}<ErrorState error={keyError} compact />{/if}
             </div>
           {/if}

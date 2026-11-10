@@ -222,20 +222,27 @@ pub fn pick_restore_file<R: Runtime>(
 pub fn pick_backup_folder<R: Runtime>(
     app: &AppHandle<R>,
 ) -> Result<Option<(String, PathBuf)>, AppError> {
-    if cfg!(any(target_os = "android", target_os = "ios")) {
-        return Err(AppError::PermissionDenied {
+    // `blocking_pick_folder` exists only on desktop builds of the dialog plugin, so the mobile
+    // branch has to be compiled out, not just skipped at run time.
+    #[cfg(any(target_os = "android", target_os = "ios"))]
+    {
+        let _ = app;
+        Err(AppError::PermissionDenied {
             reason: "externalFolder",
-        });
+        })
     }
-    dialog_available(app)?;
-    let Some(folder) = app.dialog().file().blocking_pick_folder() else {
-        return Ok(None);
-    };
-    match folder {
-        FilePath::Path(path) => Ok(Some((display_name(&FilePath::Path(path.clone())), path))),
-        FilePath::Url(_) => Err(AppError::PermissionDenied {
-            reason: "externalFolder",
-        }),
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        dialog_available(app)?;
+        let Some(folder) = app.dialog().file().blocking_pick_folder() else {
+            return Ok(None);
+        };
+        match folder {
+            FilePath::Path(path) => Ok(Some((display_name(&FilePath::Path(path.clone())), path))),
+            FilePath::Url(_) => Err(AppError::PermissionDenied {
+                reason: "externalFolder",
+            }),
+        }
     }
 }
 

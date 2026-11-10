@@ -117,14 +117,23 @@ impl Backend {
                     Err(error) => tracing::error!(code = error.code(), "AI outbox not recovered"),
                 }
                 resume_outbox(collection);
-                match collection.content.resume() {
-                    Ok(Some(job)) => {
-                        tracing::info!(job_id = %job.id, "bundled content preparation resumed")
-                    }
-                    Ok(None) => {}
-                    Err(error) => {
-                        tracing::error!(code = error.code(), "bundled content not resumed")
-                    }
+                // Checking for pending or newer bundled decks loads the encrypted bundle, which
+                // takes seconds on a phone: off the setup thread, so the app registers its backend
+                // (and answers commands) at once. Commands that need the bundle wait for the load.
+                let content = collection.content.clone();
+                let spawned = std::thread::Builder::new()
+                    .name("content-resume".into())
+                    .spawn(move || match content.resume() {
+                        Ok(Some(job)) => {
+                            tracing::info!(job_id = %job.id, "bundled content preparation resumed")
+                        }
+                        Ok(None) => {}
+                        Err(error) => {
+                            tracing::error!(code = error.code(), "bundled content not resumed")
+                        }
+                    });
+                if spawned.is_err() {
+                    tracing::error!("bundled content check not started");
                 }
             }
         }

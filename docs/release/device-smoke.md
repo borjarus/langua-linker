@@ -53,6 +53,58 @@ Legend: ☑ pass · ◐ partly verified (see notes) · ☒ fail · ☐ not run. 
 | 2026-11-02 | Android Emulator `Medium_Phone_API_36.1` (x86_64, Play Store image), WebView 155.0.8059.43 | Android 16 | `33c44e0` + uncommitted Phase 7 changes (dev debug APK, x86_64) | Phase 7 backend: P1–P8 below. Screenshot `docs/release/screenshots/android-phase7-start.png`. |
 | 2026-10-13 | iOS Simulator `iPhone 17` (arm64), WKWebView / MobileSafari | iOS 26.5 | `001aaf3` | See iOS notes below. Screenshots in `docs/release/screenshots/`. |
 | 2026-11-06 | Physical Samsung Galaxy A56 `SM-A566B` (arm64-v8a), WebView 156.0.8078.47 | Android 16 (API 36) | `8e437d8` (beta debug APK; beta release profile signed with the debug key for H) | Phase 10 run, parts A–E, G, H done remotely over adb; F (TalkBack) and I (iOS) not run. See notes below. Screenshots `docs/release/screenshots/android-phase10-*.png`. |
+| 2026-11-10 | Physical Samsung Galaxy A56 `SM-A566B` (arm64-v8a), WebView 156.0.8078.47 | Android 16 (API 36) | `969f939` + Android build fix in `files.rs` (beta debug APK; beta release profile signed with the debug key for the start check) | Phase 11 and 12 run, remotely over adb; Phase 13 left for a later run with a real key. **Two P1 blockers** (start race, Browse paging). See notes below. Screenshots `docs/release/screenshots/android-phase11-12-*.png`. |
+
+### Phase 11–12 physical Android run (2026-11-10)
+
+Driven remotely from the PC as in the Phase 10 run: `adb shell input tap/text` (real touch events and the phone keyboard, Samsung Keyboard), coordinates and state read from the WebView over Chrome DevTools, database copies over `run-as`. Not listened to with TalkBack. Wi-Fi on (no network feature was tested). The beta debug APK was installed **as an update over the Phase 10 collection** (schema v3).
+
+| Field | Value |
+|---|---|
+| Date | 2026-11-10 |
+| Device / ABI | Samsung Galaxy A56 `SM-A566B` / arm64-v8a |
+| Android / API | 16 / 36 |
+| WebView | com.google.android.webview 156.0.8078.47 |
+| Phone time zone | CET+0100 |
+| Commit | `969f939` + fix below |
+| Build | beta debug APK; beta release profile signed with the debug key (start check only) |
+
+**Build.** `969f939` does not compile for Android: `pick_backup_folder` ([files.rs](../../src-tauri/src/files.rs)) calls `blocking_pick_folder`, which the dialog plugin has only on desktop; the mobile early return used `cfg!()`, a run-time value, so the call was still compiled. Fixed with `#[cfg]` blocks (desktop `cargo check` still passes).
+
+| Area | Result | Note / screenshot |
+|---|---|---|
+| Update v3 → v4 | ☑ | `migration applied schema_version=4`, integrity `ok`; the content job re-prepared the bundled decks (1 492 notes created, 1 updated, 42 unchanged, 12 archived — the old unstudied sentence cards) in ≈ 3 s; all 41 logs, every due date/S/D/reps/flag/suspension/deletion unchanged (only 21 expired burials released); collection zone now `Europe/Warsaw` (Phase 10 defect 1 fixed). |
+| P11 browser search | ☑ | Over the real IPC on 1 686 cards: every query p95 ≤ 50 ms (`is:due` = 14 = dashboard); diacritics folded (`haus` finds *Häuser*). **50 000 cards on the phone** (`browser_search_p95_on_fifty_thousand_cards`, aarch64 release): **p50 45 ms, p95 140 ms, max 141 ms** — DoD < 200 ms met. |
+| P11 browser list | ☒ | Only the first page (100 rows) ever shows. Scrolling past row 100 requests page 1 with `cursor: "100"` (an offset, [browserController.svelte.ts](../../frontend/src/features/browser/browserController.svelte.ts) `#request`), the backend wants the opaque keyset cursor it returned (`nextCursor`) and answers `VALIDATION_FAILED cursor/format`, and the whole list turns into "Correct the search to see results." (`android-phase11-12-P11-browse-page2-error.png`). Frames up to that point: p50 8.3 ms, p95 16.7 ms, max 33 ms. |
+| P11 notes | ☑ | New Basic-and-reversed note → 2 cards, tag, own association, 2 tips saved; tip delete (soft); flag; favourite; editing a **studied** bundled note keeps due/S/D/reps and records the override (`back`); type change → reverse card archived with the warning in the preview, switching back restores the **same card id**; duplicate front warns but saves (`…-duplicate-warning.png`); delete note soft-deletes note and card; empty back blocks saving. |
+| P11 decks/presets | ☑ | Create, rename, move under another deck; the child is not offered as a parent and the backend refuses it (`parentId: cycle`); preset editor warns about 3 sharing decks, validates (retention 101, steps `1 abc`), "save as a copy" creates `Default (copy)` (5/day, 95 %) for that deck only. |
+| P11 bulk | ☑ | "Select all 1 384 matches" → Suspend → preview → applied in one operation (all `queue -1`), then Unsuspend (all `queue 0`). |
+| P12 statistics | ☑ | Real data, matches the database: 39 valid reviews, 7 min (6.9), retention "not enough data", 14 overdue = dashboard, states sum to 1 688. |
+| P12 settings | ◐ | Daily goal, language, theme save at once and survive a restart; but after a restore or reinstall the UI language and theme come from WebView `localStorage`, not from the restored settings (see defect 4). |
+| P12 backup/share | ☑ | Manual backup: manifest, SHA-256, integrity, counts correct, no key material. *Share* opens the system save dialog; the copy in Downloads has the same size. |
+| P12 restore | ☑ | From an in-app backup: preview counts right, safety copy first (holds the newer note), restored tables identical to the backup. **Backup in Downloads → uninstall → install → "Restore from a file…" → notes, cards (GUID, due, S/D, reps/lapses) and review logs identical**; only `jobs`/`operations` differ (`…-restore-from-file-preview.png`). |
+| P12 reset/delete | ☑ | Reset progress needs a fresh backup or the phrase; it removes logs, undo and sessions, cards back to New, suspension kept. Delete everything empties the collection, keeps the backups, opens onboarding; restoring the safety copy brings everything back identically. |
+| Start (release profile) | ☒ | **5 of 5 cold starts end on "Something went wrong"** on the dashboard (≈ 6 s); *Refresh* works later (`…-REL-startup-error.png`). Same on the debug build (`…-P12-startup-dashboard-error.png`). See defect 1. |
+
+Defects (proposed priority):
+
+1. **P1 (blocks release) — commands fail during the first seconds after start.** `setup` registers `Backend` only after `Backend::open_with` returns, and `ContentService::new` runs `Bundle::load(…, Mode::Dev)` eagerly: it decrypts the whole `decks.7z` (7-Zip AES, 2^19 SHA-256 rounds), unpacks and validates all content. Timed with temporary logs on the debug build: **6.44 s** inside `ContentService::new`, everything else ≈ 85 ms. Until then every command answers the string error "state not managed for field `backend`", shown as "An unexpected error occurred." (dashboard, card details; no retry except *Refresh* on the dashboard). While the phone was locked during the first start after the update, the gap was ≈ 3 min. Suggested: load the bundle lazily or on a background thread, and answer a retryable code (or let the frontend wait for `app-ready`) instead of the transport error.
+2. **P1 — Browse shows only the first 100 rows** (above): the controller sends an offset as `cursor`; the mock accepts it, the real backend does not.
+3. **P1 (content) — all 1 384 bundled sentence notes have Markdown and IPA in `front`** (`"**Danke.** /ˈdaŋkə/"`), shown literally in study, card details and Browse (`…-P11-sentence-raw-markdown.png`); there is no Markdown renderer in the frontend.
+4. **P2 — restored/reinstalled UI language and theme are not applied.** The backend keeps `uiLanguage`/`theme`, but [bootstrap.ts](../../frontend/src/app/bootstrap.ts) reads them only from `localStorage`; after restore on a fresh install the app shows English/light and the Settings screen shows `en`/System while the stored settings say `pl`/dark (`…-P12-restored-settings-not-applied.png`). Consequence: "Delete everything" in the English UI asks for the Polish phrase "USUŃ WSZYSTKO" (the backend picks the phrase from its stored language).
+5. **P2 — two automatic backups at once.** Start and the first foreground event both call `start_automatic`, which checks `jobs.running()` and then creates the job (not atomic, [backup.rs](../../crates/infrastructure/src/backup.rs)). Seen twice: once the second job failed with `NOT_FOUND backup`, once both succeeded (two "Automatic" copies at 2:31 PM), which with "keep 3" pushes out older copies.
+6. **P2 — "Choose a folder…" on Android** answers "This action requires permission." The folder target is desktop-only by design; the button and the hint "survives uninstalling" should not be offered on mobile (or should point to *Share*) (`…-P12-choose-folder-android.png`).
+7. **P2 — picked restore file shown as "1429"** (the content URI document id) instead of its file name.
+8. **P2 — search parse error shows an empty token**: "“” is not supported…"; the error details carry `field` and `reason` but no `token` (`…-P11-search-parse-error.png`).
+9. **P3** — bulk preview "Notes: 1384" not number-formatted; Browse row "Learning· Suspended" missing a space; reset dialog keeps showing the previous "Latest backup" time after the safety copy; the safety copy made from the reset/delete dialog is listed as *Manual*; "Delete everything" keeps the theme although it says every setting except the language is reset; reset leaves a soft-deleted card with its old schedule; toasts are announced twice in the DOM. Phase 10 defect 6 (beta shows *Component gallery* / *Native diagnostics*) is still open.
+
+Not run: Phase 13 (left for a run with a real API key), TalkBack listening, iOS.
+
+**Fixed the same day and re-checked on the phone** (uncommitted with the run):
+
+- Defect 1: `ContentService` loads the bundle on first use (shared `OnceLock`) and the start-up check for pending/newer bundled decks runs on its own thread, so `setup` registers the backend right after opening the collection; the Tauri adapter also waits (up to 30 s, every 150 ms) when a command meets "state not managed" — such a command never ran. Debug build, 5 cold starts: dashboard with data **410–781 ms** after the WebView started, no error (before: error after ≈ 6.5 s). Release profile: no error in 5 starts (measured only coarsely with `uiautomator`). Only commands that need the bundled catalog (`getOnboardingState`, deck catalog/import) still wait for it on the first call (≈ 4 s on the debug build).
+- Defect 2: the browser pages with the `nextCursor` of the previous page; a jump to the end loads the pages in order. Flinging Browse reaches row 1 687 of 1 688, no error, no blank rows (`android-phase11-12-FIX-browse-past-100.png`).
+- New: **Google Gemini** as a BYOK provider (`gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-3-flash-preview`; ADR-18). On the phone: selectable, models listed, a key is saved to the Android Keystore (field cleared, not in the DOM, the database or the log; still there after a restart) and can be removed (`android-phase11-12-FIX-gemini-key-saved.png`). No real request was sent.
 
 ### Phase 10 physical Android run (2026-11-06)
 

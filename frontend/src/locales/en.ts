@@ -942,6 +942,7 @@ export const en = {
       save: 'Save key',
       remove: 'Remove key',
       hint: 'The key goes straight to the system keychain; the app cannot read it back.',
+      whereGemini: 'Create a Gemini API key in Google AI Studio (aistudio.google.com → Get API key).',
       saved: 'API key saved.',
       removed: 'API key removed.',
     },

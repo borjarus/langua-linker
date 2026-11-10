@@ -155,6 +155,62 @@ fn openai_compatible_calls_use_a_bearer_token_on_the_endpoint() {
 }
 
 #[test]
+fn gemini_calls_put_the_model_in_the_path_and_the_key_in_a_header() {
+    let answer = json!({
+        "modelVersion": "gemini-3.8-flash",
+        "candidates": [{
+            "finishReason": "STOP",
+            "content": {"role": "model", "parts": [{"text": "{\"association\":\"Hund — chód\"}"}]}
+        }]
+    })
+    .to_string();
+    let (base, seen) = serve_once(200, answer, Duration::ZERO);
+    let client = HttpLlmClient::for_local_tests(&base, Duration::from_secs(5));
+    let mut gemini = request(LlmProtocol::Gemini, None);
+    gemini.model = "gemini-3.8-flash".into();
+    let response = client.generate(&gemini, Some(&key()), &never).unwrap();
+    assert_eq!(
+        response,
+        LlmResponse {
+            text: "{\"association\":\"Hund — chód\"}".into(),
+            model: "gemini-3.8-flash".into(),
+        }
+    );
+    let seen = seen.recv().unwrap();
+    assert_eq!(
+        seen.line,
+        "POST /v1beta/models/gemini-3.8-flash:generateContent HTTP/1.1"
+    );
+    assert_eq!(seen.header("x-goog-api-key"), Some("test-key-not-real"));
+    assert_eq!(seen.header("authorization"), None);
+    assert_eq!(seen.header("x-api-key"), None);
+    assert!(
+        !seen.line.contains("key="),
+        "the key never goes into the URL"
+    );
+    assert!(!seen.body.contains("test-key-not-real"));
+    let body: serde_json::Value = serde_json::from_str(&seen.body).unwrap();
+    assert_eq!(body["systemInstruction"]["parts"][0]["text"], "rules");
+    assert_eq!(
+        body["generationConfig"]["responseMimeType"],
+        "application/json"
+    );
+}
+
+#[test]
+fn a_rejected_gemini_key_is_unauthorized() {
+    let body = r#"{"error":{"code":400,"message":"API key not valid. Please pass a valid API key.","status":"INVALID_ARGUMENT","details":[{"reason":"API_KEY_INVALID"}]}}"#;
+    let (base, _seen) = serve_once(400, body.to_owned(), Duration::ZERO);
+    let client = HttpLlmClient::for_local_tests(&base, Duration::from_secs(5));
+    let mut gemini = request(LlmProtocol::Gemini, None);
+    gemini.model = "gemini-3.8-flash".into();
+    assert_eq!(
+        client.generate(&gemini, Some(&key()), &never),
+        Err(LlmFailure::Unauthorized)
+    );
+}
+
+#[test]
 fn statuses_become_failure_classes() {
     for (status, body, expected) in [
         (500, "{}", LlmFailure::Unavailable { status: 500 }),

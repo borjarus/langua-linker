@@ -89,6 +89,12 @@ impl Params {
                 max_tokens: 600,
                 temperature: Some(0.7),
             },
+            // Thinking counts against `maxOutputTokens` (kept at the "low" level); Gemini 3
+            // recommends its default temperature.
+            LlmProtocol::Gemini => Self {
+                max_tokens: 2_048,
+                temperature: None,
+            },
         }
     }
 

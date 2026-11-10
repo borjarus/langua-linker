@@ -8,6 +8,19 @@ import type { CollectionChangedEventDto, JobEventDto, Unsubscribe } from './type
 export type InvokeFn = (command: string, args?: Record<string, unknown>) => Promise<unknown>
 export type ListenFn = <T>(event: string, handler: (event: { payload: T }) => void) => Promise<UnlistenFn>
 
+export interface StartupWait {
+  totalMs: number
+  stepMs: number
+}
+
+/** How long a command waits for the backend at app start (a migration can take a while). */
+const STARTUP_WAIT: StartupWait = { totalMs: 30_000, stepMs: 150 }
+
+/** Tauri's transport error for a command whose managed state is not registered yet. */
+export function isBackendStarting(caught: unknown): boolean {
+  return typeof caught === 'string' && caught.startsWith('state not managed')
+}
+
 type CallableOperation = {
   [K in AppApiOperation]: (typeof OPERATIONS)[K]['kind'] extends 'subscription' ? never : K
 }[AppApiOperation]
@@ -16,15 +29,24 @@ type CallableOperation = {
  * Production adapter. Commands receive their single argument as `input` (Rust: `fn cmd(input: X)`).
  * Commands not yet implemented in Rust reject with an `ErrorDto`; this adapter never falls back to the mock.
  */
-export function createTauriAppApi(invokeFn: InvokeFn = invoke, listenFn: ListenFn = listen): AppApi {
+export function createTauriAppApi(invokeFn: InvokeFn = invoke, listenFn: ListenFn = listen, startupWait: StartupWait = STARTUP_WAIT): AppApi {
   const call =
     (operation: CallableOperation) =>
     async (input?: unknown): Promise<never> => {
-      try {
-        const args = input === undefined ? undefined : { input }
-        return (await invokeFn(OPERATIONS[operation].command, args)) as never
-      } catch (caught) {
-        throw new AppError(toErrorDto(caught))
+      const args = input === undefined ? undefined : { input }
+      const deadline = Date.now() + startupWait.totalMs
+      for (;;) {
+        try {
+          return (await invokeFn(OPERATIONS[operation].command, args)) as never
+        } catch (caught) {
+          // The WebView can be up before Rust registered the backend (opening or migrating the
+          // collection). Such a command never ran, so asking again is safe even for mutations.
+          if (isBackendStarting(caught) && Date.now() < deadline) {
+            await new Promise((resolve) => setTimeout(resolve, startupWait.stepMs))
+            continue
+          }
+          throw new AppError(toErrorDto(caught))
+        }
       }
     }
 

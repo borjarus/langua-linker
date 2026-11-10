@@ -15,7 +15,7 @@
 //!   version no longer ships are kept when they have progress or edits, archived otherwise.
 
 use std::collections::{BTreeMap, HashSet};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use langualinker_content::check::{
     DeckChecker, Issues, Mode, parse_deck_type, parse_note_type, parse_target_language,
@@ -219,7 +219,9 @@ pub struct ResultEncoders {
 pub struct ContentService<U: UnitOfWork> {
     db: Arc<U>,
     source: Arc<dyn ContentSource>,
-    bundle: Result<Arc<Bundle>, String>,
+    /// Loaded (decrypted, unpacked and checked) on first use, not in `new`: the app registers
+    /// its backend before this can take seconds on a phone, and every clone shares the result.
+    bundle: Arc<OnceLock<Result<Arc<Bundle>, String>>>,
     jobs: JobService<U>,
     events: Arc<dyn EventSink>,
     clock: Arc<dyn Clock>,
@@ -301,16 +303,10 @@ impl<U: UnitOfWork> ContentService<U> {
         rng: Arc<dyn Rng>,
         encode: ResultEncoders,
     ) -> Self {
-        let bundle = Bundle::load(source.as_ref(), Mode::Dev)
-            .map(|(bundle, _)| Arc::new(bundle))
-            .map_err(|issues| {
-                let error = content_error(&issues);
-                error.to_string()
-            });
         Self {
             db,
             source,
-            bundle,
+            bundle: Arc::default(),
             jobs,
             events,
             clock,
@@ -321,8 +317,16 @@ impl<U: UnitOfWork> ContentService<U> {
         }
     }
 
+    /// The bundled catalog; the first call loads it (concurrent callers wait for that load).
     fn bundle(&self) -> AppResult<Arc<Bundle>> {
-        self.bundle.clone().map_err(AppError::Internal)
+        self.bundle
+            .get_or_init(|| {
+                Bundle::load(self.source.as_ref(), Mode::Dev)
+                    .map(|(bundle, _)| Arc::new(bundle))
+                    .map_err(|issues| content_error(&issues).to_string())
+            })
+            .clone()
+            .map_err(AppError::Internal)
     }
 
     /// Catalog entries in install order.

@@ -215,6 +215,7 @@ const STABILITY_BUCKETS: [number, number | null][] = [[0, 1], [1, 3], [3, 7], [7
 const AI_PROVIDERS: AiProviderOptionDto[] = [
   { id: 'demo', name: 'Demo', requiresKey: false, models: ['demo-mnemonic-v1'], customEndpoint: false },
   { id: 'anthropic', name: 'Anthropic', requiresKey: true, models: ['claude-haiku-5-5', 'claude-sonnet-5-5'], customEndpoint: false },
+  { id: 'gemini', name: 'Google Gemini', requiresKey: true, models: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3-flash-preview'], customEndpoint: false },
   { id: 'openaiCompatible', name: 'OpenAI-compatible', requiresKey: true, models: [], customEndpoint: true },
 ]
 

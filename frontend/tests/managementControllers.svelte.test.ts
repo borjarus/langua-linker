@@ -96,6 +96,31 @@ describe('BrowserController', () => {
     expect(browser.selectedCount).toBe(0)
   })
 
+  it('pages with the opaque cursor of the previous page, even when the view jumps ahead', async () => {
+    // Like the real backend: a cursor is only valid if it came from the previous page.
+    const api = new MockAppApi()
+    const issued = new Set<string>()
+    const real = api.searchCards.bind(api)
+    const search = vi.spyOn(api, 'searchCards').mockImplementation(async (input) => {
+      if (input.cursor !== null && !issued.has(input.cursor)) throw { code: 'VALIDATION_FAILED', messageKey: 'errors.VALIDATION_FAILED', retryable: false, details: { field: 'cursor', reason: 'format' } }
+      const page = await real({ ...input, cursor: input.cursor === null ? null : input.cursor.slice('opaque:'.length) })
+      const next = page.nextCursor === null ? null : `opaque:${page.nextCursor}`
+      if (next) issued.add(next)
+      return { ...page, nextCursor: next }
+    })
+    const browser = new BrowserController({ api, pageSize: 3 })
+    await browser.search({ ...DEFAULT_FILTERS, deckId: '4' })
+    expect(browser.total).toBe(8)
+    // The list scrolls straight to the last rows: pages 1 and 2 load in order, nothing fails.
+    browser.loadRange(6, 8)
+    await vi.waitFor(() => expect(browser.rows.filter(Boolean)).toHaveLength(8))
+    expect(browser.error).toBeNull()
+    expect(search.mock.calls.map(([input]) => input.cursor)).toEqual([null, expect.stringMatching(/^opaque:/), expect.stringMatching(/^opaque:/)])
+    // Asking again for loaded pages sends nothing new.
+    browser.loadRange(0, 8)
+    expect(search).toHaveBeenCalledTimes(3)
+  })
+
   it('drops responses of an earlier search', async () => {
     const api = new MockAppApi()
     const browser = new BrowserController({ api })

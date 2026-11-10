@@ -21,15 +21,17 @@ use serde_json::{Value, json};
 
 const ANTHROPIC_BASE: &str = "https://api.anthropic.com";
 const ANTHROPIC_VERSION: &str = "2026-10-21";
+const GEMINI_BASE: &str = "https://generativelanguage.googleapis.com";
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const CALL_TIMEOUT: Duration = Duration::from_secs(45);
 const MAX_RESPONSE_BYTES: usize = 64 * 1024;
 const CANCEL_POLL: Duration = Duration::from_millis(100);
 
-/// Calls Anthropic or an OpenAI-compatible endpoint.
+/// Calls Anthropic, Google Gemini or an OpenAI-compatible endpoint.
 pub struct HttpLlmClient {
     tls: Arc<rustls::ClientConfig>,
     anthropic_base: String,
+    gemini_base: String,
     /// Tests talk to a local plain-HTTP server; production never allows it.
     allow_loopback_http: bool,
     call_timeout: Duration,
@@ -57,16 +59,18 @@ impl HttpLlmClient {
         Self {
             tls: Arc::new(tls),
             anthropic_base: ANTHROPIC_BASE.to_owned(),
+            gemini_base: GEMINI_BASE.to_owned(),
             allow_loopback_http: false,
             call_timeout: CALL_TIMEOUT,
         }
     }
 
     /// A client for tests against a local server: plain HTTP to 127.0.0.1 is accepted and the
-    /// Anthropic base URL points there.
-    pub fn for_local_tests(anthropic_base: &str, call_timeout: Duration) -> Self {
+    /// Anthropic and Gemini base URLs point there.
+    pub fn for_local_tests(base: &str, call_timeout: Duration) -> Self {
         Self {
-            anthropic_base: anthropic_base.trim_end_matches('/').to_owned(),
+            anthropic_base: base.trim_end_matches('/').to_owned(),
+            gemini_base: base.trim_end_matches('/').to_owned(),
             allow_loopback_http: true,
             call_timeout,
             ..Self::new()
@@ -102,6 +106,20 @@ impl HttpLlmClient {
                 } else {
                     format!("{base}/chat/completions")
                 }
+            }
+            // The model is part of the path: only plain model ids, nothing that changes the path.
+            LlmProtocol::Gemini => {
+                let model = request.model.as_str();
+                let plain = !model.is_empty()
+                    && model.len() <= 100
+                    && model
+                        .chars()
+                        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '.' | '_'))
+                    && !model.contains("..");
+                if !plain {
+                    return None;
+                }
+                format!("{}/v1beta/models/{model}:generateContent", self.gemini_base)
             }
         };
         self.allowed(&url).then_some(url)
@@ -148,6 +166,22 @@ pub fn request_body(request: &LlmRequest) -> Value {
             }
             body
         }
+        LlmProtocol::Gemini => {
+            let mut config = json!({
+                "maxOutputTokens": request.max_tokens,
+                "responseMimeType": "application/json",
+                "responseJsonSchema": request.schema,
+                "thinkingConfig": { "thinkingLevel": "low" }
+            });
+            if let Some(temperature) = request.temperature {
+                config["temperature"] = json!(temperature);
+            }
+            json!({
+                "systemInstruction": { "parts": [{ "text": request.system }] },
+                "contents": [{ "role": "user", "parts": [{ "text": request.user }] }],
+                "generationConfig": config
+            })
+        }
     }
 }
 
@@ -155,6 +189,10 @@ pub fn request_body(request: &LlmRequest) -> Value {
 pub fn status_failure(status: u16, body: &str) -> LlmFailure {
     match status {
         401 | 403 => LlmFailure::Unauthorized,
+        // Gemini answers a wrong or expired key with 400 INVALID_ARGUMENT.
+        400 if body.contains("API_KEY_INVALID") || body.contains("API key not valid") => {
+            LlmFailure::Unauthorized
+        }
         402 => LlmFailure::Quota,
         429 if body.contains("insufficient_quota") || body.contains("billing") => LlmFailure::Quota,
         408 | 409 | 425 | 429 | 500..=599 => LlmFailure::Unavailable { status },
@@ -169,7 +207,11 @@ pub fn parse_response(
     requested_model: &str,
 ) -> Result<LlmResponse, LlmFailure> {
     let value: Value = serde_json::from_slice(body).map_err(|_| LlmFailure::Malformed)?;
-    let model = value["model"]
+    let reported = match protocol {
+        LlmProtocol::Gemini => &value["modelVersion"],
+        LlmProtocol::Anthropic | LlmProtocol::OpenAiCompatible => &value["model"],
+    };
+    let model = reported
         .as_str()
         .filter(|model| !model.is_empty() && model.len() <= 100)
         .unwrap_or(requested_model)
@@ -207,6 +249,33 @@ pub fn parse_response(
                 .ok_or(LlmFailure::Malformed)?
                 .to_owned()
         }
+        LlmProtocol::Gemini => {
+            let candidate = &value["candidates"][0];
+            if candidate.is_null() {
+                // No candidate at all: the prompt itself was blocked.
+                return Err(if value["promptFeedback"]["blockReason"].is_string() {
+                    LlmFailure::Refused
+                } else {
+                    LlmFailure::Malformed
+                });
+            }
+            match candidate["finishReason"].as_str() {
+                Some("MAX_TOKENS") => return Err(LlmFailure::Malformed),
+                Some(
+                    "SAFETY" | "RECITATION" | "BLOCKLIST" | "PROHIBITED_CONTENT" | "SPII"
+                    | "LANGUAGE",
+                ) => return Err(LlmFailure::Refused),
+                _ => {}
+            }
+            candidate["content"]["parts"]
+                .as_array()
+                .ok_or(LlmFailure::Malformed)?
+                .iter()
+                // Thought summaries are not part of the answer.
+                .filter(|part| part["thought"] != true)
+                .filter_map(|part| part["text"].as_str())
+                .collect::<String>()
+        }
     };
     if text.trim().is_empty() {
         return Err(LlmFailure::Malformed);
@@ -240,6 +309,9 @@ async fn call(
         (LlmProtocol::Anthropic, None) => builder.header("anthropic-version", ANTHROPIC_VERSION),
         (LlmProtocol::OpenAiCompatible, Some(key)) => builder.bearer_auth(&key.0),
         (LlmProtocol::OpenAiCompatible, None) => builder,
+        // The key goes in a header, never in the URL (`?key=` would end up in logs and proxies).
+        (LlmProtocol::Gemini, Some(key)) => builder.header("x-goog-api-key", &key.0),
+        (LlmProtocol::Gemini, None) => builder,
     };
     let mut response = builder.send().await.map_err(|error| send_failure(&error))?;
     let status = response.status().as_u16();
@@ -399,6 +471,98 @@ mod tests {
         );
         assert_eq!(
             parse_response(LlmProtocol::OpenAiCompatible, b"not json", "m"),
+            Err(LlmFailure::Malformed)
+        );
+    }
+
+    #[test]
+    fn gemini_body_asks_for_json_with_the_schema_and_low_thinking() {
+        let mut gemini = request(LlmProtocol::Gemini, None);
+        gemini.temperature = None;
+        let body = request_body(&gemini);
+        assert_eq!(body["systemInstruction"]["parts"][0]["text"], "rules");
+        assert_eq!(body["contents"][0]["role"], "user");
+        assert_eq!(body["contents"][0]["parts"][0]["text"], "data");
+        let config = &body["generationConfig"];
+        assert_eq!(config["responseMimeType"], "application/json");
+        assert_eq!(config["responseJsonSchema"], json!({"type": "object"}));
+        assert_eq!(config["maxOutputTokens"], 100);
+        assert_eq!(config["thinkingConfig"]["thinkingLevel"], "low");
+        assert!(config.get("temperature").is_none());
+        // Nothing about the key or the model in the body: both travel outside it.
+        assert!(!body.to_string().contains("model-x"));
+    }
+
+    #[test]
+    fn gemini_url_carries_only_a_plain_model_id() {
+        let client = HttpLlmClient::new();
+        let url = |model: &str| {
+            let mut gemini = request(LlmProtocol::Gemini, Some("https://ignored.example.com"));
+            gemini.model = model.into();
+            client.url(&gemini)
+        };
+        assert_eq!(
+            url("gemini-3.8-flash").as_deref(),
+            Some(
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent"
+            )
+        );
+        for bad in [
+            "",
+            "../files",
+            "a/b",
+            "m?key=x",
+            "m#x",
+            "m:streamGenerateContent",
+            "m n",
+        ] {
+            assert_eq!(url(bad), None, "{bad}");
+        }
+    }
+
+    #[test]
+    fn gemini_statuses_and_responses_map_to_failure_classes() {
+        assert_eq!(
+            status_failure(
+                400,
+                r#"{"error":{"status":"INVALID_ARGUMENT","details":[{"reason":"API_KEY_INVALID"}]}}"#
+            ),
+            LlmFailure::Unauthorized
+        );
+        assert_eq!(
+            status_failure(400, r#"{"error":{"status":"INVALID_ARGUMENT"}}"#),
+            LlmFailure::Rejected { status: 400 }
+        );
+        assert_eq!(
+            status_failure(429, r#"{"error":{"status":"RESOURCE_EXHAUSTED"}}"#),
+            LlmFailure::Unavailable { status: 429 }
+        );
+
+        let ok = br#"{"modelVersion":"gemini-3.8-flash","candidates":[{"finishReason":"STOP",
+            "content":{"role":"model","parts":[{"text":"thinking...","thought":true},{"text":"{\"association\":\"x\"}"}]}}]}"#;
+        let response = parse_response(LlmProtocol::Gemini, ok, "m").unwrap();
+        assert_eq!(response.text, r#"{"association":"x"}"#);
+        assert_eq!(response.model, "gemini-3.8-flash");
+
+        let blocked_prompt = br#"{"promptFeedback":{"blockReason":"SAFETY"}}"#;
+        assert_eq!(
+            parse_response(LlmProtocol::Gemini, blocked_prompt, "m"),
+            Err(LlmFailure::Refused)
+        );
+        let blocked_answer =
+            br#"{"candidates":[{"finishReason":"SAFETY","content":{"parts":[]}}]}"#;
+        assert_eq!(
+            parse_response(LlmProtocol::Gemini, blocked_answer, "m"),
+            Err(LlmFailure::Refused)
+        );
+        let cut =
+            br#"{"candidates":[{"finishReason":"MAX_TOKENS","content":{"parts":[{"text":"{"}]}}]}"#;
+        assert_eq!(
+            parse_response(LlmProtocol::Gemini, cut, "m"),
+            Err(LlmFailure::Malformed)
+        );
+        assert_eq!(
+            parse_response(LlmProtocol::Gemini, br#"{}"#, "m"),
             Err(LlmFailure::Malformed)
         );
     }

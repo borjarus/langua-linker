@@ -1036,6 +1036,7 @@ export const pl: LocaleResource = {
       save: 'Zapisz klucz',
       remove: 'Usuń klucz',
       hint: 'Klucz trafia prosto do systemowego pęku kluczy; aplikacja nie może go odczytać.',
+      whereGemini: 'Klucz API Gemini utworzysz w Google AI Studio (aistudio.google.com → Get API key).',
       saved: 'Klucz API zapisany.',
       removed: 'Klucz API usunięty.',
     },

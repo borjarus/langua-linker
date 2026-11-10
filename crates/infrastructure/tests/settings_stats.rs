@@ -616,3 +616,39 @@ fn withdrawing_ai_consent_blocks_queued_requests_before_the_network() {
         Consent::Unset
     );
 }
+
+/// Gemini (BYOK): choosing it picks its first model, needs no endpoint and maps to its protocol.
+#[test]
+fn gemini_is_a_provider_with_its_own_protocol_and_models() {
+    use langualinker_application::llm;
+    use langualinker_application::ports::LlmProtocol;
+
+    let db = db();
+    update(
+        &db,
+        1,
+        SettingsChange {
+            ai_consent: Some(Consent::Granted),
+            ai_provider: Some("gemini".into()),
+            ..SettingsChange::default()
+        },
+    )
+    .unwrap();
+    let read = db.read(|tx| settings::read(tx)).unwrap();
+    assert_eq!(read.doc.ai.provider.as_deref(), Some("gemini"));
+    assert_eq!(read.doc.ai.model.as_deref(), Some("gemini-3.8-flash"));
+    assert_eq!(read.doc.ai.endpoint, None);
+
+    let config = db.read(llm::provider_config).unwrap();
+    assert_eq!(config.protocol, LlmProtocol::Gemini);
+    assert_eq!(config.model, "gemini-3.8-flash");
+    assert_eq!(config.endpoint, None);
+    assert!(config.requires_key);
+
+    let provider = settings::AI_PROVIDERS
+        .iter()
+        .find(|provider| provider.id == "gemini")
+        .unwrap();
+    assert!(!provider.custom_endpoint);
+    assert!(provider.models.contains(&"gemini-3.7-flash"));
+}

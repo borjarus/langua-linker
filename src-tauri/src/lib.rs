@@ -1171,7 +1171,13 @@ mod tests {
                 .unwrap();
         assert_eq!(settings.version, 1);
         assert_eq!(settings.backup.retention, 3);
-        assert_eq!(settings.ai.providers.len(), 2);
+        let providers: Vec<&str> = settings
+            .ai
+            .providers
+            .iter()
+            .map(|provider| provider.id.as_str())
+            .collect();
+        assert_eq!(providers, ["anthropic", "gemini", "openaiCompatible"]);
         assert!(!settings.ai.has_api_key);
         let update = serde_json::json!({ "operationId": "s1", "expectedVersion": 1,
             "patch": { "dailyGoal": 25, "uiLanguage": "en", "dayCutoffHour": 5, "aiEndpoint": null } });

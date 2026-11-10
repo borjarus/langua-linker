@@ -234,6 +234,7 @@ pub fn provider_config(tx: &mut dyn Repositories) -> AppResult<ProviderConfig> {
         .ok_or(AppError::PermissionDenied { reason: "aiModel" })?;
     let protocol = match provider.id {
         "anthropic" => LlmProtocol::Anthropic,
+        "gemini" => LlmProtocol::Gemini,
         _ => LlmProtocol::OpenAiCompatible,
     };
     if provider.custom_endpoint && ai.endpoint.is_none() {

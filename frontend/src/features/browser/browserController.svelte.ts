@@ -46,7 +46,11 @@ export class BrowserController {
   readonly #api: AppApi
   readonly #pageSize: number
   #generation = 0
-  readonly #requested = new Set<number>()
+  /**
+   * Page → its `nextCursor`. The backend pages by keyset (an opaque cursor from the previous
+   * page), so page N can only be asked for after page N − 1 answered; this map chains them.
+   */
+  readonly #pages = new Map<number, Promise<string | null>>()
 
   constructor({ api, pageSize = PAGE_SIZE }: { api: AppApi; pageSize?: number }) {
     this.#api = api
@@ -62,13 +66,13 @@ export class BrowserController {
   search(filters: BrowserFilters): Promise<void> {
     this.filters = { ...filters, states: [...filters.states], flags: [...filters.flags] }
     const run = ++this.#generation
-    this.#requested.clear()
+    this.#pages.clear()
     this.total = null
     this.rows = []
     this.error = null
     this.filterVersion = null
     this.clearSelection()
-    return this.#loadPage(0, run)
+    return this.#page(0, run).then(() => undefined)
   }
 
   reload(): Promise<void> {
@@ -79,7 +83,7 @@ export class BrowserController {
   loadRange(start: number, end: number): void {
     const run = this.#generation
     const last = Math.floor(Math.max(start, end - 1) / this.#pageSize)
-    for (let page = Math.floor(start / this.#pageSize); page <= last; page += 1) void this.#loadPage(page, run)
+    for (let page = Math.floor(start / this.#pageSize); page <= last; page += 1) void this.#page(page, run)
   }
 
   isSelected(cardId: Id): boolean {
@@ -138,25 +142,37 @@ export class BrowserController {
     }
   }
 
-  #request(page: number): SearchInput {
-    return { ...this.filters, cursor: page === 0 ? null : String(page * this.#pageSize), pageSize: this.#pageSize }
+  /** Loads `page` once (pages before it first) and resolves to its `nextCursor`. */
+  #page(page: number, run: number): Promise<string | null> {
+    const known = this.#pages.get(page)
+    if (known) return known
+    const loading = this.#load(page, run)
+    this.#pages.set(page, loading)
+    return loading
   }
 
-  async #loadPage(page: number, run: number): Promise<void> {
-    if (this.#requested.has(page)) return
-    this.#requested.add(page)
+  async #load(page: number, run: number): Promise<string | null> {
     try {
-      const result = await this.#api.searchCards(this.#request(page))
-      if (run !== this.#generation) return
+      const cursor = page === 0 ? null : await this.#page(page - 1, run)
+      // The previous page was the last one, failed, or a newer search started.
+      if ((page > 0 && cursor === null) || run !== this.#generation) return null
+      const input: SearchInput = { ...this.filters, cursor, pageSize: this.#pageSize }
+      const result = await this.#api.searchCards(input)
+      if (run !== this.#generation) return null
       this.total = result.total
       this.filterVersion = result.filterVersion
       const next = this.rows.length === result.total ? [...this.rows] : Array.from({ length: result.total }, (_, index) => this.rows[index])
       result.items.forEach((item, offset) => (next[page * this.#pageSize + offset] = item))
       this.rows = next
       this.error = null
+      return result.nextCursor
     } catch (caught) {
-      this.#requested.delete(page)
-      if (run === this.#generation) this.error = toErrorDto(caught)
+      if (run === this.#generation) {
+        // A later scroll may ask for it again.
+        this.#pages.delete(page)
+        this.error = toErrorDto(caught)
+      }
+      return null
     }
   }
 }

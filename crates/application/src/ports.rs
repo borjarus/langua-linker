@@ -58,6 +58,8 @@ pub enum LlmProtocol {
     Anthropic,
     /// OpenAI-compatible chat completions at a user-supplied HTTPS endpoint.
     OpenAiCompatible,
+    /// Google Gemini API `generateContent` (`generativelanguage.googleapis.com`).
+    Gemini,
 }
 
 /// A request to the association provider (Phase 13). Prompts are built in Rust; the card text is

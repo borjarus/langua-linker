@@ -88,6 +88,17 @@ pub const AI_PROVIDERS: &[AiProvider] = &[
         custom_endpoint: false,
     },
     AiProvider {
+        id: "gemini",
+        name: "Google Gemini",
+        requires_key: true,
+        models: &[
+            "gemini-3.8-flash",
+            "gemini-3.7-flash",
+            "gemini-3-flash-preview",
+        ],
+        custom_endpoint: false,
+    },
+    AiProvider {
         id: "openaiCompatible",
         name: "OpenAI-compatible",
         requires_key: true,
