@@ -7,7 +7,8 @@
 
   const { api, i18n, queries } = useServices()
   const attributions = useQuery(queries, () => ({ key: ['attributions'], fetch: () => api.getAttributions() }))
-  const SCOPES: AttributionDto['scope'][] = ['content', 'dependency', 'font', 'icon']
+  // Only the software section is shown; deck licences stay in the deck manifests.
+  const SCOPES: AttributionDto['scope'][] = ['dependency']
 </script>
 
 <Screen title={i18n.t('routes.settingsAttributions')} back>

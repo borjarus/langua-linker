@@ -22,6 +22,7 @@ use langualinker_infrastructure::backup::{BackupDirs, BackupService};
 use langualinker_infrastructure::llm::HttpLlmClient;
 use langualinker_infrastructure::sqlite::{DATABASE_FILE, SqliteDatabase};
 use langualinker_infrastructure::system::{OsRng, SystemClock};
+use langualinker_infrastructure::transfer::{TransferEncoders, TransferService};
 use serde_json::{Map, Value};
 use tauri::{AppHandle, Emitter, Runtime};
 
@@ -50,6 +51,8 @@ pub struct Collection {
     pub secrets: Option<Arc<dyn SecretStore>>,
     /// AI associations and their outbox (Phase 13).
     pub llm: LlmService<SqliteDatabase>,
+    /// CSV import and deck export (Phase 14).
+    pub transfer: TransferService,
 }
 
 impl Backend {
@@ -198,6 +201,18 @@ impl Collection {
             },
         );
         let rng: Arc<dyn Rng> = Arc::new(OsRng);
+        let transfer = TransferService::new(
+            db.clone(),
+            jobs.clone(),
+            events.clone(),
+            clock.clone(),
+            rng.clone(),
+            dirs.exports.clone(),
+            TransferEncoders {
+                import: crate::transfer::encode_import,
+                export: crate::transfer::encode_export,
+            },
+        );
         let backups = BackupService::new(
             db.clone(),
             jobs.clone(),
@@ -227,6 +242,7 @@ impl Collection {
             backups,
             secrets,
             llm,
+            transfer,
         })
     }
 }

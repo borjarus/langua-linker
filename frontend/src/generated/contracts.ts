@@ -42,7 +42,7 @@ row: number, error: ErrorDto, };
 
 export type ImportCountsDto = { create: number, update: number, skip: number, duplicate: number, error: number, };
 
-export type JobResultDto = { "type": "import", deckId: string, rowErrors: Array<ImportRowErrorDto>, create: number, update: number, skip: number, duplicate: number, error: number, } | { "type": "export", fileName: string, cardCount: number, } | { "type": "backup", backupId: string, } | { "type": "restore", safetyBackupId: string, } | { "type": "reset", safetyBackupId: string | null, } | { "type": "prepareContent", deckIds: Array<string>, created: number, updated: number, unchanged: number, 
+export type JobResultDto = { "type": "import", deckId: string, rowErrors: Array<ImportRowErrorDto>, create: number, update: number, skip: number, duplicate: number, error: number, } | { "type": "export", fileName: string, cardCount: number, format?: ExportFormat, losses: Array<ExportLossDto>, } | { "type": "backup", backupId: string, } | { "type": "restore", safetyBackupId: string, } | { "type": "reset", safetyBackupId: string | null, } | { "type": "prepareContent", deckIds: Array<string>, created: number, updated: number, unchanged: number, 
 /**
  * Removed from the bundled content but kept: the learner has progress or edits.
  */
@@ -191,6 +191,59 @@ existingNotes: number,
 existingDeckId: string | null, warnings: Array<DeckImportWarningDto>, previewToken: string, };
 
 export type CommitDeckImportInput = { operationId: string, previewToken: string, };
+
+export type CsvDelimiter = "," | ";" | "	";
+
+export type CsvEncoding = "UTF-8" | "UTF-16LE" | "UTF-16BE" | "windows-1252";
+
+export type DuplicatePolicy = "skip" | "update" | "duplicate";
+
+export type CsvColumnTarget = "front" | "back" | "tags" | "ignore" | "guid" | "deck" | "noteType" | "due" | "interval" | "reps" | "lapses" | "position";
+
+export type ImportInput = { fileToken: string, 
+/**
+ * `null` = detect.
+ */
+delimiter: CsvDelimiter | null, hasHeader: boolean, 
+/**
+ * `null` = suggested mapping.
+ */
+mapping: Array<CsvColumnTarget> | null, duplicatePolicy: DuplicatePolicy, 
+/**
+ * `null` = a new deck named after the file.
+ */
+targetDeckId: string | null, 
+/**
+ * Since 1.3; omitted or `null` = detect (BOM, UTF-8, else Windows-1252).
+ */
+encoding?: CsvEncoding, 
+/**
+ * Since 1.3: removes the `'` a guarded export put before `=`, `+`, `-`, `@`.
+ */
+formulaGuard?: boolean, };
+
+export type ImportPreviewDto = { fileName: string, detectedDelimiter: CsvDelimiter | null, delimiter: CsvDelimiter, encoding: string, hasBom: boolean, hasHeader: boolean, columns: Array<string>, sampleRows: Array<Array<string>>, mapping: Array<CsvColumnTarget>, totalRows: number, counts: ImportCountsDto, rowErrors: Array<ImportRowErrorDto>, targetDeckId: string | null, targetDeckName: string, 
+/**
+ * Since 1.3: decks the import creates (full paths with `::`), the new target first.
+ */
+newDecks: Array<string>, previewToken: string, };
+
+export type CommitImportInput = { operationId: string, previewToken: string, };
+
+export type ExportFormat = "csv" | "apkg";
+
+export type ExportDeckInput = { operationId: string, deckId: string, format: ExportFormat, 
+/**
+ * CSV: adds due date, interval, reps, lapses and position columns. Ignored for `apkg`,
+ * which always carries the scheduling and the review log.
+ */
+includeScheduling: boolean, 
+/**
+ * Since 1.3, CSV only: a `'` before fields a spreadsheet would evaluate. Omitted = raw.
+ */
+formulaGuard?: boolean, };
+
+export type ExportLossDto = { code: string, count: number, };
 
 export type Rating = "Again" | "Hard" | "Good" | "Easy";
 

@@ -2,7 +2,7 @@
 //! registered (integration checklist rule 1): the ones implemented in Phases 7–8 are below, the
 //! learning commands of Phase 10 are in `study.rs`, management (Phase 11) in `manage.rs` and
 //! statistics, settings, backup and restore (Phase 12) in `settings.rs`, AI associations
-//! (Phase 13) in `ai.rs`; every
+//! (Phase 13) in `ai.rs`, CSV import and deck export (Phase 14) in `transfer.rs`; every
 //! other one answers `NOT_IMPLEMENTED` until its phase arrives — never demo data and never
 //! "command not found" (which would reach the UI as `INTERNAL`).
 
@@ -50,6 +50,9 @@ pub const IMPLEMENTED: &[&str] = &[
     "pick_file",
     "preview_deck_import",
     "commit_deck_import",
+    "preview_import",
+    "commit_import",
+    "export_deck",
     "start_study",
     "resume_study",
     "update_study_session",

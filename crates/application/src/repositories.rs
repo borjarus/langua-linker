@@ -568,6 +568,9 @@ pub trait ManagementRepository {
     fn decks_per_config(&mut self) -> AppResult<Vec<(DeckConfigId, u32)>>;
     /// Soft-deletes every live card of the decks; returns how many cards were deleted.
     fn soft_delete_cards_of_decks(&mut self, decks: &[DeckId], at: TimestampMs) -> AppResult<u32>;
+    /// Live cards of the decks (archived ones included), by note and template (Phase 14 export
+    /// and the CSV duplicate index).
+    fn cards_of_decks(&mut self, decks: &[DeckId]) -> AppResult<Vec<Card>>;
     /// Soft-deletes notes that no longer have a live card; returns them.
     fn soft_delete_orphan_notes(&mut self, at: TimestampMs) -> AppResult<Vec<NoteId>>;
     /// Tags of live notes, sorted case-insensitively.

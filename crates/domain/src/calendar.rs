@@ -75,6 +75,15 @@ impl StudyCalendar {
         utc.with_timezone(&self.zone).naive_local()
     }
 
+    /// Offset of the zone from UTC at an instant, in minutes east (Warsaw in winter: 60).
+    pub fn utc_offset_minutes(&self, at: TimestampMs) -> i32 {
+        let local = self.local(at);
+        let utc = DateTime::<Utc>::from_timestamp_millis(at.0)
+            .unwrap_or_default()
+            .naive_utc();
+        i32::try_from((local - utc).num_minutes()).unwrap_or(0)
+    }
+
     /// The study day an instant belongs to.
     pub fn day_of(&self, at: TimestampMs) -> StudyDay {
         let shifted = self.local(at) - Duration::minutes(i64::from(self.cutoff_minutes));

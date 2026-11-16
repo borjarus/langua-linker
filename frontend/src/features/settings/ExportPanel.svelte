@@ -1,6 +1,6 @@
 <script lang="ts">
   import { toErrorDto } from '../../api/errors'
-  import type { ErrorDto } from '../../api/types'
+  import { EXPORT_FORMATS, type ErrorDto, type ExportFormat } from '../../api/types'
   import { useServices } from '../../app/context'
   import { href } from '../../app/routes'
   import ErrorState from '../../components/ErrorState.svelte'
@@ -17,7 +17,9 @@
   $effect(() => job.listen())
 
   let deckId = $state('')
+  let format = $state<ExportFormat>('csv')
   let includeScheduling = $state(false)
+  let formulaGuard = $state(false)
   let sharing = $state(false)
   let shareError = $state<ErrorDto | null>(null)
 
@@ -27,7 +29,9 @@
   function exportDeck() {
     if (!selected || job.active) return
     shareError = null
-    void job.start(() => api.exportDeck({ operationId: newOperationId(), deckId: selected, format: 'csv', includeScheduling }))
+    void job.start(() =>
+      api.exportDeck({ operationId: newOperationId(), deckId: selected, format, includeScheduling: format === 'apkg' || includeScheduling, formulaGuard: format === 'csv' && formulaGuard }),
+    )
   }
 
   async function share(jobId: string) {
@@ -61,10 +65,28 @@
         {/each}
       </select>
     </div>
-    <label class="choice">
-      <input type="checkbox" bind:checked={includeScheduling} disabled={job.active} />
-      {i18n.t('transfer.export.scheduling')}
-    </label>
+    <fieldset class="group">
+      <legend>{i18n.t('transfer.export.format')}</legend>
+      {#each EXPORT_FORMATS as option (option)}
+        <label class="choice">
+          <input type="radio" name="{ids}-format" checked={format === option} disabled={job.active} onchange={() => (format = option)} />
+          {i18n.t(`transfer.export.formats.${option}`)}
+        </label>
+      {/each}
+    </fieldset>
+    {#if format === 'csv'}
+      <label class="choice">
+        <input type="checkbox" bind:checked={includeScheduling} disabled={job.active} />
+        {i18n.t('transfer.export.scheduling')}
+      </label>
+      <label class="choice">
+        <input type="checkbox" bind:checked={formulaGuard} disabled={job.active} aria-describedby="{ids}-guard" />
+        {i18n.t('transfer.export.formulaGuard')}
+      </label>
+      <p id="{ids}-guard" class="muted hint">{i18n.t('transfer.export.formulaGuardHint')}</p>
+    {:else}
+      <p class="muted hint">{i18n.t('transfer.export.apkgHint')}</p>
+    {/if}
     <button type="button" class="btn" disabled={!selected || job.active} aria-busy={job.active} onclick={exportDeck}><Icon name="copy" />{i18n.t('transfer.export.action')}</button>
     {#if job.job && job.job.status !== 'succeeded'}
       <ProgressPanel title={i18n.t('transfer.export.progress')} status={job.job.status} progress={job.job.progress} oncancel={() => job.cancel()} />
@@ -76,6 +98,16 @@
       {@const jobId = job.job.jobId}
       <div class="done" role="status">
         <p><Icon name="check" />{i18n.t('transfer.export.done', { file: result.fileName, count: result.cardCount })}</p>
+        {#if result.losses.length > 0}
+          <details class="losses">
+            <summary>{i18n.t('transfer.export.losses.title')}</summary>
+            <ul>
+              {#each result.losses as loss (loss.code)}
+                <li>{i18n.tDynamic(`transfer.export.losses.codes.${loss.code}`, 'transfer.export.losses.title')}: {i18n.formatNumber(loss.count)}</li>
+              {/each}
+            </ul>
+          </details>
+        {/if}
         <button type="button" class="btn btn-primary" disabled={sharing} aria-busy={sharing} onclick={() => share(jobId)}>{i18n.t('transfer.export.share')}</button>
       </div>
       {#if shareError}<ErrorState error={shareError} compact />{/if}
@@ -111,6 +143,31 @@
     width: 1.25rem;
     height: 1.25rem;
     accent-color: var(--color-primary);
+  }
+
+  .group {
+    display: grid;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  legend {
+    margin-bottom: var(--space-1);
+    font-weight: var(--weight-medium);
+  }
+
+  .losses ul {
+    margin: 0;
+    padding-inline-start: var(--space-5);
+  }
+
+  .losses summary {
+    min-height: var(--touch-target);
+    display: flex;
+    align-items: center;
+    cursor: pointer;
   }
 
   section > .btn {

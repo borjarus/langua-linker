@@ -8,6 +8,7 @@ use langualinker_application::repositories::{
     SortValue, WordNote,
 };
 use langualinker_application::{AppError, AppResult};
+use langualinker_domain::card::Card;
 use langualinker_domain::note::CardDirection;
 use langualinker_domain::{
     AssociationId, CardId, DeckConfigId, DeckId, GrammarTipId, NoteId, TimestampMs, WordLinkId,
@@ -189,6 +190,22 @@ impl ManagementRepository for SqliteRepos<'_> {
             .execute(&sql, params_from_iter(args))
             .map_err(map_sqlite)?;
         Ok(u32::try_from(changed).unwrap_or(u32::MAX))
+    }
+
+    fn cards_of_decks(&mut self, decks: &[DeckId]) -> AppResult<Vec<Card>> {
+        if decks.is_empty() {
+            return Ok(Vec::new());
+        }
+        let sql = format!(
+            "SELECT {CARD_COLUMNS} FROM cards WHERE deck_id IN ({}) AND deleted_at IS NULL
+             ORDER BY note_id, template_ordinal",
+            placeholders(decks.len())
+        );
+        let mut statement = self.tx.prepare(&sql).map_err(map_sqlite)?;
+        statement
+            .query_map(params_from_iter(decks.iter().map(|deck| deck.0)), card_row)
+            .and_then(Iterator::collect)
+            .map_err(map_sqlite)
     }
 
     fn soft_delete_orphan_notes(&mut self, at: TimestampMs) -> AppResult<Vec<NoteId>> {

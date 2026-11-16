@@ -883,11 +883,13 @@ Before this gate, do not implement production FSRS/CRUD/LLM. Spikes, IPC transpo
 
 ### Tests and DoD
 
-- [ ] CSV quotes/newline/unicode/BOM/formula/dry-run tested.
-- [ ] Codec memory+DayLearn+suspended/buried/filtered/DST/version fixture tested.
+- [x] CSV quotes/newline/unicode/BOM/formula/dry-run tested.
+- [x] Codec memory+DayLearn+suspended/buried/filtered/DST/version fixture tested.
 - [ ] 5–10 legal external APKG fixtures, not only own exports. [file:1]
-- [ ] 20k import/export time-memory-cancel recovery measured.
-- [ ] Format-specific round-trip scope explicit; full FSRS/logs through own backup.
+- [x] 20k import/export time-memory-cancel recovery measured (desktop release; phone pending).
+- [x] Format-specific round-trip scope explicit; full FSRS/logs through own backup.
+
+> **Status 2026-11-16 — Phase 14a (steps 1–3) implemented; step 4 (optional `.apkg` import, v1.1) not started.** Decisions in [ADR-19](adr/ADR-19-csv-anki-interop.md); contract 1.3 (minor). New crate `crates/interop`: `csv` (BOM/UTF-8/UTF-16/Windows-1252 decoding, Anki `#separator`/`#columns`/`#html` directives, delimiter detection that reports uncertainty, RFC 4180 reader with row/column/field limits, writer with an explicit formula guard and a lossless raw variant), `anki::codec` (type/queue/due/odue/odid/left/flags/data ↔ card state; calendar study days from `crt`, rollover, `creationOffset`; scheduler v1/v2 awareness; raw origin kept), `anki::schema11` (legacy `.apkg`: notes with GUID/U+001F/HTML escaping/`csum`, fixed note types per kind, deck hierarchy, cards through the codec, revlog, deflated ZIP). `application::transfer`: mapping suggestion and checks, read-only plan (GUID then front/deck matching, skip/update/duplicate, in-file duplicates, deck paths, due/interval/reps/lapses/position for created notes), apply inside one write transaction with cancel checks, export snapshot and CSV writer with a loss report. `infrastructure::transfer::TransferService`: preview with fingerprint (`PREVIEW_STALE`), import job, export job writing `exports/<jobId>.<ext>` atomically, keep 5, `shareFile` for exports. Shell commands `preview_import`, `commit_import`, `export_deck`; Transfer screen: encoding, formula guard, new targets, new decks; export format CSV/`.apkg` and the losses list. Evidence: interop unit tests (CSV incl. proptest round trip, codec incl. DST/v1/filtered/suspended, writer), application unit tests, `crates/infrastructure/tests/transfer.rs` (preview = commit and writes nothing, update keeps schedules, stale preview, CSV export → import into a fresh collection with GUIDs/decks/due dates, guarded/raw formulas, `.apkg` read back by the Anki reader with schema 11/fields/GUIDs/tags/types/queues/revlog, 20k rows with cancel), contract round trips; workspace tests, clippy `-D warnings`, rustfmt; svelte-check, ESLint, i18n lint, Vitest. Measured (desktop release): 20k rows preview 65 ms, import 3.5 s, CSV export 0.5 s, APKG export 1.1 s. Open: opening the `.apkg` in a tested Anki desktop version (counts/content/directions/due compared), 5–10 legal external APKG fixtures, phone measurements, ADR-19 acceptance, step 4.
 
 ## PHASE 15 — TTS, notifications, deep links, and lifecycle
 

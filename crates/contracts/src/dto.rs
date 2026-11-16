@@ -103,9 +103,15 @@ pub enum JobResultDto {
         duplicate: u32,
         error: u32,
     },
+    /// `format` and `losses` since contract 1.3; a 1.2 result has neither.
     Export {
         file_name: String,
         card_count: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        format: Option<ExportFormat>,
+        #[serde(default)]
+        losses: Vec<ExportLossDto>,
     },
     Backup {
         backup_id: String,
@@ -485,6 +491,142 @@ pub struct DeckImportPreviewDto {
 pub struct CommitDeckImportInput {
     pub operation_id: String,
     pub preview_token: String,
+}
+
+// ---------------------------------------------------------------- CSV and Anki (Phase 14)
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub enum CsvDelimiter {
+    #[serde(rename = ",")]
+    Comma,
+    #[serde(rename = ";")]
+    Semicolon,
+    #[serde(rename = "	")]
+    Tab,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+pub enum CsvEncoding {
+    #[serde(rename = "UTF-8")]
+    Utf8,
+    #[serde(rename = "UTF-16LE")]
+    Utf16Le,
+    #[serde(rename = "UTF-16BE")]
+    Utf16Be,
+    #[serde(rename = "windows-1252")]
+    Windows1252,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum DuplicatePolicy {
+    Skip,
+    Update,
+    Duplicate,
+}
+
+/// What a CSV column becomes. Since 1.3 also the GUID, deck path, note type and the scheduling
+/// columns of a LanguaLinker or Anki export.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum CsvColumnTarget {
+    Front,
+    Back,
+    Tags,
+    Ignore,
+    Guid,
+    Deck,
+    NoteType,
+    Due,
+    Interval,
+    Reps,
+    Lapses,
+    Position,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ImportInput {
+    pub file_token: String,
+    /// `null` = detect.
+    pub delimiter: Option<CsvDelimiter>,
+    pub has_header: bool,
+    /// `null` = suggested mapping.
+    pub mapping: Option<Vec<CsvColumnTarget>>,
+    pub duplicate_policy: DuplicatePolicy,
+    /// `null` = a new deck named after the file.
+    pub target_deck_id: Option<String>,
+    /// Since 1.3; omitted or `null` = detect (BOM, UTF-8, else Windows-1252).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub encoding: Option<CsvEncoding>,
+    /// Since 1.3: removes the `'` a guarded export put before `=`, `+`, `-`, `@`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub formula_guard: Option<bool>,
+}
+
+/// Dry run: nothing is written until `commitImport` with the same `previewToken`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ImportPreviewDto {
+    pub file_name: String,
+    pub detected_delimiter: Option<CsvDelimiter>,
+    pub delimiter: CsvDelimiter,
+    pub encoding: String,
+    pub has_bom: bool,
+    pub has_header: bool,
+    pub columns: Vec<String>,
+    pub sample_rows: Vec<Vec<String>>,
+    pub mapping: Vec<CsvColumnTarget>,
+    pub total_rows: u32,
+    pub counts: ImportCountsDto,
+    pub row_errors: Vec<ImportRowErrorDto>,
+    pub target_deck_id: Option<String>,
+    pub target_deck_name: String,
+    /// Since 1.3: decks the import creates (full paths with `::`), the new target first.
+    #[serde(default)]
+    pub new_decks: Vec<String>,
+    pub preview_token: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CommitImportInput {
+    pub operation_id: String,
+    pub preview_token: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum ExportFormat {
+    Csv,
+    /// Anki package (legacy schema 11), since 1.3.
+    Apkg,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ExportDeckInput {
+    pub operation_id: String,
+    pub deck_id: String,
+    pub format: ExportFormat,
+    /// CSV: adds due date, interval, reps, lapses and position columns. Ignored for `apkg`,
+    /// which always carries the scheduling and the review log.
+    pub include_scheduling: bool,
+    /// Since 1.3, CSV only: a `'` before fields a spreadsheet would evaluate. Omitted = raw.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub formula_guard: Option<bool>,
+}
+
+/// What the export format could not carry (`code`, e.g. `associations`, `reviewHistory`,
+/// `fsrsMemoryUnverified`) and for how many items.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ExportLossDto {
+    pub code: String,
+    pub count: u32,
 }
 
 // ---------------------------------------------------------------- study (Phase 10)
@@ -1493,6 +1635,16 @@ pub fn typescript() -> String {
         PreviewDeckImportInput::decl(&cfg),
         DeckImportPreviewDto::decl(&cfg),
         CommitDeckImportInput::decl(&cfg),
+        CsvDelimiter::decl(&cfg),
+        CsvEncoding::decl(&cfg),
+        DuplicatePolicy::decl(&cfg),
+        CsvColumnTarget::decl(&cfg),
+        ImportInput::decl(&cfg),
+        ImportPreviewDto::decl(&cfg),
+        CommitImportInput::decl(&cfg),
+        ExportFormat::decl(&cfg),
+        ExportDeckInput::decl(&cfg),
+        ExportLossDto::decl(&cfg),
         Rating::decl(&cfg),
         CardState::decl(&cfg),
         QueueState::decl(&cfg),
@@ -1743,8 +1895,30 @@ mod tests {
             round_trip(&JobResultDto::Export {
                 file_name: "deck.csv".into(),
                 card_count: 9,
+                format: Some(ExportFormat::Csv),
+                losses: vec![ExportLossDto {
+                    code: "reviewHistory".into(),
+                    count: 3,
+                }],
             }),
-            json!({ "type": "export", "fileName": "deck.csv", "cardCount": 9 })
+            json!({
+                "type": "export", "fileName": "deck.csv", "cardCount": 9, "format": "csv",
+                "losses": [{ "code": "reviewHistory", "count": 3 }]
+            })
+        );
+        // A 1.2 result still reads.
+        let old: JobResultDto = serde_json::from_value(
+            json!({ "type": "export", "fileName": "d.csv", "cardCount": 1 }),
+        )
+        .unwrap();
+        assert_eq!(
+            old,
+            JobResultDto::Export {
+                file_name: "d.csv".into(),
+                card_count: 1,
+                format: None,
+                losses: Vec::new(),
+            }
         );
         assert_eq!(
             round_trip(&JobResultDto::PrepareContent {

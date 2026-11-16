@@ -1,5 +1,5 @@
 /**
- * Transport contract v1.2 between the Svelte frontend and the Rust backend.
+ * Transport contract v1.3 between the Svelte frontend and the Rust backend.
  *
  * Rules (plan §4.1):
  * - SQLite i64 identifiers and GUIDs travel as strings (`Id`).
@@ -8,7 +8,7 @@
  * - Long-running work returns a `JobDto`; events are signals, never durable truth.
  *
  * This file is framework-independent: no Svelte, no Tauri imports.
- * Rust is the DTO source for the types re-exported from `src/generated/contracts.ts` (Phases 7–13);
+ * Rust is the DTO source for the types re-exported from `src/generated/contracts.ts` (Phases 7–14);
  * the remaining DTOs move there as their commands become real.
  */
 
@@ -55,6 +55,16 @@ import type {
   NoteTypeKind,
   PickFileInput,
   PreviewDeckImportInput,
+  CsvEncoding,
+  ImportInput,
+  ImportPreviewDto,
+  CommitImportInput,
+  ExportDeckInput,
+  ExportFormat,
+  ExportLossDto,
+  CsvDelimiter as GeneratedCsvDelimiter,
+  DuplicatePolicy as GeneratedDuplicatePolicy,
+  CsvColumnTarget as GeneratedCsvColumnTarget,
   DeckType as GeneratedDeckType,
   OnboardingStep as GeneratedOnboardingStep,
   ErrorCode as GeneratedErrorCode,
@@ -335,9 +345,16 @@ export type {
   MaturityDto,
   TrueRetentionDto,
   CollectionCountsDto,
+  CsvEncoding,
+  ImportInput,
+  ImportPreviewDto,
+  CommitImportInput,
+  ExportDeckInput,
+  ExportFormat,
+  ExportLossDto,
 }
 
-export const API_VERSION = '1.2'
+export const API_VERSION = '1.3'
 
 /** Equal sets of members: guards runtime lists against the Rust enums. */
 type SameMembers<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false
@@ -455,54 +472,20 @@ void onboardingStepsMatchRust
 
 // ---------------------------------------------------------------- transfer / backup
 
+// CSV and export DTOs come from Rust (Phase 14).
+
 export const CSV_DELIMITERS = [',', ';', '\t'] as const
 export type CsvDelimiter = (typeof CSV_DELIMITERS)[number]
+const csvDelimitersMatchRust: SameMembers<CsvDelimiter, GeneratedCsvDelimiter> = true
+void csvDelimitersMatchRust
+export const CSV_ENCODINGS = ['UTF-8', 'UTF-16LE', 'UTF-16BE', 'windows-1252'] as const satisfies readonly CsvEncoding[]
 export const DUPLICATE_POLICIES = ['skip', 'update', 'duplicate'] as const
 export type DuplicatePolicy = (typeof DUPLICATE_POLICIES)[number]
-export const CSV_COLUMN_TARGETS = ['front', 'back', 'tags', 'ignore'] as const
+const duplicatePoliciesMatchRust: SameMembers<DuplicatePolicy, GeneratedDuplicatePolicy> = true
+void duplicatePoliciesMatchRust
+export const CSV_COLUMN_TARGETS = ['front', 'back', 'tags', 'guid', 'deck', 'noteType', 'due', 'interval', 'reps', 'lapses', 'position', 'ignore'] as const
 export type CsvColumnTarget = (typeof CSV_COLUMN_TARGETS)[number]
-
-export interface ImportInput {
-  fileToken: string
-  /** `null` = detect. */
-  delimiter: CsvDelimiter | null
-  hasHeader: boolean
-  /** `null` = suggested mapping. */
-  mapping: CsvColumnTarget[] | null
-  duplicatePolicy: DuplicatePolicy
-  /** `null` = a new deck named after the file. */
-  targetDeckId: Id | null
-}
-
-/** Dry run: nothing is written until `commitImport` with the same `previewToken`. */
-export interface ImportPreviewDto {
-  fileName: string
-  detectedDelimiter: CsvDelimiter | null
-  delimiter: CsvDelimiter
-  encoding: string
-  hasBom: boolean
-  hasHeader: boolean
-  columns: string[]
-  sampleRows: string[][]
-  mapping: CsvColumnTarget[]
-  totalRows: number
-  counts: ImportCountsDto
-  rowErrors: ImportRowErrorDto[]
-  targetDeckId: Id | null
-  targetDeckName: string
-  previewToken: string
-}
-
-export interface CommitImportInput {
-  operationId: OperationId
-  previewToken: string
-}
-
-export interface ExportDeckInput {
-  operationId: OperationId
-  deckId: Id
-  format: 'csv'
-  /** Adds due date, interval and reps columns. */
-  includeScheduling: boolean
-}
+const csvColumnTargetsMatchRust: SameMembers<CsvColumnTarget, GeneratedCsvColumnTarget> = true
+void csvColumnTargetsMatchRust
+export const EXPORT_FORMATS = ['csv', 'apkg'] as const satisfies readonly ExportFormat[]
 

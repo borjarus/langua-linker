@@ -2,6 +2,7 @@ import type { AppApi, AppApiOperation } from '../api/appApi'
 import { AppError } from '../api/errors'
 import {
   API_VERSION,
+  CSV_COLUMN_TARGETS,
   DECK_TYPES,
   FSRS_WEIGHT_COUNT,
   RATINGS,
@@ -2089,11 +2090,16 @@ export class MockAppApi implements AppApi {
       const header = input.hasHeader ? (table[0] ?? []) : null
       const body = input.hasHeader ? table.slice(1) : table
       const columns = Array.from({ length: width }, (_, index) => header?.[index]?.trim() || String(index + 1))
-      const suggested = columns.map((_, index): CsvColumnTarget => (['front', 'back', 'tags'] as const)[index] ?? 'ignore')
+      // Header names first (as the Rust importer does), else front, back, tags by position.
+      const byName = (name: string | undefined) => CSV_COLUMN_TARGETS.find((target) => target !== 'ignore' && target.toLowerCase() === name?.trim().toLowerCase())
+      const named = header ? columns.map((_, index) => byName(header[index]) ?? 'ignore') : []
+      const suggested = named.includes('front') && named.includes('back') ? named : columns.map((_, index): CsvColumnTarget => (['front', 'back', 'tags'] as const)[index] ?? 'ignore')
       const mapping = input.mapping && input.mapping.length === width ? input.mapping : suggested
-      if (mapping.filter((target) => target === 'front').length > 1 || mapping.filter((target) => target === 'back').length > 1) {
-        fail('VALIDATION_FAILED', { field: 'mapping', reason: 'repeated' })
+      if (mapping.filter((target) => target === 'front').length !== 1 || mapping.filter((target) => target === 'back').length !== 1) {
+        fail('VALIDATION_FAILED', { field: 'mapping', reason: 'frontBack' })
       }
+      const chosen = mapping.filter((target) => target !== 'ignore')
+      if (new Set(chosen).size !== chosen.length) fail('VALIDATION_FAILED', { field: 'mapping', reason: 'duplicateTarget' })
       const deck = input.targetDeckId === null ? null : this.#deck(input.targetDeckId)
       const existing = new Map(
         this.#collection.notes
@@ -2146,6 +2152,7 @@ export class MockAppApi implements AppApi {
         rowErrors,
         targetDeckId: deck?.id ?? null,
         targetDeckName: deckName,
+        newDecks: deck ? [] : [deckName],
         previewToken: token,
       }
     })
@@ -2262,9 +2269,12 @@ export class MockAppApi implements AppApi {
     return this.#mutate('exportDeck', input.operationId, [], (): JobDto => {
       const deck = this.#deck(input.deckId)
       const ids = this.#subtree(deck.id)
-      const cardCount = this.#liveCards().filter((card) => ids.has(card.deckId)).length
+      const cards = this.#liveCards().filter((card) => ids.has(card.deckId))
       const slug = deck.name.normalize('NFD').replace(/\p{M}/gu, '').replace(/ł/gu, 'l').replace(/Ł/gu, 'L').replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/gu, '').toLowerCase()
-      return this.#startJob('export', 4, () => ({ result: { type: 'export', fileName: `${slug || 'deck'}.csv`, cardCount } }))
+      const reviewed = cards.filter((card) => card.reps > 0).length
+      const losses = (input.format === 'apkg' ? [{ code: 'reviewSnapshots', count: cards.reduce((sum, card) => sum + card.reps, 0) }] : [{ code: 'reviewHistory', count: reviewed }]).filter((loss) => loss.count > 0)
+      const cardCount = input.format === 'apkg' ? cards.length : new Set(cards.map((card) => card.noteId)).size
+      return this.#startJob('export', 4, () => ({ result: { type: 'export', fileName: `${slug || 'deck'}.${input.format}`, cardCount, format: input.format, losses } }))
     })
   }
 

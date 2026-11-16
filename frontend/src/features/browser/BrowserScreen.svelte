@@ -8,6 +8,7 @@
   import EmptyState from '../../components/EmptyState.svelte'
   import ErrorState from '../../components/ErrorState.svelte'
   import Icon from '../../components/Icon.svelte'
+  import RichText from '../../components/RichText.svelte'
   import SearchInput from '../../components/SearchInput.svelte'
   import Skeleton from '../../components/Skeleton.svelte'
   import VirtualList from '../../components/VirtualList.svelte'
@@ -208,10 +209,10 @@
               <a class="text" href={href({ name: 'card', params: { id: item.cardId } })}>
                 <span class="front" dir="auto">
                   {#if item.flag !== 'none'}<span class="dot flag-{item.flag}" role="img" aria-label={i18n.t('study.flagged', { flag: i18n.t(`study.flags.${item.flag}`) })}></span>{/if}
-                  {item.front}
+                  <RichText text={item.front} />
                 </span>
                 <span class="meta muted">
-                  <span dir="auto">{item.back}</span>
+                  <RichText text={item.back} />
                   · {i18n.t(`study.states.${item.state}`)}{#if item.queue === 'Suspended'} · {i18n.t('card.suspended')}{/if}{#if item.direction === 'reverse'} · {i18n.t('study.reverse')}{/if}{#if item.position !== null} · {i18n.t('browser.position', { position: item.position })}{/if}
                   · {item.deckName}
                 </span>

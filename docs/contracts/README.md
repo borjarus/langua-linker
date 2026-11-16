@@ -63,6 +63,14 @@ Phase 7 extends the Rust side per command: the DTO deserializes its frozen input
 - `collection_changed` after a committed rating/undo (`cards`, `stats`; undo also `notes`), card action (`cards`, `decks`; a delete also `notes`, `stats`), favorite or link choice (`notes`), and ending a session (`stats`).
 - Known deviation from checklist rule 3, fixed with the next minor version: `startStudy`, `getRatingPreview` and `rateCard` can answer `VALIDATION_FAILED` (paused or finished session, card outside the session, card not studyable) or `DELETED`; `setFavoriteAssociation` and `resolveWordLink` can answer `DELETED` for a deleted note.
 
+## Changes in v1.3 (Phase 14a, CSV and Anki export)
+
+- Minor (additive), [ADR-19](../adr/ADR-19-csv-anki-interop.md). Rust became the DTO source for `ImportInput`, `ImportPreviewDto`, `CommitImportInput`, `ExportDeckInput` and the enums `CsvDelimiter`, `DuplicatePolicy`, `CsvColumnTarget`; new `CsvEncoding`, `ExportFormat`, `ExportLossDto`.
+- `ImportInput` gains optional `encoding` (`UTF-8` | `UTF-16LE` | `UTF-16BE` | `windows-1252`; omitted = detect) and `formulaGuard` (strip the guard `'`). `ImportPreviewDto` gains `newDecks` (decks the import creates). `CsvColumnTarget` gains `guid`, `deck`, `noteType`, `due`, `interval`, `reps`, `lapses`, `position` — a new member in an output enum, accepted as a documented deviation because frontend and backend ship as one app.
+- `ExportDeckInput.format` accepts `apkg` (Anki package, schema 11); optional `formulaGuard` for CSV (omitted = raw). `JobResultDto.export` gains optional `format` and `losses: ExportLossDto[]` (`code`, `count`); a 1.2 result without them still deserializes.
+- Real in Rust: `previewImport`, `commitImport` (job `import`), `exportDeck` (job `export`), and `shareFile` for `{ kind: "export", jobId }` (save dialog). Errors stay within the catalogue: a deleted deck in `exportDeck` is `NOT_FOUND`; `previewImport` answers `VALIDATION_FAILED { field: "file" | "mapping" | "targetDeckId", reason }` for unreadable files and mappings.
+- Transfer screen: encoding picker, formula-guard options, new mapping targets, new decks line; export format choice (CSV / `.apkg`) and the list of what the file leaves out.
+
 ## Changes in v1.2 (Phase 8, Anki converter)
 
 - Minor (additive): new operations `previewDeckImport` (query, `preview_deck_import`, input `{ fileToken }` → `DeckImportPreviewDto`) and `commitDeckImport` (job, `commit_deck_import`, input `{ operationId, previewToken }` → `JobDto` kind `import`, result `JobResultDto::Import`). Errors: `UNSUPPORTED_FORMAT` (`format: "apkg"` for an unconverted Anki file), `VALIDATION_FAILED` (`field: "content"`, `reason`: lint code), `NOT_FOUND` (file token), `DELETED`, `PREVIEW_STALE`, `STORAGE_FULL`, `DB_BUSY`.

@@ -5,6 +5,7 @@
   import { href } from '../../app/routes'
   import EmptyState from '../../components/EmptyState.svelte'
   import Icon from '../../components/Icon.svelte'
+  import RichText from '../../components/RichText.svelte'
   import StatTile from '../../components/StatTile.svelte'
   import { useQuery } from '../../services/query.svelte'
   import QueryView from '../shared/QueryView.svelte'
@@ -130,8 +131,8 @@
           <ul class="again">
             {#each data.againCards as card (card.cardId)}
               <li class="surface">
-                <strong lang={card.direction === 'forward' ? card.targetLanguage : 'pl'} dir="auto">{card.front}</strong>
-                <span class="muted" lang={card.direction === 'forward' ? 'pl' : card.targetLanguage} dir="auto">{card.back}</span>
+                <strong lang={card.direction === 'forward' ? card.targetLanguage : 'pl'} dir="auto"><RichText text={card.front} /></strong>
+                <span class="muted" lang={card.direction === 'forward' ? 'pl' : card.targetLanguage} dir="auto"><RichText text={card.back} /></span>
               </li>
             {/each}
           </ul>

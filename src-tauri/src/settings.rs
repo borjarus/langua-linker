@@ -538,8 +538,8 @@ pub async fn restore_backup(backend: State<'_, Backend>, input: Value) -> Result
     blocking(move || job(backups.restore(input.operation_id, &input.preview_token))).await
 }
 
-/// Saves a copy of a backup outside the app sandbox through the system save dialog (plan Phase
-/// 12 step 13). Exports arrive with CSV export in Phase 14; until then no export job exists.
+/// Saves a copy of a backup (plan Phase 12 step 13) or of a finished export (Phase 14) outside
+/// the app sandbox through the system save dialog.
 #[tauri::command]
 pub async fn share_file<R: Runtime>(
     app: AppHandle<R>,
@@ -550,8 +550,23 @@ pub async fn share_file<R: Runtime>(
     operation_id(&input.operation_id)?;
     let backup_id = match input.target {
         ShareTarget::Backup { backup_id } => backup_id,
-        ShareTarget::Export { .. } => {
-            return Err(app_error(AppError::NotFound { entity: "export" }));
+        ShareTarget::Export { job_id } => {
+            let transfer = backend.collection()?.transfer.clone();
+            let (path, file_name) = blocking(move || {
+                transfer
+                    .export_file(&langualinker_application::jobs::JobId(job_id))
+                    .map_err(|error| match error {
+                        AppError::NotFound { .. } => AppError::NotFound { entity: "export" },
+                        other => other,
+                    })
+                    .map_err(app_error)
+            })
+            .await?;
+            let shared = blocking(move || {
+                crate::files::save_copy(&app, &path, &file_name).map_err(app_error)
+            })
+            .await?;
+            return Ok(ShareResultDto { shared });
         }
     };
     let backups = backend.collection()?.backups.clone();

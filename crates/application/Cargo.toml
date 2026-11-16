@@ -8,6 +8,8 @@ license.workspace = true
 [dependencies]
 langualinker-content = { path = "../content" }
 langualinker-domain = { path = "../domain" }
+langualinker-interop = { path = "../interop", default-features = false }
+chrono.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

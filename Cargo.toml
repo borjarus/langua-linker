@@ -5,6 +5,7 @@ members = [
     "crates/content",
     "crates/contracts",
     "crates/domain",
+    "crates/interop",
     "crates/infrastructure",
     "src-tauri",
 ]

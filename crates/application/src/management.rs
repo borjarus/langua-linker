@@ -118,7 +118,7 @@ fn snippet(field: &'static str, text: &str) -> AppResult<String> {
 }
 
 /// Records that the user changed `field` of a bundled note, so content updates keep the edit.
-fn mark_override(
+pub(crate) fn mark_override(
     tx: &mut dyn Repositories,
     note: NoteId,
     field: &str,

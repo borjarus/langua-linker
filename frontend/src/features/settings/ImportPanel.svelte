@@ -3,9 +3,11 @@
   import {
     CSV_COLUMN_TARGETS,
     CSV_DELIMITERS,
+    CSV_ENCODINGS,
     DUPLICATE_POLICIES,
     type CsvColumnTarget,
     type CsvDelimiter,
+    type CsvEncoding,
     type DuplicatePolicy,
     type ErrorDto,
     type FileHandleDto,
@@ -39,6 +41,8 @@
   let previewError = $state<ErrorDto | null>(null)
   let preview = $state<ImportPreviewDto | null>(null)
   let delimiter = $state<CsvDelimiter | null>(null)
+  let encoding = $state<CsvEncoding | null>(null)
+  let formulaGuard = $state(false)
   let hasHeader = $state(true)
   let mapping = $state<CsvColumnTarget[] | null>(null)
   let duplicatePolicy = $state<DuplicatePolicy>('skip')
@@ -50,7 +54,9 @@
     if (!mapping) return null
     const fronts = mapping.filter((target) => target === 'front').length
     const backs = mapping.filter((target) => target === 'back').length
-    return fronts !== 1 || backs !== 1 ? i18n.t('transfer.mapping.needFrontBack') : null
+    if (fronts !== 1 || backs !== 1) return i18n.t('transfer.mapping.needFrontBack')
+    const chosen = mapping.filter((target) => target !== 'ignore')
+    return new Set(chosen).size !== chosen.length ? i18n.t('transfer.mapping.repeated') : null
   })
   const importable = $derived(preview ? preview.counts.create + preview.counts.update + preview.counts.duplicate : 0)
   const unsupported = $derived(previewError?.code === 'UNSUPPORTED_FORMAT' ? String(previewError.details?.format ?? '') : null)
@@ -65,6 +71,7 @@
       file = picked
       job.reset()
       delimiter = null
+      encoding = null
       hasHeader = true
       mapping = null
       targetDeckId = targetDeckId ?? decks[0]?.id ?? null
@@ -82,7 +89,7 @@
     previewing = true
     previewError = null
     try {
-      preview = await api.previewImport({ fileToken: file.token, delimiter, hasHeader, mapping, duplicatePolicy, targetDeckId })
+      preview = await api.previewImport({ fileToken: file.token, delimiter, hasHeader, mapping, duplicatePolicy, targetDeckId, formulaGuard, ...(encoding ? { encoding } : {}) })
       mapping = preview.mapping
       operationId = newOperationId()
     } catch (caught) {
@@ -95,6 +102,12 @@
 
   function changeDelimiter(value: string) {
     delimiter = value === '' ? null : (value as CsvDelimiter)
+    mapping = null
+    void refresh()
+  }
+
+  function changeEncoding(value: string) {
+    encoding = value === '' ? null : (value as CsvEncoding)
     mapping = null
     void refresh()
   }
@@ -126,8 +139,16 @@
   function rowError(item: ImportRowErrorDto): string {
     const field = String(item.error.details?.field ?? '')
     const reason = String(item.error.details?.reason ?? '')
-    const fieldName = field === 'front' || field === 'back' ? i18n.t(`transfer.mapping.targets.${field}`) : field
-    const message = reason === 'required' ? i18n.t('transfer.rowErrors.required', { field: fieldName }) : reason === 'tooLong' ? i18n.t('transfer.rowErrors.tooLong', { field: fieldName }) : i18n.tDynamic(item.error.messageKey, 'errors.INTERNAL')
+    const target = (CSV_COLUMN_TARGETS as readonly string[]).includes(field) ? (field as CsvColumnTarget) : null
+    const fieldName = target ? i18n.t(`transfer.mapping.targets.${target}`) : field
+    const message =
+      reason === 'required'
+        ? i18n.t('transfer.rowErrors.required', { field: fieldName })
+        : reason === 'tooLong'
+          ? i18n.t('transfer.rowErrors.tooLong', { field: fieldName })
+          : field
+            ? i18n.t('transfer.rowErrors.invalid', { field: fieldName, reason })
+            : i18n.tDynamic(item.error.messageKey, 'errors.INTERNAL')
     return i18n.t('transfer.rowErrors.line', { row: item.row, message })
   }
 </script>
@@ -215,11 +236,25 @@
               <option value="">{i18n.t('transfer.options.newDeck', { name: data.fileName.replace(/\.[^.]+$/u, '') })}</option>
             </select>
           </div>
+          <div class="field">
+            <label for="{ids}-encoding">{i18n.t('transfer.options.encoding')}</label>
+            <select id="{ids}-encoding" class="input" value={encoding ?? ''} disabled={job.active} onchange={(event) => changeEncoding(event.currentTarget.value)}>
+              <option value="">{i18n.t('transfer.options.encodingDetected', { encoding: data.encoding })}</option>
+              {#each CSV_ENCODINGS as option (option)}
+                <option value={option}>{option}</option>
+              {/each}
+            </select>
+          </div>
         </div>
         <label class="choice">
           <input type="checkbox" checked={hasHeader} disabled={job.active} onchange={(event) => { hasHeader = event.currentTarget.checked; mapping = null; void refresh() }} />
           {i18n.t('transfer.options.header')}
         </label>
+        <label class="choice">
+          <input type="checkbox" checked={formulaGuard} disabled={job.active} onchange={(event) => { formulaGuard = event.currentTarget.checked; void refresh() }} />
+          {i18n.t('transfer.options.formulaGuard')}
+        </label>
+        {#if data.newDecks.length > 0}<p class="muted">{i18n.t('transfer.preview.newDecks', { names: data.newDecks.join(', ') })}</p>{/if}
 
         <fieldset class="group">
           <legend>{i18n.t('transfer.mapping.title')}</legend>
@@ -239,6 +274,7 @@
             {/each}
           </ul>
           {#if mappingProblem}<p class="invalid" role="alert">{mappingProblem}</p>{/if}
+          {#if mapping?.includes('due')}<p class="muted hint">{i18n.t('transfer.preview.scheduling')}</p>{/if}
         </fieldset>
 
         <fieldset class="group">

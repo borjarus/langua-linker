@@ -7,6 +7,7 @@
   import Dialog from '../../components/Dialog.svelte'
   import Icon from '../../components/Icon.svelte'
   import LinkedText from '../../components/LinkedText.svelte'
+  import RichText from '../../components/RichText.svelte'
   import type { TranslationKey } from '../../locales/types'
   import { newOperationId } from '../../services/operationId'
   import { useQuery } from '../../services/query.svelte'
@@ -168,10 +169,10 @@
           {#if sentence && data.capabilities.wordLinks}
             <LinkedText text={data.note.front} links={data.wordLinks} lang={data.targetLanguage} onselect={(link) => (picking = link)} />
           {:else}
-            <span dir="auto">{data.note.front}</span>
+            <RichText text={data.note.front} />
           {/if}
         </p>
-        <p dir="auto" lang="pl">{data.note.back}</p>
+        <p dir="auto" lang="pl"><RichText text={data.note.back} /></p>
         <div class="row">
           <Chip label={i18n.t(`editor.noteTypes.${data.note.noteTypeKind}`)} />
           {#each data.note.tags as tag (tag)}<Chip label={tag} tone="info" icon="tag" />{/each}

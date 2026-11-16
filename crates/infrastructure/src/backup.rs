@@ -169,7 +169,7 @@ pub struct RestorePreview {
 }
 
 /// Maps a file-system failure; `reason` names what was being accessed (never a path).
-fn io_error(error: &io::Error, reason: &'static str) -> AppError {
+pub(crate) fn io_error(error: &io::Error, reason: &'static str) -> AppError {
     match error.kind() {
         io::ErrorKind::StorageFull | io::ErrorKind::QuotaExceeded => AppError::StorageFull,
         io::ErrorKind::PermissionDenied | io::ErrorKind::ReadOnlyFilesystem => {
@@ -427,6 +427,8 @@ pub struct BackupDirs {
     pub staging: PathBuf,
     /// Media files of the collection (none yet; deleted with everything).
     pub media: PathBuf,
+    /// Finished deck exports waiting to be shared (Phase 14).
+    pub exports: PathBuf,
 }
 
 impl BackupDirs {
@@ -435,6 +437,7 @@ impl BackupDirs {
             backups: data_dir.join("backups"),
             staging: data_dir.join("staging"),
             media: data_dir.join("media"),
+            exports: data_dir.join("exports"),
         }
     }
 }

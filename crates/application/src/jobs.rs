@@ -239,6 +239,40 @@ impl<U: UnitOfWork> JobContext<U> {
         self.cancel.committing.store(true, Ordering::SeqCst);
         Ok(())
     }
+
+    /// A handle that checks for a cancel from inside a write transaction (where
+    /// [`JobContext::progress`] cannot persist): returning its `Cancelled` rolls the work back.
+    pub fn cancel_token(&self) -> CancelToken {
+        CancelToken(self.cancel.clone())
+    }
+}
+
+/// See [`JobContext::cancel_token`].
+#[derive(Clone)]
+pub struct CancelToken(Arc<CancelState>);
+
+impl CancelToken {
+    /// A token that is never cancelled (tests, work outside a job).
+    pub fn never() -> Self {
+        Self(Arc::default())
+    }
+
+    pub fn check(&self) -> AppResult<()> {
+        let cancelled =
+            self.0.requested.load(Ordering::SeqCst) && !self.0.committing.load(Ordering::SeqCst);
+        if cancelled {
+            Err(AppError::Cancelled)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Same as [`JobContext::begin_commit`]; call it as the last step inside the transaction.
+    pub fn begin_commit(&self) -> AppResult<()> {
+        self.check()?;
+        self.0.committing.store(true, Ordering::SeqCst);
+        Ok(())
+    }
 }
 
 /// Work of a job: returns the kind-specific result JSON (or `None`).

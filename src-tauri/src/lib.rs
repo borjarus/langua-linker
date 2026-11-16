@@ -9,6 +9,7 @@ mod files;
 mod manage;
 mod settings;
 mod study;
+mod transfer;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -118,6 +119,9 @@ fn configure<R: Runtime>(
         commands::pick_file,
         commands::preview_deck_import,
         commands::commit_deck_import,
+        transfer::preview_import,
+        transfer::commit_import,
+        transfer::export_deck,
         study::start_study,
         study::resume_study,
         study::update_study_session,

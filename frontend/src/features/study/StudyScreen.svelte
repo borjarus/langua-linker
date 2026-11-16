@@ -18,6 +18,8 @@
   import { AssociationGenerator } from './associationGenerator.svelte'
   import CardActions, { type HidingAction } from './CardActions.svelte'
   import SpeakButton from './SpeakButton.svelte'
+  import RichText from '../../components/RichText.svelte'
+  import { stripInlineMarkdown } from '../../services/markdown'
   import { StudyController } from './studyController.svelte'
   import WordSheet from './WordSheet.svelte'
 
@@ -236,20 +238,20 @@
           {#if card.capabilities.wordLinks && targetSide === 'front'}
             <LinkedText text={card.front} links={card.wordLinks} lang={card.targetLanguage} onselect={(link) => (activeLink = link)} />
           {:else}
-            <span dir="auto">{card.front}</span>
+            <RichText text={card.front} />
           {/if}
         </div>
-        {#if card.capabilities.tts && targetSide === 'front'}<SpeakButton text={card.front} lang={card.targetLanguage} />{/if}
+        {#if card.capabilities.tts && targetSide === 'front'}<SpeakButton text={stripInlineMarkdown(card.front)} lang={card.targetLanguage} />{/if}
         {#if study.phase !== 'question'}
           <hr />
           <div class="back" tabindex="-1" bind:this={answerEl} lang={card.direction === 'forward' ? 'pl' : card.targetLanguage}>
             {#if card.capabilities.wordLinks && targetSide === 'back'}
               <LinkedText text={card.back} links={card.wordLinks} lang={card.targetLanguage} onselect={(link) => (activeLink = link)} />
             {:else}
-              <span dir="auto">{card.back}</span>
+              <RichText text={card.back} />
             {/if}
           </div>
-          {#if card.capabilities.tts && targetSide === 'back'}<SpeakButton text={card.back} lang={card.targetLanguage} />{/if}
+          {#if card.capabilities.tts && targetSide === 'back'}<SpeakButton text={stripInlineMarkdown(card.back)} lang={card.targetLanguage} />{/if}
         {/if}
       </section>
 

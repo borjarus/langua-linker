@@ -14,7 +14,7 @@ const job = (overrides: Partial<JobDto> = {}): JobDto => ({
 describe('JobTracker', () => {
   it('drops foreign and out-of-order events and reads the result from getJobStatus', async () => {
     let emit: (event: JobEventDto) => void = () => {}
-    const final = job({ status: 'succeeded', sequence: 3, result: { type: 'export', fileName: 'a.csv', cardCount: 2 } })
+    const final = job({ status: 'succeeded', sequence: 3, result: { type: 'export', fileName: 'a.csv', cardCount: 2, losses: [] } })
     const api = {
       onJobEvent: (listener: (event: JobEventDto) => void) => ((emit = listener), () => {}),
       getJobStatus: vi.fn(async () => final),
