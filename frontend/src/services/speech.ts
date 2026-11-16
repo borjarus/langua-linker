@@ -1,3 +1,4 @@
+import type { PlatformBridge } from '../api/platform'
 import type { Unsubscribe } from '../api/types'
 
 /** `unsupported`: no speech engine at all; `noVoice`: an engine without a voice for the language. */
@@ -5,8 +6,8 @@ export type SpeechAvailability = 'available' | 'noVoice' | 'unsupported'
 
 /**
  * Text-to-speech port. Not part of `AppApi`: audio is a platform adapter (plan §3, Phase 15), and
- * the mock never simulates it. Until the native plugin exists, the WebView engine is used where
- * present (ADR-12: iOS WKWebView yes, Android WebView no).
+ * the mock never simulates it. Android uses the native engine (`NativePlugin`, ADR-20) because its
+ * WebView has no Web Speech API; iOS and desktop use the WebView engine (ADR-12).
  */
 export interface SpeechService {
   availability(lang: string): SpeechAvailability
@@ -50,6 +51,67 @@ export function createWebSpeechService(
       if (!synthesis) return () => {}
       synthesis.addEventListener('voiceschanged', listener)
       return () => synthesis.removeEventListener('voiceschanged', listener)
+    },
+  }
+}
+
+/** Languages the app teaches; their native status is asked for once at start. */
+export const SPEECH_LANGUAGES = ['de', 'en', 'es'] as const
+
+/**
+ * Native engine first, WebView engine as the proven fallback (plan Phase 15 step 10). The native
+ * status arrives asynchronously: until it does, the fallback answers, and `onChange` fires when
+ * the native answer changes the picture.
+ */
+export function createNativeSpeechService(bridge: PlatformBridge, fallback: SpeechService): SpeechService {
+  let engine: boolean | null = null
+  const voices = new Map<string, boolean>()
+  const asked = new Set<string>()
+  const listeners = new Set<() => void>()
+  const notify = () => listeners.forEach((listener) => listener())
+
+  const ask = (lang: string) => {
+    if (asked.has(lang) || engine === false) return
+    asked.add(lang)
+    bridge
+      .speechStatus(lang)
+      .then((status) => {
+        engine = status.engine
+        voices.set(lang, status.voice)
+        notify()
+      })
+      .catch(() => {
+        engine = false
+        notify()
+      })
+  }
+  SPEECH_LANGUAGES.forEach(ask)
+
+  const native = (lang: string) => engine === true && voices.has(lang)
+  return {
+    availability(lang) {
+      ask(lang)
+      if (native(lang)) return voices.get(lang) ? 'available' : 'noVoice'
+      return fallback.availability(lang)
+    },
+    speak(text, lang, rate = 1) {
+      if (native(lang)) {
+        void bridge.speak(text, lang, Math.min(1.5, Math.max(0.5, rate))).catch(() => notify())
+      } else {
+        fallback.speak(text, lang, rate)
+      }
+    },
+    stop() {
+      if (engine === true) void bridge.stopSpeech().catch(() => {})
+      fallback.stop()
+    },
+    onChange(listener) {
+      listeners.add(listener)
+      const unsubscribe = fallback.onChange(listener)
+      return () => {
+        listeners.delete(listener)
+        unsubscribe()
+      }
     },
   }
 }

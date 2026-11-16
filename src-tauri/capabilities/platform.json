@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "platform",
+  "description": "Phase 15 platform adapters outside AppApi (ADR-20): native text to speech and the launch URL of a tapped reminder. Every variant.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-speech-status",
+    "allow-speak",
+    "allow-stop-speech",
+    "allow-take-launch-url"
+  ]
+}

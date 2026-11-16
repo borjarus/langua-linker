@@ -26,6 +26,7 @@ use langualinker_contracts::dto::{
 };
 use langualinker_domain::{DeckConfigId, DeckId, TimestampMs};
 use langualinker_infrastructure::backup::{self, BackupInfo};
+use serde::Deserialize;
 use serde_json::Value;
 use tauri::{AppHandle, Runtime, State};
 
@@ -33,6 +34,7 @@ use crate::backend::{Backend, iso, job_dto};
 use crate::commands::{blocking, operation_id, parse_input};
 use crate::content::{domain_target_language, target_language};
 use crate::files::PickedFiles;
+use crate::reminders;
 use crate::study::{app_error, emit, id, text_id};
 
 const OP_UPDATE_SETTINGS: &str = "updateSettings";
@@ -198,7 +200,7 @@ fn settings_dto(settings: Settings, has_key: bool, quota: llm::Quota) -> Setting
         time_zone: settings.time_zone,
         day_cutoff_hour: settings.day_cutoff_hour,
         default_preset_id: text_id(settings.default_preset_id.0),
-        // Local notifications arrive in Phase 15; until then the screen offers no prompt.
+        // Filled in by the commands from the OS (`reminders::permission`).
         notifications: PermissionState::Unsupported,
         reminder_time: doc.reminder_time,
         tts_enabled: doc.tts_enabled,
@@ -300,15 +302,69 @@ pub async fn get_stats(backend: State<'_, Backend>, input: Value) -> Result<Stat
 // ---------------------------------------------------------------- settings
 
 #[tauri::command]
-pub async fn get_settings(backend: State<'_, Backend>) -> Result<SettingsDto, ErrorDto> {
+pub async fn get_settings<R: Runtime>(
+    app: AppHandle<R>,
+    backend: State<'_, Backend>,
+) -> Result<SettingsDto, ErrorDto> {
     let collection = backend.collection()?;
     let (db, secrets) = (collection.db.clone(), collection.secrets.clone());
     let now = collection.clock.now();
-    blocking(move || read_settings(&db, secrets.as_ref(), now)).await
+    blocking(move || with_permission(&app, read_settings(&db, secrets.as_ref(), now))).await
+}
+
+/// The notification permission lives in the OS, not in the settings document.
+fn with_permission<R: Runtime>(
+    app: &AppHandle<R>,
+    settings: Result<SettingsDto, ErrorDto>,
+) -> Result<SettingsDto, ErrorDto> {
+    settings.map(|mut settings| {
+        settings.notifications = reminders::permission(app);
+        settings
+    })
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct RequestPermissionInput {
+    operation_id: String,
+}
+
+/// Asks the OS for the notification permission (Phase 15 step 3). The OS shows its prompt at
+/// most once; after a refusal the answer stays `denied` and the screen points to the system
+/// settings. A grant schedules the reminders right away.
+#[tauri::command]
+pub async fn request_notification_permission<R: Runtime>(
+    app: AppHandle<R>,
+    backend: State<'_, Backend>,
+    input: Value,
+) -> Result<SettingsDto, ErrorDto> {
+    let input: RequestPermissionInput = parse_input(input)?;
+    operation_id(&input.operation_id)?;
+    let collection = backend.collection()?;
+    let (db, secrets) = (collection.db.clone(), collection.secrets.clone());
+    let worker = app.clone();
+    let state = blocking(move || Ok(reminders::request_permission(&worker))).await?;
+    if state == PermissionState::Granted {
+        reminders::sync_in_background(&app);
+    }
+    emit(
+        collection,
+        &[CollectionScope::Settings],
+        collection.clock.now(),
+    );
+    let now = collection.clock.now();
+    blocking(move || {
+        read_settings(&db, secrets.as_ref(), now).map(|mut settings| {
+            settings.notifications = state;
+            settings
+        })
+    })
+    .await
 }
 
 #[tauri::command]
-pub async fn update_settings(
+pub async fn update_settings<R: Runtime>(
+    app: AppHandle<R>,
     backend: State<'_, Backend>,
     files: State<'_, PickedFiles>,
     input: Value,
@@ -411,11 +467,14 @@ pub async fn update_settings(
             ]);
         }
         emit(collection, &scopes, collection.clock.now());
+        // Reminder time, language, goal or calendar may have changed the reminder plan.
+        reminders::sync_in_background(&app);
     }
     let collection_db = collection.db.clone();
     let secrets = collection.secrets.clone();
     let now = collection.clock.now();
-    blocking(move || read_settings(&collection_db, secrets.as_ref(), now)).await
+    blocking(move || with_permission(&app, read_settings(&collection_db, secrets.as_ref(), now)))
+        .await
 }
 
 // ---------------------------------------------------------------- reset

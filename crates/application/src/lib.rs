@@ -10,6 +10,7 @@ pub mod learning;
 pub mod llm;
 pub mod management;
 pub mod ports;
+pub mod reminders;
 pub mod repositories;
 pub mod settings;
 pub mod stats;

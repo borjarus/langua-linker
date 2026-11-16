@@ -168,7 +168,10 @@ describe('session summary', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Daily reminder' })
     await user.click(within(dialog).getByRole('button', { name: 'Save reminder' }))
     expect(await screen.findByText(/Reminder set for 19:00/)).toBeInTheDocument()
-    expect((await services.api.getSettings()).reminderTime).toBe('19:00')
+    const settings = await services.api.getSettings()
+    expect(settings.reminderTime).toBe('19:00')
+    // The OS permission is asked for right after the learner chose a time (Phase 15 step 3).
+    expect(settings.notifications).toBe('granted')
     expect(screen.queryByRole('region', { name: 'Keep the habit' })).not.toBeInTheDocument()
     stop()
   })

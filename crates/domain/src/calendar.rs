@@ -110,6 +110,31 @@ impl StudyCalendar {
         TimestampMs(local.and_utc().timestamp_millis())
     }
 
+    /// Local calendar date of an instant (days since 1970-01-01), ignoring the cutoff.
+    pub fn local_date(&self, at: TimestampMs) -> i64 {
+        (self.local(at).date() - epoch_date()).num_days()
+    }
+
+    /// The instant at which the local clock shows `minutes` after midnight on local date `date`
+    /// (days since 1970-01-01). A time skipped by DST moves to the first existing minute after
+    /// it; a time that occurs twice resolves to the earlier one.
+    pub fn local_instant(&self, date: i64, minutes: u32) -> TimestampMs {
+        let mut local = (epoch_date() + Duration::days(date))
+            .and_hms_opt(0, 0, 0)
+            .expect("midnight exists")
+            + Duration::minutes(i64::from(minutes.min(24 * 60 - 1)));
+        for _ in 0..(24 * 60) {
+            match self.zone.from_local_datetime(&local) {
+                LocalResult::Single(at) => return TimestampMs(at.timestamp_millis()),
+                LocalResult::Ambiguous(earlier, _) => {
+                    return TimestampMs(earlier.timestamp_millis());
+                }
+                LocalResult::None => local += Duration::minutes(1),
+            }
+        }
+        TimestampMs(local.and_utc().timestamp_millis())
+    }
+
     /// First instant of the following study day.
     pub fn day_end(&self, day: StudyDay) -> TimestampMs {
         self.day_start(day.plus(1))

@@ -9,8 +9,9 @@
   import { useQuery } from '../../services/query.svelte'
 
   /**
-   * Offered after the first completed session. It only stores the reminder time; the native
-   * notification adapter asks for the OS permission later (Phase 15), the GUI never fakes it.
+   * Offered after the first completed session (plan Phase 15 step 3): it stores the reminder time
+   * and only then asks for the OS permission, so the prompt has a reason the learner just chose.
+   * Not offered where the device cannot schedule notifications or the learner already refused.
    */
   const { api, i18n, queries, toasts } = useServices()
   const ids = $props.id()
@@ -21,17 +22,19 @@
   let saving = $state(false)
   let error = $state<ErrorDto | null>(null)
 
-  const offered = (current: SettingsDto) => !dismissed && current.reminderTime === null && current.notifications !== 'denied'
+  const offered = (current: SettingsDto) => !dismissed && current.reminderTime === null && current.notifications !== 'denied' && current.notifications !== 'unsupported'
 
   async function save(current: SettingsDto) {
     if (saving) return
     saving = true
     error = null
     try {
-      await api.updateSettings({ operationId: newOperationId(), expectedVersion: current.version, patch: { reminderTime: time } })
+      let saved = await api.updateSettings({ operationId: newOperationId(), expectedVersion: current.version, patch: { reminderTime: time } })
+      if (saved.notifications === 'prompt') saved = await api.requestNotificationPermission({ operationId: newOperationId() })
       open = false
       dismissed = true
-      toasts.show(i18n.t('summary.reminderSaved', { time }), 'success')
+      if (saved.notifications === 'granted') toasts.show(i18n.t('summary.reminderSaved', { time }), 'success')
+      else toasts.show(i18n.t('summary.reminderSavedNoPermission', { time }), 'info')
     } catch (caught) {
       error = toErrorDto(caught)
     } finally {

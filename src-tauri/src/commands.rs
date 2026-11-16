@@ -90,6 +90,7 @@ pub const IMPLEMENTED: &[&str] = &[
     "validate_restore",
     "restore_backup",
     "share_file",
+    "request_notification_permission",
     "generate_association",
     "set_ai_api_key",
 ];
@@ -500,8 +501,9 @@ mod tests {
 
     #[test]
     fn pending_pairs_a_command_with_its_operation_name() {
+        // Since Phase 15 every catalogue command has a backend; the pairing still holds if one
+        // is ever added ahead of its phase.
         let pending = pending();
-        assert!(!pending.is_empty());
         let catalogue: Value = serde_json::from_str(CATALOGUE).unwrap();
         for (command, operation) in pending {
             assert_eq!(

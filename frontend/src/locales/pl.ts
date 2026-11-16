@@ -500,7 +500,8 @@ export const pl: LocaleResource = {
     reminderTime: 'Godzina przypomnienia',
     reminderSave: 'Zapisz przypomnienie',
     reminderLater: 'Nie teraz',
-    reminderSaved: 'Przypomnienie ustawione na {{time}}. O zgodę na powiadomienia poprosi aplikacja natywna.',
+    reminderSaved: 'Przypomnienie ustawione na {{time}}.',
+    reminderSavedNoPermission: 'Zapisano godzinę {{time}}. Bez zgody na powiadomienia przypomnienie się nie pojawi; możesz ją włączyć w ustawieniach systemu.',
   },
   card: {
     note: 'Notatka',

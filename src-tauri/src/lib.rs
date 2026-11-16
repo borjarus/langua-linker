@@ -7,6 +7,8 @@ mod content;
 mod diagnostics;
 mod files;
 mod manage;
+mod native;
+mod reminders;
 mod settings;
 mod study;
 mod transfer;
@@ -159,6 +161,11 @@ fn configure<R: Runtime>(
         settings::validate_restore,
         settings::restore_backup,
         settings::share_file,
+        settings::request_notification_permission,
+        native::speech_status,
+        native::speak,
+        native::stop_speech,
+        native::take_launch_url,
         ai::generate_association,
         ai::set_ai_api_key,
         diagnostics::probe_secret_store,
@@ -178,14 +185,20 @@ fn configure<R: Runtime>(
             app.manage(files::PickedFiles::default());
             if diagnostics {
                 start_outbox_ticker(app.handle().clone());
+                // The reminder window rolls forward on every start (Phase 15).
+                reminders::sync_in_background(app.handle());
             }
             announce_ready(app.handle())?;
             Ok(())
         })
-        .on_window_event(|window, event| {
-            if matches!(event, tauri::WindowEvent::Focused(true)) {
-                foreground(window.app_handle());
-            }
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::Focused(true) => foreground(window.app_handle()),
+            // Leaving the app: the reminders follow today's progress (Phase 15 step 9).
+            #[cfg(mobile)]
+            tauri::WindowEvent::Suspended => reminders::sync_in_background(window.app_handle()),
+            #[cfg(mobile)]
+            tauri::WindowEvent::Resumed => foreground(window.app_handle()),
+            _ => {}
         })
         .invoke_handler(move |invoke| match commands::reject_pending(invoke) {
             Some(invoke) => generated(invoke),
@@ -233,6 +246,8 @@ fn foreground<R: Runtime>(app: &AppHandle<R>) {
         && let Ok(collection) = backend.collection()
     {
         backend::resume_outbox(collection);
+        // The rolling reminder window moves on (and follows a restore, zone or permission change).
+        reminders::sync_in_background(app);
     }
     let last = LAST_CHECK.load(Ordering::Relaxed);
     if now - last < 3_600_000
@@ -255,7 +270,8 @@ pub fn run() {
     let builder = Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_notification::init());
+        .plugin(tauri_plugin_notification::init())
+        .plugin(native::init());
     configure(builder, true, open_backend)
         .build(tauri::generate_context!())
         .expect("error while building LanguaLinker")
@@ -1448,12 +1464,22 @@ mod tests {
     fn diagnostics_capability_is_enabled_only_in_dev() {
         let enabled = |json: &str| config(json)["app"]["security"]["capabilities"].clone();
         let release = enabled(include_str!("../tauri.conf.json"));
-        assert_eq!(release, serde_json::json!(["default"]));
+        assert_eq!(release, serde_json::json!(["default", "platform"]));
         // Beta inherits the release list; only the dev overlay adds diagnostics.
         assert!(enabled(include_str!("../tauri.beta.conf.json")).is_null());
         assert_eq!(
             enabled(include_str!("../tauri.dev.conf.json")),
-            serde_json::json!(["default", "diagnostics"])
+            serde_json::json!(["default", "platform", "diagnostics"])
+        );
+        let platform = config(include_str!("../capabilities/platform.json"));
+        assert_eq!(
+            platform["permissions"],
+            serde_json::json!([
+                "allow-speech-status",
+                "allow-speak",
+                "allow-stop-speech",
+                "allow-take-launch-url"
+            ])
         );
         let diagnostics = config(include_str!("../capabilities/diagnostics.json"));
         assert_eq!(
@@ -1491,6 +1517,47 @@ mod tests {
             let message = denied.expect_err(command).to_string();
             assert!(message.contains("not allowed"), "{command}: {message}");
         }
+    }
+
+    #[test]
+    fn platform_adapters_answer_without_a_native_engine_on_desktop() {
+        let app = app();
+        let window = main_window(&app);
+        let status = invoke(
+            &window,
+            "speech_status",
+            serde_json::json!({ "input": { "lang": "de-DE" } }),
+        )
+        .unwrap();
+        assert_eq!(
+            status,
+            serde_json::json!({ "engine": false, "voice": false, "offline": false })
+        );
+        let bad = invoke(
+            &window,
+            "speech_status",
+            serde_json::json!({ "input": { "lang": "de;x" } }),
+        );
+        assert_eq!(error_code(bad.unwrap_err()), ErrorCode::ValidationFailed);
+        let rate = invoke(
+            &window,
+            "speak",
+            serde_json::json!({ "input": { "text": "Hallo", "lang": "de-DE", "rate": 3.0 } }),
+        );
+        assert_eq!(error_code(rate.unwrap_err()), ErrorCode::ValidationFailed);
+        assert!(invoke(&window, "stop_speech", serde_json::json!({})).is_ok());
+        let url = invoke(&window, "take_launch_url", serde_json::json!({})).unwrap();
+        assert!(url.is_null());
+        // Desktop cannot schedule notifications: the permission stays `unsupported`.
+        let settings = invoke(
+            &window,
+            "request_notification_permission",
+            serde_json::json!({ "input": { "operationId": "op-permission-1" } }),
+        )
+        .unwrap();
+        assert_eq!(settings["notifications"], "unsupported");
+        let settings = invoke(&window, "get_settings", serde_json::json!({})).unwrap();
+        assert_eq!(settings["notifications"], "unsupported");
     }
 
     /// Answers every call with a fixed association; a card containing "offline" never leaves

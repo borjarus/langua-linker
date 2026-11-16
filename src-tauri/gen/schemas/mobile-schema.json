@@ -2307,10 +2307,34 @@
           "markdownDescription": "Enables the share_file command without any pre-configured scope."
         },
         {
+          "description": "Enables the speak command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-speak",
+          "markdownDescription": "Enables the speak command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the speech_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-speech-status",
+          "markdownDescription": "Enables the speech_status command without any pre-configured scope."
+        },
+        {
           "description": "Enables the start_study command without any pre-configured scope.",
           "type": "string",
           "const": "allow-start-study",
           "markdownDescription": "Enables the start_study command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the stop_speech command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-stop-speech",
+          "markdownDescription": "Enables the stop_speech command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the take_launch_url command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-take-launch-url",
+          "markdownDescription": "Enables the take_launch_url command without any pre-configured scope."
         },
         {
           "description": "Enables the undo_review command without any pre-configured scope.",
@@ -2655,10 +2679,34 @@
           "markdownDescription": "Denies the share_file command without any pre-configured scope."
         },
         {
+          "description": "Denies the speak command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-speak",
+          "markdownDescription": "Denies the speak command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the speech_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-speech-status",
+          "markdownDescription": "Denies the speech_status command without any pre-configured scope."
+        },
+        {
           "description": "Denies the start_study command without any pre-configured scope.",
           "type": "string",
           "const": "deny-start-study",
           "markdownDescription": "Denies the start_study command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the stop_speech command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-stop-speech",
+          "markdownDescription": "Denies the stop_speech command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the take_launch_url command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-take-launch-url",
+          "markdownDescription": "Denies the take_launch_url command without any pre-configured scope."
         },
         {
           "description": "Denies the undo_review command without any pre-configured scope.",

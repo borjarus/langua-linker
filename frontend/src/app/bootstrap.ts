@@ -1,13 +1,16 @@
 import type { AppApi } from '../api/appApi'
+import { createPlatformBridge, type PlatformBridge } from '../api/platform'
 import { createTauriAppApi } from '../api/tauriAppApi'
 import type { ThemePreference, UiLanguage } from '../api/types'
 import type { DemoControls } from '../demo/scenarios'
 import { I18n, UI_LANGUAGES } from '../services/i18n.svelte'
+import { newOperationId } from '../services/operationId'
 import { QueryClient } from '../services/queryClient'
-import { createWebSpeechService } from '../services/speech'
+import { createNativeSpeechService, createWebSpeechService } from '../services/speech'
 import { ThemeController, type TextScale } from '../services/theme.svelte'
 import { ToastController } from '../services/toasts.svelte'
 import type { AppServices } from './context'
+import { watchLaunchLinks } from './launchLink'
 import { APP_PROFILE, storageKey, type AppProfile } from './profile'
 import { Router } from './router.svelte'
 
@@ -47,10 +50,24 @@ export function savePreference(profile: AppProfile, key: keyof LocalPreferences,
   }
 }
 
+/** Stores the shown UI language in the settings when they differ; a failure only logs. */
+export async function syncUiLanguage(services: Pick<AppServices, 'api' | 'i18n'>): Promise<boolean> {
+  try {
+    const settings = await services.api.getSettings()
+    if (settings.uiLanguage === services.i18n.language) return false
+    await services.api.updateSettings({ operationId: newOperationId(), expectedVersion: settings.version, patch: { uiLanguage: services.i18n.language } })
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** Builds one isolated service graph for the root component. */
 export async function createServices(profile: AppProfile = APP_PROFILE): Promise<{ services: AppServices; start: () => () => void }> {
   let api: AppApi
   let demo: DemoControls | null = null
+  // Native adapters exist only next to the real backend; the browser demo never simulates them.
+  let platform: PlatformBridge | null = null
   if (DEMO_ADAPTER_AVAILABLE && profile === 'demo') {
     const { createDemoApi } = await import('../demo/index')
     const created = createDemoApi()
@@ -59,6 +76,7 @@ export async function createServices(profile: AppProfile = APP_PROFILE): Promise
     document.documentElement.dataset.demo = created.marker
   } else {
     api = createTauriAppApi()
+    platform = createPlatformBridge()
   }
 
   const preferences = readPreferences(profile)
@@ -76,7 +94,7 @@ export async function createServices(profile: AppProfile = APP_PROFILE): Promise
     queries: new QueryClient(),
     theme,
     toasts: new ToastController(),
-    speech: createWebSpeechService(),
+    speech: platform ? createNativeSpeechService(platform, createWebSpeechService()) : createWebSpeechService(),
     demo,
   }
 
@@ -84,7 +102,20 @@ export async function createServices(profile: AppProfile = APP_PROFILE): Promise
     const stopRouter = services.router.start()
     const stopTheme = services.theme.start()
     const stopCollection = services.api.onCollectionChanged(() => services.queries.invalidate())
+    const stopLinks = platform ? watchLaunchLinks(platform, services.router) : () => {}
+    // The shown language starts from the device language; native text (reminders) follows the
+    // stored one, so the first start stores what the learner actually sees (Phase 15).
+    if (platform) void syncUiLanguage(services)
+    // Speech never continues in the background (plan Phase 15 step 9). Back in the foreground the
+    // settings are read again: the notification permission may have changed in the system settings.
+    const onHidden = () => {
+      if (document.visibilityState === 'hidden') services.speech.stop()
+      else services.queries.invalidate(['settings'])
+    }
+    document.addEventListener('visibilitychange', onHidden)
     return () => {
+      document.removeEventListener('visibilitychange', onHidden)
+      stopLinks()
       stopCollection()
       stopTheme()
       stopRouter()

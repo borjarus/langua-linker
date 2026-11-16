@@ -454,7 +454,8 @@ export const en = {
     reminderTime: 'Reminder time',
     reminderSave: 'Save reminder',
     reminderLater: 'Not now',
-    reminderSaved: 'Reminder set for {{time}}. The notification permission is requested by the native app.',
+    reminderSaved: 'Reminder set for {{time}}.',
+    reminderSavedNoPermission: 'Reminder time {{time}} saved. Without the notification permission no reminder appears; you can allow it in the system settings.',
   },
   card: {
     note: 'Note',
