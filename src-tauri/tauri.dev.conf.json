@@ -9,7 +9,7 @@
   },
   "app": {
     "security": {
-      "capabilities": ["default", "platform", "diagnostics"]
+      "capabilities": ["default", "platform", "metrics", "diagnostics"]
     }
   },
   "bundle": {

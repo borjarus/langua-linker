@@ -51,7 +51,7 @@ describe('every screen runs on the production adapter unchanged', () => {
     ['#/stats', en.routes.stats, 'True retention — mature cards'],
     ['#/settings', en.routes.settings, 'App language'],
     ['#/settings/ai', en.routes.settingsAi, 'Allow generating associations with AI'],
-    ['#/settings/privacy', en.routes.settingsPrivacy, 'Share anonymous usage statistics'],
+    ['#/settings/privacy', en.routes.settingsPrivacy, 'Collect usage statistics on this device'],
     ['#/settings/about', en.routes.settingsAbout, 'Interface contract'],
     ['#/settings/transfer', en.routes.settingsTransfer, 'Choose a CSV file'],
     ['#/settings/backup', en.routes.settingsBackup, 'backups'],

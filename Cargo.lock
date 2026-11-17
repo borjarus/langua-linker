@@ -2372,6 +2372,7 @@ dependencies = [
  "langualinker-content",
  "langualinker-domain",
  "langualinker-interop",
+ "proptest",
  "reqwest",
  "rusqlite",
  "rustls",

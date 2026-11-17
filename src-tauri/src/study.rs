@@ -10,10 +10,12 @@ use langualinker_application::learning::{
 };
 use langualinker_application::llm::{self, Generation, GenerationState};
 use langualinker_application::ports::CollectionScope;
+use langualinker_application::ports::Telemetry;
 use langualinker_application::repositories::{SessionStatus, UnitOfWork};
 use langualinker_application::study::{
     self, IntervalPreview, RateCard, RatingPreview, ReviewedCard, SessionAction, StartStudy,
 };
+use langualinker_application::telemetry::MetricEvent;
 use langualinker_contracts::ErrorDto;
 use langualinker_contracts::dto::{
     AssociationDto, AssociationProvenance, AssociationStatus, CardActionInput, CardActionKind,
@@ -471,6 +473,11 @@ pub async fn update_study_session(
     })
     .await?;
     if action == SessionAction::End {
+        let session = &screen.view.session;
+        collection.telemetry.record(MetricEvent::SessionEnded {
+            reviews: screen.view.reviewed_count,
+            duration_ms: u32::try_from((now.0 - session.started_at.0).max(0)).unwrap_or(u32::MAX),
+        });
         emit(collection, &[CollectionScope::Stats], now);
     }
     Ok(session_dto(screen))
@@ -510,6 +517,7 @@ pub async fn rate_card(
         rating: domain_rating(input.rating),
         answer_ms: i64::from(input.answer_ms),
     };
+    let rating = u8::try_from(rate.rating.db_code()).unwrap_or(0);
     let collection = backend.collection()?;
     let (db, now) = (collection.db.clone(), collection.clock.now());
     let (outcome, screen) = blocking(move || {
@@ -522,6 +530,7 @@ pub async fn rate_card(
     })
     .await?;
     if !outcome.replayed {
+        collection.telemetry.record(MetricEvent::Rated { rating });
         emit(
             collection,
             &[CollectionScope::Cards, CollectionScope::Stats],
@@ -555,6 +564,7 @@ pub async fn undo_review(
     })
     .await?;
     if !outcome.replayed {
+        collection.telemetry.record(MetricEvent::Undone);
         emit(
             collection,
             &[
@@ -684,6 +694,7 @@ pub async fn set_favorite_association(
         .map_err(app_error)
     })
     .await?;
+    collection.telemetry.record(MetricEvent::Favorited);
     emit(collection, &[CollectionScope::Notes], now);
     Ok(associations_dto(associations, generations))
 }

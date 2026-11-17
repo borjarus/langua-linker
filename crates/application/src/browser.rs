@@ -136,10 +136,12 @@ pub fn parse_query(query: &str) -> AppResult<ParsedQuery> {
 }
 
 /// FTS5 query for the free words: each word a quoted prefix phrase (quotes doubled), all
-/// required. Words without a letter or digit cannot match a token and are skipped.
+/// required. Words without a letter or digit cannot match a token and are skipped. Control
+/// characters never reach FTS5: its parser ends a string at NUL ("unterminated string").
 pub fn fts_query(words: &[String]) -> Option<String> {
     let phrases: Vec<String> = words
         .iter()
+        .map(|word| word.replace(char::is_control, " "))
         .filter(|word| word.chars().any(char::is_alphanumeric))
         .map(|word| format!("\"{}\"*", word.replace('"', "\"\"")))
         .collect();
@@ -677,6 +679,12 @@ mod tests {
             fts_query(&["x' OR 1=1 --".to_owned()]).as_deref(),
             Some(r#""x' OR 1=1 --"*"#)
         );
+        // FTS5 ends a string at NUL; control characters become spaces (Phase 16 fuzz finding).
+        assert_eq!(
+            fts_query(&["ż\u{0}x".to_owned()]).as_deref(),
+            Some(r#""ż x"*"#)
+        );
+        assert_eq!(fts_query(&["\u{0}\u{7}".to_owned()]), None);
     }
 
     #[test]

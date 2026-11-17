@@ -38,14 +38,15 @@ use langualinker_domain::{NoteId, TimestampMs, ValidationError};
 use crate::jobs::{JobContext, JobKind, JobRecord, JobService, NewJob};
 use crate::learning;
 use crate::ports::{
-    ApiKey, Clock, CollectionScope, EventSink, LlmClient, LlmFailure, LlmProtocol, LlmRequest, Rng,
-    SecretStore,
+    ApiKey, Clock, CollectionScope, EventSink, LlmClient, LlmFailure, LlmProtocol, LlmRequest,
+    NoTelemetry, Rng, SecretStore, Telemetry,
 };
 use crate::repositories::{
     CachedAssociation, LlmCall, LlmRequestRow, LlmRequestStatus, NewLlmRequest, Repositories,
     UnitOfWork,
 };
 use crate::settings::{self, AI_KEY_SECRET, AI_PROVIDERS, Consent};
+use crate::telemetry::MetricEvent;
 use crate::{AppError, AppResult};
 
 use prompt::{AnswerError, CacheInput, Params, PromptKind};
@@ -373,6 +374,8 @@ pub struct LlmService<U: UnitOfWork> {
     rng: Arc<dyn Rng>,
     client: Arc<dyn LlmClient>,
     secrets: Option<Arc<dyn SecretStore>>,
+    /// Opt-in metrics: provider latency, failures and retries (Phase 16).
+    telemetry: Arc<dyn Telemetry>,
     /// Rows a job of this process is working on; a resume never takes them twice.
     active: Arc<Mutex<HashSet<i64>>>,
     /// Pause before retrying a timeout or an overload (multiplied by the attempt number).
@@ -389,6 +392,7 @@ impl<U: UnitOfWork> Clone for LlmService<U> {
             rng: self.rng.clone(),
             client: self.client.clone(),
             secrets: self.secrets.clone(),
+            telemetry: self.telemetry.clone(),
             active: self.active.clone(),
             retry_delay: self.retry_delay,
         }
@@ -464,9 +468,16 @@ impl<U: UnitOfWork + 'static> LlmService<U> {
             rng,
             client,
             secrets,
+            telemetry: Arc::new(NoTelemetry),
             active: Arc::default(),
             retry_delay: Duration::from_millis(1_500),
         }
+    }
+
+    /// Records provider calls in the opt-in metrics.
+    pub fn with_telemetry(mut self, telemetry: Arc<dyn Telemetry>) -> Self {
+        self.telemetry = telemetry;
+        self
     }
 
     /// Pause before timeout/overload retries (tests use zero).
@@ -763,6 +774,13 @@ impl<U: UnitOfWork + 'static> LlmService<U> {
                 duration_ms,
                 "AI provider call finished"
             );
+            // A cancelled wait is not a provider latency.
+            if !matches!(outcome, CallOutcome::Failure(LlmFailure::Cancelled)) {
+                self.telemetry.record(MetricEvent::Generated {
+                    latency_ms: u32::try_from(duration_ms).unwrap_or(u32::MAX),
+                    ok: matches!(outcome, CallOutcome::Answer { .. }),
+                });
+            }
             let call = LlmCall {
                 request_id: Some(id),
                 started_at,
@@ -783,6 +801,7 @@ impl<U: UnitOfWork + 'static> LlmService<U> {
                     return Ok(true);
                 }
                 Finished::Retry(wait) => {
+                    self.telemetry.record(MetricEvent::GenerationRetried);
                     self.wait(context, wait)?;
                 }
                 Finished::Stop(result) => {

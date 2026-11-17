@@ -7,6 +7,7 @@ mod content;
 mod diagnostics;
 mod files;
 mod manage;
+mod metrics;
 mod native;
 mod reminders;
 mod settings;
@@ -166,6 +167,9 @@ fn configure<R: Runtime>(
         native::speak,
         native::stop_speech,
         native::take_launch_url,
+        metrics::report_startup,
+        metrics::report_client_error,
+        metrics::get_usage_metrics,
         ai::generate_association,
         ai::set_ai_api_key,
         diagnostics::probe_secret_store,
@@ -1464,12 +1468,24 @@ mod tests {
     fn diagnostics_capability_is_enabled_only_in_dev() {
         let enabled = |json: &str| config(json)["app"]["security"]["capabilities"].clone();
         let release = enabled(include_str!("../tauri.conf.json"));
-        assert_eq!(release, serde_json::json!(["default", "platform"]));
+        assert_eq!(
+            release,
+            serde_json::json!(["default", "platform", "metrics"])
+        );
         // Beta inherits the release list; only the dev overlay adds diagnostics.
         assert!(enabled(include_str!("../tauri.beta.conf.json")).is_null());
         assert_eq!(
             enabled(include_str!("../tauri.dev.conf.json")),
-            serde_json::json!(["default", "platform", "diagnostics"])
+            serde_json::json!(["default", "platform", "metrics", "diagnostics"])
+        );
+        let metrics = config(include_str!("../capabilities/metrics.json"));
+        assert_eq!(
+            metrics["permissions"],
+            serde_json::json!([
+                "allow-report-startup",
+                "allow-report-client-error",
+                "allow-get-usage-metrics"
+            ])
         );
         let platform = config(include_str!("../capabilities/platform.json"));
         assert_eq!(
@@ -1497,6 +1513,74 @@ mod tests {
                 "notification:allow-remove-listener"
             ])
         );
+    }
+
+    /// Phase 16 step 18/21: the release WebView runs only bundled code, talks only to the IPC
+    /// bridge, gets no plugin permissions beyond events, and ships without devtools.
+    #[test]
+    fn release_security_surface_is_minimal() {
+        let release = config(include_str!("../tauri.conf.json"));
+        let security = &release["app"]["security"];
+        let csp = security["csp"].as_str().expect("a CSP is set");
+        let directives: std::collections::HashMap<&str, Vec<&str>> = csp
+            .split(';')
+            .filter_map(|directive| {
+                let mut parts = directive.split_whitespace();
+                Some((parts.next()?, parts.collect()))
+            })
+            .collect();
+        assert_eq!(directives["default-src"], ["'self'"]);
+        // No script-src override: scripts fall back to 'self' (no inline, no eval, no CDN).
+        assert!(!directives.contains_key("script-src"), "{csp}");
+        assert!(!csp.contains("unsafe-eval") && !csp.contains('*'), "{csp}");
+        // The WebView never reaches the network: AI calls go through Rust.
+        assert_eq!(directives["connect-src"], ["ipc:", "http://ipc.localhost"]);
+        for (directive, sources) in &directives {
+            for source in sources {
+                let remote = source.starts_with("https:") || source.starts_with("http://");
+                assert!(
+                    !remote || *source == "http://ipc.localhost",
+                    "{directive} allows {source}"
+                );
+            }
+        }
+        for key in [
+            "dangerousDisableAssetCspModification",
+            "dangerousRemoteDomainIpcAccess",
+            "assetProtocol",
+        ] {
+            assert!(security[key].is_null(), "{key} is set");
+        }
+        assert!(release["app"]["withGlobalTauri"].is_null());
+        for window in release["app"]["windows"].as_array().unwrap() {
+            assert!(window["devtools"].is_null(), "devtools in a release window");
+        }
+        // Release capabilities: own commands and core events only — no fs/shell/http/dialog.
+        for capability in [
+            include_str!("../capabilities/default.json"),
+            include_str!("../capabilities/platform.json"),
+            include_str!("../capabilities/metrics.json"),
+        ] {
+            for permission in config(capability)["permissions"].as_array().unwrap() {
+                let permission = permission.as_str().unwrap();
+                assert!(
+                    permission.starts_with("allow-") || permission == "core:event:default",
+                    "{permission}"
+                );
+            }
+        }
+        // The tauri crate is built without the devtools feature in every variant.
+        let manifest = include_str!("../Cargo.toml");
+        let dependencies = manifest
+            .split("[dependencies]")
+            .nth(1)
+            .and_then(|rest| rest.split("\n[").next())
+            .unwrap();
+        let tauri = dependencies
+            .lines()
+            .find(|line| line.starts_with("tauri = "))
+            .unwrap();
+        assert!(!tauri.contains("devtools"), "{tauri}");
     }
 
     #[test]
@@ -1560,6 +1644,78 @@ mod tests {
         assert_eq!(settings["notifications"], "unsupported");
     }
 
+    /// Phase 16: metrics are empty without consent, follow the opt-in, accept only numbers and
+    /// error kinds from the WebView, and are deleted on opt-out.
+    #[test]
+    fn usage_metrics_follow_the_consent_over_ipc() {
+        let app = app();
+        let window = main_window(&app);
+        let metrics = || invoke(&window, "get_usage_metrics", serde_json::json!({})).unwrap();
+        assert_eq!(
+            metrics(),
+            serde_json::json!({ "enabled": false, "installId": null, "summary": null })
+        );
+        let opt = |value: bool, op: &str| {
+            let version =
+                invoke(&window, "get_settings", serde_json::json!({})).unwrap()["version"].clone();
+            invoke(
+                &window,
+                "update_settings",
+                serde_json::json!({ "input": {
+                    "operationId": op,
+                    "expectedVersion": version,
+                    "patch": { "telemetryOptIn": value },
+                } }),
+            )
+            .unwrap()
+        };
+        assert_eq!(opt(true, "op-telemetry-on")["telemetryOptIn"], true);
+        invoke(
+            &window,
+            "report_startup",
+            serde_json::json!({ "input": { "coldStartMs": 1234 } }),
+        )
+        .unwrap();
+        invoke(
+            &window,
+            "report_client_error",
+            serde_json::json!({ "input": { "kind": "error" } }),
+        )
+        .unwrap();
+        let rejected = invoke(
+            &window,
+            "report_client_error",
+            serde_json::json!({ "input": { "kind": "error", "message": "der Hund" } }),
+        );
+        assert_eq!(
+            error_code(rejected.unwrap_err()),
+            ErrorCode::ValidationFailed
+        );
+        let too_long = invoke(
+            &window,
+            "report_startup",
+            serde_json::json!({ "input": { "coldStartMs": 3_600_000 } }),
+        );
+        assert_eq!(
+            error_code(too_long.unwrap_err()),
+            ErrorCode::ValidationFailed
+        );
+
+        let on = metrics();
+        assert_eq!(on["enabled"], true);
+        assert_eq!(on["installId"].as_str().unwrap().len(), 32);
+        assert_eq!(on["summary"]["appStarts"], 1);
+        assert_eq!(on["summary"]["coldStartMedianMs"], 1234);
+        assert_eq!(on["summary"]["clientErrors"], 1);
+        assert!(!on.to_string().contains("Hund"));
+
+        opt(false, "op-telemetry-off");
+        assert_eq!(metrics()["enabled"], false);
+        let backend = app.state::<Backend>();
+        let store = backend.collection().unwrap().telemetry.clone();
+        assert_eq!(store.event_count().unwrap(), 0);
+    }
+
     /// Answers every call with a fixed association; a card containing "offline" never leaves
     /// the device.
     struct ScriptedLlm;
@@ -1606,6 +1762,12 @@ mod tests {
                 langualinker_infrastructure::backup::BackupDirs::under(&dir),
                 Some(secrets),
                 Arc::new(ScriptedLlm),
+                Arc::new(
+                    langualinker_infrastructure::telemetry::LocalTelemetry::in_memory(
+                        Arc::new(SystemClock),
+                        Arc::new(langualinker_infrastructure::system::OsRng),
+                    ),
+                ),
             ),
             log_dir: None,
         }

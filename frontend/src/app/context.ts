@@ -1,5 +1,6 @@
 import { getContext, setContext } from 'svelte'
 import type { AppApi } from '../api/appApi'
+import type { MetricsBridge } from '../api/metrics'
 import type { DemoControls } from '../demo/scenarios'
 import type { I18n } from '../services/i18n.svelte'
 import type { QueryClient } from '../services/queryClient'
@@ -25,6 +26,8 @@ export interface AppServices {
   speech: SpeechService
   /** Present only in the demo profile; drives the banner and scenario switcher. */
   demo: DemoControls | null
+  /** Opt-in usage metrics (Phase 16); only next to the real backend, never simulated. */
+  metrics?: MetricsBridge | null
 }
 
 export const APP_SERVICES = Symbol('langualinker.services')

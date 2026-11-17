@@ -46,6 +46,10 @@ criterion = { version = "0.5.1", default-features = false }
 chrono.workspace = true
 langualinker-anki = { path = "../anki" }
 langualinker-content = { path = "../content" }
+# Property-based fuzzing of parsers, archives and the study state machine (Phase 16).
+proptest.workspace = true
+# SQL functions let the data-loss drill abort inside a migration transaction (Phase 16).
+rusqlite = { workspace = true, features = ["functions"] }
 tempfile = "3.23.0"
 
 [[bench]]

@@ -1,6 +1,6 @@
 //! Ports: everything the application needs from the outside world. Infrastructure implements
 //! them; tests use fakes. Platform ports (LLM, notifications, TTS, files, telemetry) are declared
-//! now so use cases can depend on them; their adapters arrive in Phases 12–16.
+//! so use cases can depend on them; their adapters arrived in Phases 12–16.
 
 use langualinker_domain::{Guid, TimestampMs};
 
@@ -154,9 +154,19 @@ pub trait FileAccess: Send + Sync {
     fn write_all(&self, token: &FileToken, bytes: &[u8]) -> AppResult<()>;
 }
 
-/// Opt-in usage telemetry (Phase 16). Off by default; events carry no content.
+/// Opt-in usage metrics (Phase 16, ADR-13). Off by default; an implementation drops events while
+/// the learner has not opted in. Events are typed numbers only, so they cannot carry content.
+/// Recording never fails the operation that produced the event.
 pub trait Telemetry: Send + Sync {
-    fn record(&self, event: &'static str, fields: &[(&'static str, i64)]);
+    fn record(&self, event: crate::telemetry::MetricEvent);
+}
+
+/// Telemetry that records nothing (tests, and services built without a store).
+#[derive(Debug, Default, Clone, Copy)]
+pub struct NoTelemetry;
+
+impl Telemetry for NoTelemetry {
+    fn record(&self, _event: crate::telemetry::MetricEvent) {}
 }
 
 #[cfg(test)]

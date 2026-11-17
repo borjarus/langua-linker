@@ -7,9 +7,10 @@
   import Screen from '../shared/Screen.svelte'
   import ResetDialog from './ResetDialog.svelte'
   import SaveStatus from './SaveStatus.svelte'
+  import UsageMetricsPanel from './UsageMetricsPanel.svelte'
   import { SettingsController } from './settingsController.svelte'
 
-  const { api, i18n, queries, router, toasts } = useServices()
+  const { api, i18n, metrics, queries, router, toasts } = useServices()
   const ids = $props.id()
   const controller = new SettingsController(api)
   void controller.load()
@@ -41,6 +42,9 @@
       </label>
       <p class="muted hint">{i18n.t('privacy.telemetry.never')}</p>
       <SaveStatus {controller} field="telemetry" />
+      {#if metrics && settings.telemetryOptIn}
+        {#key settings.version}<UsageMetricsPanel {metrics} />{/key}
+      {/if}
     </section>
   {/if}
 

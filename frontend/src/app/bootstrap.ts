@@ -1,4 +1,5 @@
 import type { AppApi } from '../api/appApi'
+import { createMetricsBridge, reportColdStart, watchClientErrors, type MetricsBridge } from '../api/metrics'
 import { createPlatformBridge, type PlatformBridge } from '../api/platform'
 import { createTauriAppApi } from '../api/tauriAppApi'
 import type { ThemePreference, UiLanguage } from '../api/types'
@@ -68,6 +69,7 @@ export async function createServices(profile: AppProfile = APP_PROFILE): Promise
   let demo: DemoControls | null = null
   // Native adapters exist only next to the real backend; the browser demo never simulates them.
   let platform: PlatformBridge | null = null
+  let metrics: MetricsBridge | null = null
   if (DEMO_ADAPTER_AVAILABLE && profile === 'demo') {
     const { createDemoApi } = await import('../demo/index')
     const created = createDemoApi()
@@ -77,6 +79,7 @@ export async function createServices(profile: AppProfile = APP_PROFILE): Promise
   } else {
     api = createTauriAppApi()
     platform = createPlatformBridge()
+    metrics = createMetricsBridge()
   }
 
   const preferences = readPreferences(profile)
@@ -96,6 +99,7 @@ export async function createServices(profile: AppProfile = APP_PROFILE): Promise
     toasts: new ToastController(),
     speech: platform ? createNativeSpeechService(platform, createWebSpeechService()) : createWebSpeechService(),
     demo,
+    metrics,
   }
 
   const start = () => {
@@ -103,6 +107,9 @@ export async function createServices(profile: AppProfile = APP_PROFILE): Promise
     const stopTheme = services.theme.start()
     const stopCollection = services.api.onCollectionChanged(() => services.queries.invalidate())
     const stopLinks = platform ? watchLaunchLinks(platform, services.router) : () => {}
+    // Opt-in metrics (Phase 16): the backend drops both while the learner has not opted in.
+    const stopErrors = metrics ? watchClientErrors(metrics) : () => {}
+    if (metrics) reportColdStart(metrics)
     // The shown language starts from the device language; native text (reminders) follows the
     // stored one, so the first start stores what the learner actually sees (Phase 15).
     if (platform) void syncUiLanguage(services)
@@ -115,6 +122,7 @@ export async function createServices(profile: AppProfile = APP_PROFILE): Promise
     document.addEventListener('visibilitychange', onHidden)
     return () => {
       document.removeEventListener('visibilitychange', onHidden)
+      stopErrors()
       stopLinks()
       stopCollection()
       stopTheme()

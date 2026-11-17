@@ -1,0 +1,11 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "metrics",
+  "description": "Phase 16 opt-in usage metrics outside AppApi (ADR-13): the WebView reports its cold start and the kind of an uncaught error (never a message), and reads the local summary. Records nothing without the telemetry consent. Every variant.",
+  "windows": ["main"],
+  "permissions": [
+    "allow-report-startup",
+    "allow-report-client-error",
+    "allow-get-usage-metrics"
+  ]
+}

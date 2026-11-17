@@ -964,11 +964,13 @@ Before this gate, do not implement production FSRS/CRUD/LLM. Spikes, IPC transpo
 
 ### Tests and DoD
 
-- [ ] Budgets measured per device; deviations owner-approved.
-- [ ] Four-operation data-loss drill/fault injection without loss of committed ratings.
-- [ ] Beta metric counting/crash symbols verified.
-- [ ] Security/accessibility/localization zero blockers; Svelte checks green.
-- [ ] Entire scope uses real `AppApi` in release; demo separate.
+- [ ] Budgets measured per device; deviations owner-approved. (Desktop reference measured 2026-11-17, all within budget; phones open — [performance-budgets.md](testing/performance-budgets.md).)
+- [x] Four-operation data-loss drill/fault injection without loss of committed ratings. (Session, import, migration, restore with real process kills, plus disk full — desktop; phones open.)
+- [ ] Beta metric counting/crash symbols verified. (Local opt-in metrics and crash counting implemented and tested; upload/vendor waits for D-08 — ADR-13.)
+- [ ] Security/accessibility/localization zero blockers; Svelte checks green. (Security surface tested, svelte-check green; `cargo audit`, dev-tool upgrades and the TalkBack/VoiceOver pass open.)
+- [x] Entire scope uses real `AppApi` in release; demo separate.
+
+> **Status 2026-11-17 — Phase 16 implemented on desktop; device measurements and D-08 open.** Decisions in [ADR-13](adr/ADR-13-telemetry-crash.md); report in [phase16-qa.md](testing/phase16-qa.md); no contract version bump (contract README "Phase 16 additions"). **Metrics (step 1):** closed event set of typed numbers (`application::telemetry`), stored only while opted in, in a separate `telemetry.sqlite` (not in backups); opt-in creates a pseudonymous id, opt-out deletes everything and compacts the file; sources: ratings/undo/favorite/session end (study commands), provider latency/failures/retries (LLM service), restores (event-sink decorator), the previous run's panic (crash report read once on start), cold start and WebView error kinds (commands `report_startup`, `report_client_error` in the new `metrics` capability). `get_usage_metrics` summarises D7, cold-start median, generation p90, favorite rate, crash-free starts and undo/retry/restore counts against the plan targets with minimum sample sizes; the Privacy screen shows it and copies it. Nothing is sent (D-08). The consent text now says "pseudonymous" instead of "anonymous". **Testing (step 2):** property-based fuzz of the search language, backup and content archives and the study state machine (Rust), inline Markdown renderer and deep links (TS). Fuzzing found and this phase fixed: undo restoring FSRS stability one ULP off (`serde_json` `float_roundtrip`), and a NUL in a search word failing with `INTERNAL` (control characters stripped before FTS5). **Budgets (step 3):** ignored release tests for due-queue p95, backend cold open and 5k import next to the existing search p95; desktop reference: due p95 16 ms, scheduler counts p95 13.5 ms, open + first counts p95 54 ms, 5k import 0.79 s, search p95 179 ms. **Security/data loss (step 4):** data-loss drill with real process kills (session, import, migration abort inside its transaction, restore) and disk full — no committed rating lost, imports and restores all-or-nothing; release security surface test (CSP, capabilities, no devtools); `npm audit --omit=dev` clean. Evidence: application/infrastructure unit tests (telemetry summary and store, crash report), `crates/infrastructure/tests/{fuzz,data_loss,budgets}.rs`, shell tests `usage_metrics_follow_the_consent_over_ipc` and `release_security_surface_is_minimal`, Vitest `metrics.test.ts` and `fuzz.test.ts`; workspace tests, clippy `-D warnings`, rustfmt; svelte-check, ESLint, i18n lint, Vitest, `verify:release`. Open: budgets, drill and metrics on Galaxy A56 and an iPhone; D-08 and an uploader; packaged-app E2E and native harnesses; `cargo audit` in CI; dev-tool upgrades (10 moderate advisories in lint/test tooling, none shipped); accessibility pass with TalkBack/VoiceOver; size/RSS/battery limits ADR; ADR-13 acceptance.
 
 ## PHASE 17 — Beta, compliance, release engineering, and publication
 
@@ -1114,7 +1116,7 @@ D-01–D-08 originate from the input plan; D-09–D-14 arise from the stack/cont
 | ADR-10 | LLM BYOK/proxy | 0/13 | Provider-neutral; BYOK beta, hybrid after cost decision | Quota/kill/cost/latency |
 | ADR-11 | APKG scope | 0/14 | CSV+legacy export v1; import/new formats v1.1 | Supported matrix/loss report |
 | ADR-12 | Native plugins | 1/15 | PROPOSED: WebView spike done on the Android emulator and iOS simulator, no plugin needed; notifications/TTS/files pending — [ADR-12](adr/ADR-12-native-capabilities.md) | Device permissions/deep link/TTS |
-| ADR-13 | Telemetry/crash | 0/16 | Opt-in/minimal/EU-self-host after audit | No content/secrets/symbols |
+| ADR-13 | Telemetry/crash | 0/16 | PROPOSED: local opt-in store of typed events, pseudonymous id, summary against targets, no upload until D-08 — [ADR-13](adr/ADR-13-telemetry-crash.md) | No content/secrets/symbols |
 | ADR-14 | Content/license | 0/8 | PROPOSED: format v2, shared lint/import checks, per-deck transactions, keep/archive policy, release gate on review+rights — [ADR-14](adr/ADR-14-bundled-content.md) | Linter/attribution/manual acceptance |
 | ADR-15 | FSRS-6/scheduler | 9 | PROPOSED: own port of py-fsrs 6.3.0 with reference vectors, study days in the collection zone, tree limits, transactional rating/undo — [ADR-15](adr/ADR-15-fsrs-scheduler.md) | Conformance/properties/Phase 10 device run |
 

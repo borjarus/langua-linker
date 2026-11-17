@@ -467,6 +467,13 @@ pub async fn update_settings<R: Runtime>(
             ]);
         }
         emit(collection, &scopes, collection.clock.now());
+        // Opting out deletes the collected metrics at once (Phase 16).
+        let (db, telemetry) = (collection.db.clone(), collection.telemetry.clone());
+        blocking(move || {
+            crate::metrics::sync_consent(&db, &telemetry);
+            Ok(())
+        })
+        .await?;
         // Reminder time, language, goal or calendar may have changed the reminder plan.
         reminders::sync_in_background(&app);
     }

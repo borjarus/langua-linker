@@ -29,7 +29,7 @@ describe('every route opens its screen with the correct mock state', () => {
     ['#/stats', 'Statistics', 'True retention — mature cards'],
     ['#/settings', 'Settings', 'App language'],
     ['#/settings/ai', 'AI & associations', 'Allow generating associations with AI'],
-    ['#/settings/privacy', 'Privacy & data', 'Share anonymous usage statistics'],
+    ['#/settings/privacy', 'Privacy & data', 'Collect usage statistics on this device'],
     ['#/settings/about', 'About the app', 'Interface contract'],
     ['#/settings/transfer', 'Import & export', 'Choose a CSV file'],
     ['#/settings/backup', 'Backup & restore', '3 backups'],

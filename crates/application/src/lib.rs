@@ -15,6 +15,7 @@ pub mod repositories;
 pub mod settings;
 pub mod stats;
 pub mod study;
+pub mod telemetry;
 pub mod transfer;
 
 pub use error::{AppError, AppResult, DetailValue};

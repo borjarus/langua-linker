@@ -3,7 +3,7 @@
 //! Policy (plan §3, §5): logs never contain card content, prompts or secrets. Structured fields
 //! are written only when their *name* is on [`ALLOWED_FIELDS`]; every other field value is
 //! replaced by `[redacted]`. Messages must be static text — put variable data into fields.
-//! Telemetry is not part of this module and stays disabled by default.
+//! Opt-in usage metrics live in [`crate::telemetry`] and are off by default.
 
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -37,6 +37,8 @@ pub const ALLOWED_FIELDS: &[&str] = &[
 pub const REDACTED: &str = "[redacted]";
 pub const LOG_FILE_PREFIX: &str = "langualinker";
 pub const CRASH_REPORT_FILE: &str = "last-crash.json";
+/// Where a crash report goes once the next start has read it.
+pub const SEEN_CRASH_REPORT_FILE: &str = "previous-crash.json";
 const MAX_LOG_FILES: usize = 7;
 
 #[derive(Debug, thiserror::Error)]
@@ -148,6 +150,24 @@ fn write_crash_report(dir: &Path, app_version: &str, location: &str) -> std::io:
     std::fs::write(dir.join(CRASH_REPORT_FILE), report.to_string())
 }
 
+/// A crash report of an earlier run: version and source location only.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CrashReport {
+    pub app_version: String,
+    pub location: String,
+    pub occurred_at_ms: u64,
+}
+
+/// Reads the crash report a previous run left and moves it aside, so each crash is counted
+/// once. A missing or unreadable report yields `None` (an unreadable one is moved aside too).
+pub fn take_crash_report(dir: &Path) -> Option<CrashReport> {
+    let path = dir.join(CRASH_REPORT_FILE);
+    let text = std::fs::read_to_string(&path).ok()?;
+    let _ = std::fs::rename(&path, dir.join(SEEN_CRASH_REPORT_FILE));
+    serde_json::from_str(&text).ok()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -240,6 +260,12 @@ mod tests {
         assert!(report.contains("logging.rs"), "{report}");
         assert!(!report.contains("zażółć"), "{report}");
         assert!(!report.contains("secret card text"), "{report}");
+        // The next start reads it once.
+        let taken = take_crash_report(&dir).expect("report taken");
+        assert_eq!(taken.app_version, "9.9.9-test");
+        assert!(taken.location.contains("logging.rs"));
+        assert_eq!(take_crash_report(&dir), None);
+        assert!(dir.join(SEEN_CRASH_REPORT_FILE).exists());
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

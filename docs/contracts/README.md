@@ -48,6 +48,11 @@ Phase 7 extends the Rust side per command: the DTO deserializes its frozen input
 - Error details: `PERMISSION_DENIED { reason }` `aiConsent`, `apiKey`, `apiKeyRejected`, `aiProvider`, `aiModel`, `aiEndpoint`, `secretStore`; `QUOTA_EXCEEDED { resetsAt }` in epoch milliseconds (the demo adapter sends an ISO string; no screen reads it); `PROVIDER_ERROR { status }`.
 - Known deviation from checklist rule 3, fixed with the next minor version: `generateAssociation` can answer `VALIDATION_FAILED` (`variants` out of range, `noteId` of a deck type without associations), `NOT_FOUND` or `DELETED`; the job of an offline request fails with `NETWORK_UNAVAILABLE` while its row stays queued.
 
+## Phase 16 additions (no version bump)
+
+- Opt-in usage metrics outside `AppApi` ([ADR-13](../adr/ADR-13-telemetry-crash.md)), granted by the separate capability `metrics` in every variant: `report_startup { input: { coldStartMs } }` (0–600 000, counted once per process), `report_client_error { input: { kind: "error" | "unhandledRejection" } }` (no other field is accepted), `get_usage_metrics` → `{ enabled, installId, summary }`. Invalid input answers `VALIDATION_FAILED`. The backend records nothing while `telemetryOptIn` is false and deletes everything when it is turned off; nothing is sent over the network.
+- Unchanged `AppApi`: `updateSettings { telemetryOptIn }` now also switches the metrics store.
+
 ## Phase 15 additions (no version bump)
 
 - Real in Rust ([ADR-20](../adr/ADR-20-native-adapters.md)): `requestNotificationPermission` — the last pending command; every catalogue command now has a backend. `getSettings`, `updateSettings` and `requestNotificationPermission` read `notifications` from the OS on every call (Android/iOS: `granted`/`denied`/`prompt`; desktop: `unsupported`). `requestNotificationPermission` emits `collection_changed { settings }`; a refusal is the state `denied`, never an error.

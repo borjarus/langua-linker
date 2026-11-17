@@ -2169,6 +2169,12 @@
           "markdownDescription": "Enables the get_stats command without any pre-configured scope."
         },
         {
+          "description": "Enables the get_usage_metrics command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-usage-metrics",
+          "markdownDescription": "Enables the get_usage_metrics command without any pre-configured scope."
+        },
+        {
           "description": "Enables the list_backups command without any pre-configured scope.",
           "type": "string",
           "const": "allow-list-backups",
@@ -2233,6 +2239,18 @@
           "type": "string",
           "const": "allow-rate-card",
           "markdownDescription": "Enables the rate_card command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the report_client_error command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-report-client-error",
+          "markdownDescription": "Enables the report_client_error command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the report_startup command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-report-startup",
+          "markdownDescription": "Enables the report_startup command without any pre-configured scope."
         },
         {
           "description": "Enables the request_notification_permission command without any pre-configured scope.",
@@ -2541,6 +2559,12 @@
           "markdownDescription": "Denies the get_stats command without any pre-configured scope."
         },
         {
+          "description": "Denies the get_usage_metrics command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-usage-metrics",
+          "markdownDescription": "Denies the get_usage_metrics command without any pre-configured scope."
+        },
+        {
           "description": "Denies the list_backups command without any pre-configured scope.",
           "type": "string",
           "const": "deny-list-backups",
@@ -2605,6 +2629,18 @@
           "type": "string",
           "const": "deny-rate-card",
           "markdownDescription": "Denies the rate_card command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the report_client_error command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-report-client-error",
+          "markdownDescription": "Denies the report_client_error command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the report_startup command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-report-startup",
+          "markdownDescription": "Denies the report_startup command without any pre-configured scope."
         },
         {
           "description": "Denies the request_notification_permission command without any pre-configured scope.",

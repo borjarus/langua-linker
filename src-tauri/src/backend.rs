@@ -22,6 +22,7 @@ use langualinker_infrastructure::backup::{BackupDirs, BackupService};
 use langualinker_infrastructure::llm::HttpLlmClient;
 use langualinker_infrastructure::sqlite::{DATABASE_FILE, SqliteDatabase};
 use langualinker_infrastructure::system::{OsRng, SystemClock};
+use langualinker_infrastructure::telemetry::LocalTelemetry;
 use langualinker_infrastructure::transfer::{TransferEncoders, TransferService};
 use serde_json::{Map, Value};
 use tauri::{AppHandle, Emitter, Runtime};
@@ -53,6 +54,8 @@ pub struct Collection {
     pub llm: LlmService<SqliteDatabase>,
     /// CSV import and deck export (Phase 14).
     pub transfer: TransferService,
+    /// Opt-in usage metrics (Phase 16); records nothing without consent.
+    pub telemetry: Arc<LocalTelemetry>,
 }
 
 impl Backend {
@@ -75,6 +78,12 @@ impl Backend {
         secrets: Option<Arc<dyn SecretStore>>,
     ) -> Self {
         let clock = Arc::new(SystemClock);
+        // Next to the collection, never inside it: backups and restores leave metrics alone.
+        let telemetry = Arc::new(LocalTelemetry::open(
+            &data_dir,
+            clock.clone(),
+            Arc::new(OsRng),
+        ));
         let collection = SqliteDatabase::open(&data_dir.join(DATABASE_FILE), clock.as_ref())
             .and_then(|opened| {
                 tracing::info!(
@@ -93,6 +102,7 @@ impl Backend {
                     BackupDirs::under(&data_dir),
                     secrets,
                     Arc::new(HttpLlmClient::new()),
+                    telemetry,
                 )
             });
         match &collection {
@@ -110,6 +120,11 @@ impl Backend {
                     Ok(true) => tracing::info!("study day follows the device time zone"),
                     Ok(false) => {}
                     Err(error) => tracing::error!(code = error.code(), "settings not initialized"),
+                }
+                // Metrics follow the stored consent; a crash of the previous run counts once.
+                crate::metrics::sync_consent(&collection.db, &collection.telemetry);
+                if let Some(dir) = &log_dir {
+                    crate::metrics::record_previous_crash(dir, collection.telemetry.as_ref());
                 }
                 // AI requests cut short by a kill go back to the queue; due ones run now.
                 match collection.llm.recover_interrupted() {
@@ -165,6 +180,7 @@ impl Collection {
             std::process::id(),
             NEXT.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
         ));
+        let telemetry = Arc::new(LocalTelemetry::in_memory(clock.clone(), Arc::new(OsRng)));
         Self::start_in(
             db,
             events,
@@ -172,6 +188,7 @@ impl Collection {
             BackupDirs::under(&dir),
             None,
             Arc::new(HttpLlmClient::new()),
+            telemetry,
         )
     }
 
@@ -182,7 +199,14 @@ impl Collection {
         dirs: BackupDirs,
         secrets: Option<Arc<dyn SecretStore>>,
         llm_client: Arc<dyn LlmClient>,
+        telemetry: Arc<LocalTelemetry>,
     ) -> Result<Self, AppError> {
+        // Every service signals through the metered sink, so restores are counted.
+        let events: Arc<dyn EventSink> = Arc::new(crate::metrics::MeteredEvents {
+            inner: events,
+            telemetry: telemetry.clone(),
+            db: db.clone(),
+        });
         let jobs = JobService::new(db.clone(), events.clone(), clock.clone());
         let interrupted = jobs.recover_interrupted()?;
         if interrupted > 0 {
@@ -231,7 +255,8 @@ impl Collection {
             rng.clone(),
             llm_client,
             secrets.clone(),
-        );
+        )
+        .with_telemetry(telemetry.clone());
         Ok(Self {
             db,
             jobs,
@@ -243,6 +268,7 @@ impl Collection {
             secrets,
             llm,
             transfer,
+            telemetry,
         })
     }
 }
