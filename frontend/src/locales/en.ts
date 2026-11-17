@@ -384,6 +384,22 @@ export const en = {
     title: 'Associations',
     favorite: 'Favorite association',
     setFavorite: 'Mark as favorite',
+    report: {
+      open: 'Report',
+      title: 'Report association',
+      intro: 'Offensive, wrong or confusing? Your mail app opens with the message below addressed to {{email}}. Nothing is sent until you send it there.',
+      reason: 'What is wrong?',
+      reasons: {
+        offensive: 'Offensive or inappropriate',
+        wrong: 'Wrong or misleading',
+        unclear: 'Unclear or unhelpful',
+        other: 'Something else',
+      },
+      comment: 'Comment (optional)',
+      preview: 'Message',
+      send: 'Open e-mail',
+      thanks: 'Thank you. Send the message in your mail app to complete the report.',
+    },
     generate: 'Generate new association',
     empty: 'No associations yet.',
     provenance: {

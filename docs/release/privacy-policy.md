@@ -10,11 +10,13 @@ Status: **DRAFT 2026-11-17, not published.** Facts come from [compliance.md](com
 
 **Kto odpowiada.** [Imię i nazwisko / nazwa firmy, adres], kontakt: [adres e-mail do spraw prywatności].
 
-**W skrócie.** LanguaLinker działa na Twoim urządzeniu. Nie ma konta, chmury, reklam ani analityki. Nie otrzymujemy Twoich danych. Jedyny wyjątek to funkcja skojarzeń AI, którą włączasz sam(a), z własnym kluczem u wybranego przez siebie dostawcy.
+**W skrócie.** LanguaLinker działa na Twoim urządzeniu. Nie ma konta, chmury, reklam ani analityki. Nie otrzymujemy Twoich danych, chyba że sam(a) wyślesz nam zgłoszenie e-mailem. Poza tym dane opuszczają urządzenie tylko w funkcji skojarzeń AI, którą włączasz sam(a), z własnym kluczem u wybranego przez siebie dostawcy.
 
 **Dane na urządzeniu.** Talie, karty, historia powtórek, ustawienia i kopie zapasowe są zapisywane lokalnie w pamięci aplikacji. Klucz API dostawcy AI przechowywany jest w bezpiecznym magazynie systemu (Android Keystore / iOS Keychain). Dzienniki diagnostyczne nie zawierają treści kart, zapytań ani kluczy.
 
 **Skojarzenia AI (opcjonalne).** Gdy wyrazisz zgodę, wybierzesz dostawcę, podasz własny klucz i poprosisz o skojarzenie, aplikacja wysyła bezpośrednio do tego dostawcy (połączenie szyfrowane HTTPS): przód i tył danej karty, kody języków i stałą instrukcję. Dostawcy do wyboru: Anthropic, Google (Gemini) lub zgodny z OpenAI serwer, którego adres podajesz. Te dane przetwarza dostawca na podstawie umowy, którą masz z nim Ty (Twoje konto i klucz); obowiązuje jego polityka prywatności: [linki]. Dostawca może przetwarzać dane poza EOG (np. w USA). Zgodę wycofasz w Ustawieniach → AI; wstrzymuje to też zapytania oczekujące w kolejce.
+
+**Zgłoszenia skojarzeń.** Gdy zgłosisz skojarzenie, aplikacja otwiera Twój program pocztowy z gotową wiadomością do nas (borjarus@gmail.com): powód, treść skojarzenia, przód i tył karty, Twój komentarz i wersja aplikacji. Widzisz całą wiadomość przed wysłaniem; wysyłasz ją sam(a). Otrzymujemy ją razem z Twoim adresem e-mail i używamy wyłącznie do poprawy treści i bezpieczeństwa aplikacji; usuwamy po rozpatrzeniu, najpóźniej po [okres] miesiącach. Podstawa: nasz prawnie uzasadniony interes (art. 6 ust. 1 lit. f RODO).
 
 **Statystyki użycia (opcjonalne, domyślnie wyłączone).** Po włączeniu aplikacja zapisuje na urządzeniu liczby i czasy (uruchomienia, oceny, czasy odpowiedzi AI, awarie) powiązane z losowym identyfikatorem instalacji. Ta wersja niczego nie wysyła. Wyłączenie usuwa zebrane dane.
 
@@ -34,11 +36,13 @@ Status: **DRAFT 2026-11-17, not published.** Facts come from [compliance.md](com
 
 **Who is responsible.** [Name / company, address], contact: [privacy e-mail].
 
-**In short.** LanguaLinker runs on your device. There is no account, cloud, advertising or analytics. We do not receive your data. The only exception is the AI association feature, which you turn on yourself, with your own key at a provider you choose.
+**In short.** LanguaLinker runs on your device. There is no account, cloud, advertising or analytics. We do not receive your data unless you e-mail us a report yourself. Otherwise data leaves the device only for the AI association feature, which you turn on yourself, with your own key at a provider you choose.
 
 **Data on your device.** Decks, cards, review history, settings and backups are stored locally in the app's storage. The AI provider's API key is kept in the system's secure store (Android Keystore / iOS Keychain). Diagnostic logs contain no card content, prompts or keys.
 
 **AI associations (optional).** After you consent, pick a provider, enter your own key and ask for an association, the app sends directly to that provider (encrypted HTTPS): the front and back of that card, the language codes and a fixed instruction. Providers: Anthropic, Google (Gemini) or an OpenAI-compatible server whose address you enter. The provider processes this data under your agreement with it (your account and key); its privacy policy applies: [links]. The provider may process data outside the EEA (e.g. in the US). You can withdraw consent in Settings → AI; this also stops queued requests.
+
+**Association reports.** When you report an association, the app opens your mail app with a ready message to us (borjarus@gmail.com): the reason, the association text, the card's front and back, your comment and the app version. You see the whole message before sending, and you send it yourself. We receive it with your e-mail address and use it only to improve the app's content and safety; we delete it once handled, at the latest after [period] months. Legal basis: our legitimate interest (Art. 6(1)(f) GDPR).
 
 **Usage statistics (optional, off by default).** When on, the app stores counts and timings on the device (starts, ratings, AI response times, crashes), tied to a random installation ID. This version sends nothing. Turning it off deletes what was collected.
 

@@ -1,9 +1,11 @@
 <script lang="ts">
   import type { AssociationDto } from '../api/types'
   import { useServices } from '../app/context'
+  import { reportable, type ReportCard } from '../services/report'
   import Chip from './Chip.svelte'
   import Disclosure from './Disclosure.svelte'
   import Icon from './Icon.svelte'
+  import ReportAssociationDialog from './ReportAssociationDialog.svelte'
 
   interface Props {
     associations: AssociationDto[]
@@ -12,9 +14,12 @@
     ongenerate?: () => void
     generating?: boolean
     onfavorite?: (association: AssociationDto) => void
+    /** The card shown with the associations; given → generated and bundled ones can be reported. */
+    card?: ReportCard
   }
 
-  let { associations, expanded = false, ongenerate, generating = false, onfavorite }: Props = $props()
+  let { associations, expanded = false, ongenerate, generating = false, onfavorite, card }: Props = $props()
+  let reporting = $state<AssociationDto | null>(null)
   const { i18n } = useServices()
   const ordered = $derived([...associations].sort((a, b) => Number(b.favorite) - Number(a.favorite)))
 </script>
@@ -53,6 +58,12 @@
                 {i18n.t('association.setFavorite')}
               </button>
             {/if}
+            {#if card && reportable(association)}
+              <button type="button" class="btn btn-ghost" onclick={() => (reporting = association)}>
+                <Icon name="alert" />
+                {i18n.t('association.report.open')}
+              </button>
+            {/if}
           </div>
         </li>
       {/each}
@@ -65,6 +76,10 @@
     </button>
   {/if}
 </Disclosure>
+
+{#if reporting && card}
+  <ReportAssociationDialog association={reporting} {card} onclose={() => (reporting = null)} />
+{/if}
 
 <style>
   .list {

@@ -27,7 +27,7 @@ Copy this list per version (beta and production). "CI" items are enforced automa
 ## Store submission
 
 - [ ] Data safety / App Privacy / age rating / target audience / app access from [compliance.md](compliance.md).
-- [ ] AI report action decision implemented (Play AI-generated content policy) — or submission postponed.
+- [ ] Association report on the device: Report → dialog → mail app opens addressed to `borjarus@gmail.com` with the message; the mailbox is monitored.
 - [ ] Listing texts and real screenshots from [store-listing.md](store-listing.md), PL and EN.
 - [ ] Beta exit criteria met ([beta-plan.md](beta-plan.md)) — production only.
 

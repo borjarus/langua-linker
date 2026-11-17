@@ -5,6 +5,7 @@ All notable changes to LanguaLinker. Versions follow `X.Y.Z` / `X.Y.Z-(alpha|bet
 ## [Unreleased]
 
 ### Added
+- Report an AI-generated or bundled association (offensive, wrong, unclear): the app shows the message and opens your mail app addressed to the developer.
 - Privacy screen explains what leaves the device (only the card text you send for an AI association, to the provider you chose) and how to keep your data elsewhere; a link to the privacy policy in store builds.
 - Licences screen lists every bundled third-party component with its licence (generated report).
 

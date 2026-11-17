@@ -276,6 +276,7 @@
             generating={generator.isRunning(noteId)}
             ongenerate={() => generate(noteId)}
             onfavorite={(association) => favorite(noteId, association.id)}
+            card={{ front: card.front, back: card.back, targetLanguage: card.targetLanguage }}
           />
           {#if generator.isRunning(noteId)}<p class="muted" role="status">{i18n.t('association.generating')}</p>{/if}
           {#if generationError}<ErrorState error={generationError} compact onretry={() => generate(noteId)} />{/if}

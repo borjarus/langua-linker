@@ -12,8 +12,9 @@ Verified in code; the WebView itself cannot reach the network (CSP `connect-src 
 |---|---|---|---|---|
 | AI association request | only after AI consent, a provider and the user's own API key are set, and the user asks for an association (or a queued request is retried) | front and back of that one card, the variant, L1/L2 language codes, the fixed prompt; the user's API key as the provider's auth header | the provider the user picked: Anthropic (`api.anthropic.com`), Google Gemini (`generativelanguage.googleapis.com`) or an OpenAI-compatible https endpoint the user typed | `crates/infrastructure/src/llm.rs`, ADR-18 |
 | External link | user taps a link (Licences, privacy policy) | the URL | opened in the system browser, not by the app | `src-tauri/src/links.rs` |
+| Association report | user taps Report on a generated or bundled association, reviews the message and sends it from their mail app | reason, association text and provenance/model, card front/back and target language, optional comment, app version — shown in full before sending | the developer, `borjarus@gmail.com`, by the user's own e-mail (the app sends nothing; the guard opens `mailto:` only for this address) | `frontend/src/services/report.ts`, `links.rs` |
 
-Not sent: usage metrics and crash reports (stored locally only, opt-in, ADR-13 — "this version sends nothing"), logs, backups, exports (saved/shared only by the user through the system share sheet or file picker), notifications (scheduled locally by the OS). No analytics or advertising SDK, no account, no remote config.
+Data the developer receives: only association reports the user chooses to e-mail (with the user's e-mail address, as with any e-mail). Not sent: usage metrics and crash reports (stored locally only, opt-in, ADR-13 — "this version sends nothing"), logs, backups, exports (saved/shared only by the user through the system share sheet or file picker), notifications (scheduled locally by the OS). No analytics or advertising SDK, no account, no remote config.
 
 **Subprocessors / transfers.** The developer runs no server and receives no user data. Under BYOK the AI provider is the user's own vendor, used with the user's own key and account; its terms (training, retention, location — e.g. US transfers for Anthropic/Google) apply between the user and that provider. The privacy policy names the three options and links to their policies. **Owner/legal:** confirm this controller/processor characterisation; confirm the providers' API terms say API inputs are not used for training by default and their retention periods (step 3: "confirmed by terms, not a prompt") and record the dates checked here.
 
@@ -42,7 +43,7 @@ Draft: **"Data Not Collected"**, because neither the developer nor a partner of 
 
 - **AI label**: every generated association is marked "AI-generated" in the UI; bundled associations are candidates for native review (content/PROVENANCE.md).
 - **Moderation in place**: local term list on outgoing card text (never sent when hit) and on every answer (blocked answers are never stored or cached), strict JSON answer ≤ 400 chars, prompts versioned (ADR-18).
-- **Reporting — release blocker for Google Play**: Play's AI-generated content policy expects an in-app way to report or flag offensive AI output to the developer. Today the user can only delete an association. A report action (Phase 13 open item: preview of what would be sent, contract minor) needs a destination; with no server (D-02/D-08) the options are a pre-filled e-mail via the share sheet, or a minimal report endpoint. **Owner decision needed before the Play submission.** Apple has no equivalent rule for BYOK text, but the same action would serve both.
+- **Reporting** (Play AI-generated content policy; owner decision 2026-11-17: e-mail to `borjarus@gmail.com`): every generated or bundled association in study and in the word sheet has *Report*. A dialog asks for the reason (offensive / wrong / unclear / other) and an optional comment, shows the full message, and *Open e-mail* opens the mail app with it addressed to the developer. Nothing leaves the device unless the user sends it. Risk to note for review: the policy asks for reporting "without needing to exit the app"; the dialog is in the app, sending goes through the mail app. If review objects, the fallback is a small report endpoint (new network traffic → forms and policy update). Reports are triaged with the beta `content` tag ([beta-plan.md](beta-plan.md)); the reporter's e-mail address reaches the developer — covered in the privacy policy.
 - **EU AI Act Art. 50** (transparency for AI-generated text, applies from 2026-08-02): the label covers "users are informed"; legal to confirm no further marking duty applies to short private mnemonic text not published to the public.
 
 ## 5. Age rating (step 4)
@@ -75,7 +76,8 @@ No account in v1, so Play's account-deletion requirement does not apply (declare
 - [ ] Publish the privacy policy ([draft](privacy-policy.md)) at an https URL; set repository variable `PRIVACY_POLICY_URL`.
 - [ ] Legal review: controller role under BYOK, Data safety "shared" vs user-initiated, Apple "not collected", GDPR information duties (Art. 13), AI Act Art. 50, notice requirements of licences.
 - [ ] Provider terms checked (no training on API data, retention, transfer basis) — date and links recorded in §1.
-- [ ] Decide the AI report action (§4) — blocker for Play.
+- [x] AI report action (§4): e-mail to `borjarus@gmail.com`, implemented 2026-11-17.
+- [ ] Mailbox `borjarus@gmail.com` monitored during beta and after release; reports triaged in the beta triage rhythm.
 - [ ] IARC and Apple age-rating questionnaires answered from §5; results recorded.
 - [ ] D-04 content rights or an explicit beta-only exception.
 - [ ] D-08: stays "nothing sent" for the beta, or vendor chosen and the forms updated before the uploader ships.

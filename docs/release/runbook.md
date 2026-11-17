@@ -25,7 +25,7 @@ Cost gate: none on our side (BYOK, no server). If a provider changes pricing or 
 
 ## 3. Disable a feature without a server (step 17)
 
-There is no remote switch (ADR-21 §14). In order of preference:
+There is no remote switch (ADR-21 §15). In order of preference:
 
 1. **AI associations misbehave** (provider outage, bad answers): nothing to do for outages — requests back off up to 15 min, are capped at 3 calls and 100/day, and study continues offline. For harmful output: tell users to turn AI off (Settings → AI), extend the local term list, ship a hotfix. Users can revoke their own key at the provider.
 2. **Reminders misfire**: users turn them off in Settings; hotfix replaces the schedule at the next start.

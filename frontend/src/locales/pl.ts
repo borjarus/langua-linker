@@ -424,6 +424,22 @@ export const pl: LocaleResource = {
     title: 'Skojarzenia',
     favorite: 'Ulubione skojarzenie',
     setFavorite: 'Oznacz jako ulubione',
+    report: {
+      open: 'Zgłoś',
+      title: 'Zgłoś skojarzenie',
+      intro: 'Obraźliwe, błędne lub niejasne? Otworzy się aplikacja pocztowa z poniższą wiadomością do {{email}}. Nic nie zostanie wysłane, dopóki sam(a) jej tam nie wyślesz.',
+      reason: 'Co jest nie tak?',
+      reasons: {
+        offensive: 'Obraźliwe lub niestosowne',
+        wrong: 'Błędne lub wprowadzające w błąd',
+        unclear: 'Niejasne lub nieprzydatne',
+        other: 'Coś innego',
+      },
+      comment: 'Komentarz (opcjonalnie)',
+      preview: 'Wiadomość',
+      send: 'Otwórz e-mail',
+      thanks: 'Dziękujemy. Wyślij wiadomość w aplikacji pocztowej, aby dokończyć zgłoszenie.',
+    },
     generate: 'Wygeneruj nowe skojarzenie',
     empty: 'Brak skojarzeń.',
     provenance: {

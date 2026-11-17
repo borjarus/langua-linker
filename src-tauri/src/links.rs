@@ -1,10 +1,16 @@
 //! Navigation guard (ADR-21). The WebView only ever shows the app: a link to anything else
 //! (licences, privacy policy) is cancelled, and an `https` one opens in the system browser.
+//! A `mailto:` link opens the mail app only for the association report address (Play
+//! AI-generated content policy); any other recipient is dropped.
 //! Without it, Android loads the page inside the app's WebView in place of the app, and iOS
 //! ignores `target="_blank"`.
 
 use tauri::{Runtime, Url, plugin::TauriPlugin};
 use tauri_plugin_opener::OpenerExt;
+
+/// Recipient of association reports; the same constant as `REPORT_EMAIL` in
+/// `frontend/src/services/report.ts` (checked by `frontend/tests/report.test.ts`).
+pub const REPORT_EMAIL: &str = "borjarus@gmail.com";
 
 /// What happens to a navigation request.
 #[derive(Debug, PartialEq, Eq)]
@@ -25,6 +31,15 @@ pub fn classify(url: &Url) -> Navigation {
         "tauri" | "asset" | "ipc" | "about" => Navigation::Allow,
         "http" | "https" if local => Navigation::Allow,
         "https" if url.host_str().is_some() => Navigation::OpenExternally,
+        // Only the report address, and only one recipient (no `to=`/`cc=`/`bcc=` extras).
+        "mailto"
+            if url.path().eq_ignore_ascii_case(REPORT_EMAIL)
+                && url
+                    .query_pairs()
+                    .all(|(key, _)| key == "subject" || key == "body") =>
+        {
+            Navigation::OpenExternally
+        }
         _ => Navigation::Block,
     }
 }
@@ -84,6 +99,20 @@ mod tests {
     }
 
     #[test]
+    fn association_reports_open_the_mail_app() {
+        assert_eq!(
+            kind(
+                "mailto:borjarus@gmail.com?subject=LanguaLinker%3A%20report&body=Reason%3A%20wrong%0AFront%3A%20%C5%BC"
+            ),
+            Navigation::OpenExternally
+        );
+        assert_eq!(
+            kind("mailto:borjarus@gmail.com"),
+            Navigation::OpenExternally
+        );
+    }
+
+    #[test]
     fn other_schemes_are_dropped() {
         for url in [
             "http://example.com/",
@@ -91,6 +120,9 @@ mod tests {
             "javascript:alert(1)",
             "intent://scan/#Intent;scheme=zxing;end",
             "mailto:someone@example.com",
+            "mailto:borjarus@gmail.com,someone@example.com",
+            "mailto:borjarus@gmail.com?cc=someone@example.com",
+            "mailto:borjarus@gmail.com?bcc=someone@example.com&subject=x",
             "data:text/html,hi",
         ] {
             assert_eq!(kind(url), Navigation::Block, "{url}");

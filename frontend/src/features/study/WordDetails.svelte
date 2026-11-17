@@ -23,7 +23,11 @@
       {#if lemma && lemma !== note.front}<p class="muted">{i18n.t('wordSheet.baseForm', { lemma })}</p>{/if}
       <!-- In the sheet the user asked for the details, so sections start expanded; empty ones are left out. -->
       {#if note.capabilities.grammarTips && note.grammarTips.length > 0}<GrammarTipList tips={note.grammarTips} expanded />{/if}
-      {#if note.capabilities.associations && note.associations.length > 0}<AssociationPanel associations={note.associations} expanded />{/if}
+      {#if note.capabilities.associations && note.associations.length > 0}<AssociationPanel
+          associations={note.associations}
+          expanded
+          card={{ front: note.front, back: note.back, targetLanguage: note.targetLanguage }}
+        />{/if}
     </div>
   {/snippet}
 </QueryView>
