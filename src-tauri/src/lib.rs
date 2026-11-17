@@ -6,6 +6,7 @@ mod commands;
 mod content;
 mod diagnostics;
 mod files;
+mod links;
 mod manage;
 mod metrics;
 mod native;
@@ -275,6 +276,14 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        // Used from Rust by the navigation guard only: no injected click handler, and the
+        // WebView has no opener permission (ADR-21).
+        .plugin(
+            tauri_plugin_opener::Builder::new()
+                .open_js_links_on_click(false)
+                .build(),
+        )
+        .plugin(links::guard())
         .plugin(native::init());
     configure(builder, true, open_backend)
         .build(tauri::generate_context!())

@@ -88,6 +88,47 @@ fn query_text() -> impl Strategy<Value = String> {
     .prop_map(|parts| parts.concat())
 }
 
+/// `"phrase"* "phrase"* …`: every phrase quoted with inner quotes doubled, a prefix star after
+/// each, one space between them. (A string split on `"* ` is not enough: a phrase may itself
+/// start with `* `, found by this test with the query `"*\0deck:"`.)
+fn well_formed_fts(fts: &str) -> bool {
+    let mut chars = fts.chars().peekable();
+    loop {
+        if chars.next() != Some('"') {
+            return false;
+        }
+        loop {
+            match chars.next() {
+                None => return false,
+                Some('"') if chars.peek() == Some(&'"') => {
+                    chars.next();
+                }
+                Some('"') => break,
+                Some(c) if c.is_control() => return false,
+                Some(_) => {}
+            }
+        }
+        if chars.next() != Some('*') {
+            return false;
+        }
+        match chars.next() {
+            None => return true,
+            Some(' ') => {}
+            Some(_) => return false,
+        }
+    }
+}
+
+#[test]
+fn the_fts_oracle_accepts_only_quoted_prefix_phrases() {
+    assert!(well_formed_fts("\"a\"*"));
+    assert!(well_formed_fts("\"* deck:\"* \"a\"\"b\"*"));
+    assert!(!well_formed_fts("\"a\"* "));
+    assert!(!well_formed_fts("\"a\"b\"*"));
+    assert!(!well_formed_fts("a*"));
+    assert!(!well_formed_fts("\"a\""));
+}
+
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(2_000))]
 
@@ -98,10 +139,7 @@ proptest! {
         match parse_query(&query) {
             Ok(parsed) => {
                 if let Some(fts) = fts_query(&parsed.words) {
-                    prop_assert_eq!(fts.matches('"').count() % 2, 0, "{}", fts);
-                    for phrase in fts.split("\"* ") {
-                        prop_assert!(phrase.starts_with('"'), "{}", fts);
-                    }
+                    prop_assert!(well_formed_fts(&fts), "{}", fts);
                 }
             }
             Err(error) => prop_assert!(matches!(error, AppError::Validation(_)), "{error:?}"),
@@ -116,7 +154,18 @@ fn fts_expressions_of_odd_words_run_on_the_index() {
         .unwrap()
         .database;
     let words = [
-        "\"", "\"\"x", "a\"b", "NEAR(", "*", "a*b", "OR", "-x", "^y", "{z}", "ż\u{0}x",
+        "\"",
+        "\"\"x",
+        "a\"b",
+        "NEAR(",
+        "*",
+        "a*b",
+        "OR",
+        "-x",
+        "^y",
+        "{z}",
+        "ż\u{0}x",
+        "\"*\u{0}deck:\"",
     ];
     for word in words {
         let parsed = parse_query(word);

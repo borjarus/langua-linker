@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { JobDto, ResetScope } from '../../api/types'
   import { useServices } from '../../app/context'
+  import { PRIVACY_POLICY_URL } from '../../app/profile'
   import ErrorState from '../../components/ErrorState.svelte'
   import Icon from '../../components/Icon.svelte'
   import Skeleton from '../../components/Skeleton.svelte'
@@ -51,7 +52,12 @@
   <section class="surface stack" aria-labelledby="{ids}-local">
     <h2 id="{ids}-local">{i18n.t('privacy.local.title')}</h2>
     <p>{i18n.t('privacy.local.body')}</p>
+    <p>{i18n.t('privacy.local.ai')}</p>
     <p class="muted hint">{i18n.t('privacy.local.logs')}</p>
+    <p class="muted hint">{i18n.t('privacy.local.export')}</p>
+    {#if PRIVACY_POLICY_URL}
+      <a class="btn" href={PRIVACY_POLICY_URL} rel="noreferrer noopener external"><Icon name="link" />{i18n.t('privacy.local.policy')}</a>
+    {/if}
   </section>
 
   <section class="surface stack danger-zone" aria-labelledby="{ids}-reset">

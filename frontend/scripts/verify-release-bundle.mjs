@@ -13,6 +13,8 @@ const FORBIDDEN = [
   ['probe_secret_store', 'native diagnostics commands'],
   ['probe_file_open', 'native diagnostics commands'],
   ['plugin:notification|', 'notification spike'],
+  // Source maps are not shipped (ADR-21): they would publish the readable source and comments.
+  ['sourceMappingURL=', 'source map reference'],
 ]
 
 function walk(dir) {
@@ -25,6 +27,7 @@ function walk(dir) {
 const files = walk(dist)
 const problems = []
 for (const file of files) {
+  if (file.endsWith('.map')) problems.push(`${file}: source map file`)
   const content = readFileSync(file, 'utf8')
   for (const [needle, label] of FORBIDDEN) {
     if (file.includes(needle) || content.includes(needle)) problems.push(`${file}: contains ${label}`)

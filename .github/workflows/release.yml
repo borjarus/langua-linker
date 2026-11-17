@@ -7,8 +7,13 @@ name: Release
 #   in tauri.conf.json (`0.3.0-beta.2` → `0.3.0.2`); remove it again for a final `vX.Y.Z`.
 # - Manual runs only upload the packages as workflow artifacts.
 # Signing secrets stay outside the repository (plan Phase 1 step 14). Android release signing:
-# ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD.
-# Desktop packages are unsigned until D-01 decides on code signing/notarization.
+# ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+# (the upload key when Play App Signing is used). Desktop packages are unsigned until D-01
+# decides on code signing/notarization; there is no desktop updater (ADR-21).
+# Repository variable PRIVACY_POLICY_URL: the published policy the app links to; a tag needs it.
+# Store builds (Phase 17, ADR-21): the Android job also builds the Play bundle (AAB with native
+# symbol tables) and keeps the R8 mapping as a private workflow artifact; the release gets
+# SHA256SUMS and a build-provenance attestation.
 on:
   push:
     tags: ['v*']
@@ -20,9 +25,21 @@ permissions:
 # Decrypts the bundled content (content/decks/decks.7z) compiled into the app.
 env:
   LANGUA_DECKS_PASSWORD: ${{ secrets.LANGUA_DECKS_PASSWORD }}
+  VITE_PRIVACY_POLICY_URL: ${{ vars.PRIVACY_POLICY_URL }}
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # A tag also needs the matching version, a CHANGELOG entry and the privacy-policy URL.
+      - run: node scripts/release-check.mjs ${{ startsWith(github.ref, 'refs/tags/v') && format('--tag {0}', github.ref_name) || '' }}
+
   desktop:
+    needs: gate
     strategy:
       fail-fast: false
       matrix:
@@ -76,6 +93,7 @@ jobs:
           retention-days: 14
 
   android:
+    needs: gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -88,7 +106,7 @@ jobs:
         with:
           packages: platform-tools
       - name: Install NDK r27 (LTS)
-        run: sdkmanager --install "ndk;27.3.13750724" "platforms;android-34" "build-tools;34.0.0"
+        run: sdkmanager --install "ndk;27.3.13750724" "platforms;android-36" "build-tools;36.0.0"
       - run: echo "NDK_HOME=$ANDROID_HOME/ndk/27.3.13750724" >> "$GITHUB_ENV"
       - run: rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
       - uses: Swatinem/rust-cache@v2
@@ -111,8 +129,9 @@ jobs:
           fi
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
           echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
-      # Universal APK (all ABIs) for sideloading; Gradle picks up the signing env (app/build.gradle.kts).
-      - run: npm run variant -- release android build --apk
+      # Universal APK (all ABIs) for sideloading and the AAB for Google Play; Gradle picks up the
+      # signing env (app/build.gradle.kts).
+      - run: npm run variant -- release android build --apk --aab
         working-directory: frontend
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -129,6 +148,20 @@ jobs:
           path: dist-android/*.apk
           if-no-files-found: error
           retention-days: 14
+      # Play upload: the bundle (native symbol tables inside) and the R8 mapping for deobfuscation.
+      # Workflow artifacts only, not attached to the public release.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: play-bundle
+          path: src-tauri/gen/android/app/build/outputs/bundle/*Release/*.aab
+          if-no-files-found: error
+          retention-days: 90
+      - uses: actions/upload-artifact@v4
+        with:
+          name: play-mapping
+          path: src-tauri/gen/android/app/build/outputs/mapping/*Release/mapping.txt
+          if-no-files-found: warn
+          retention-days: 90
 
   publish:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -136,6 +169,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v4
       - name: Tag must match the app version
@@ -150,8 +185,22 @@ jobs:
           pattern: langualinker-*
           path: packages
           merge-multiple: true
+      - name: Checksums
+        working-directory: packages
+        run: |
+          find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
+          cat SHA256SUMS
+      # Release notes come from the CHANGELOG entry of this version (checked by the gate job).
+      - name: Release notes
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          awk -v head="## [$version]" 'index($0, head) == 1 { on = 1; next } on && /^## \[/ { exit } on' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: packages/**/*
       - uses: softprops/action-gh-release@v2
         with:
           files: packages/**/*
-          generate_release_notes: true
+          body_path: ${{ runner.temp }}/notes.md
           prerelease: ${{ contains(github.ref_name, '-') }}

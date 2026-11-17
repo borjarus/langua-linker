@@ -66,7 +66,7 @@ Open: the same drill on a phone (Android low-memory kill, iOS jetsam) and a real
 | Devtools / debug | `tauri` built without `devtools`; no window `devtools`; release frontend bundle checked by `verify-release-bundle.mjs` (no demo adapter, gallery, diagnostics) | ✅ |
 | Rust dependencies | `cargo audit` / `cargo deny` are not installed in this environment | ⬜ run in CI (`cargo install cargo-audit && cargo audit`) |
 | npm dependencies | `npm audit --omit=dev`: 0 vulnerabilities. Dev tooling: 10 moderate (vite dev-server `fs.deny` bypass, vitest mocker, minimatch ReDoS via typescript-eslint) — not shipped | ⬜ upgrade dev tooling |
-| Licences | attributions screen (Phase 5/8) lists bundled content and libraries | ⬜ full Rust/JS/native licence report before release (Phase 17) |
+| Licences | attributions screen (Phase 5/8) lists bundled content and libraries | ✅ generated Rust/JS/native licence report with allowlist, checked in CI (Phase 17, ADR-21) |
 
 ## Release contents (step 21)
 

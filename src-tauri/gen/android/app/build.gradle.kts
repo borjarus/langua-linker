@@ -23,7 +23,8 @@ val appVariant = System.getenv("LL_APP_VARIANT") ?: "dev"
 require(appVariant in setOf("dev", "beta", "release")) { "Unknown LL_APP_VARIANT \"$appVariant\"" }
 
 android {
-    compileSdk = 34
+    // Google Play requires API 36 for new apps and updates since 2026-08-31 (scripts/release-check.mjs).
+    compileSdk = 36
     namespace = "com.mila.langualinker"
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
@@ -34,7 +35,7 @@ android {
         }
         applicationId = "com.mila.langualinker"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
     }
@@ -69,6 +70,11 @@ android {
             applicationIdSuffix = if (appVariant == "release") null else ".$appVariant"
             signingConfig = signingConfigs.getByName(if (releaseKeystore != null) "release" else "debug")
             isMinifyEnabled = true
+            // The AAB carries the native symbol tables, so Play Console symbolicates native crashes
+            // (ADR-21); the APK stays stripped.
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
             proguardFiles(
                 *fileTree(".") { include("**/*.pro") }
                     .plus(getDefaultProguardFile("proguard-android-optimize.txt"))

@@ -2,6 +2,7 @@
   import { toErrorDto } from '../../api/errors'
   import type { DiagnosticsReportDto, ErrorDto } from '../../api/types'
   import { useServices } from '../../app/context'
+  import { PRIVACY_POLICY_URL } from '../../app/profile'
   import { href } from '../../app/routes'
   import ErrorState from '../../components/ErrorState.svelte'
   import Icon from '../../components/Icon.svelte'
@@ -61,6 +62,9 @@
       {/snippet}
     </QueryView>
     <a class="btn" href={href({ name: 'settingsAttributions' })}><Icon name="link" />{i18n.t('routes.settingsAttributions')}</a>
+    {#if PRIVACY_POLICY_URL}
+      <a class="btn" href={PRIVACY_POLICY_URL} rel="noreferrer noopener external"><Icon name="link" />{i18n.t('privacy.local.policy')}</a>
+    {/if}
   </section>
 
   <section class="surface stack" aria-labelledby="{ids}-diagnostics">

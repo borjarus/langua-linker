@@ -23,7 +23,7 @@
               <li class="surface">
                 <h3>{item.name}</h3>
                 <p class="muted">{i18n.t('attributions.license', { license: item.license })}</p>
-                {#if item.url}<a href={item.url} target="_blank" rel="noreferrer noopener">{item.url}</a>{/if}
+                {#if item.url}<a href={item.url} rel="noreferrer noopener external">{item.url}</a>{/if}
               </li>
             {/each}
           </ul>

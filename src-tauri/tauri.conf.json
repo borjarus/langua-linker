@@ -34,7 +34,8 @@
       "icons/icon.ico"
     ],
     "android": {
-      "minSdkVersion": 26
+      "minSdkVersion": 26,
+      "versionCode": 40031
     },
     "iOS": {
       "minimumSystemVersion": "16.0"

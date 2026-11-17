@@ -71,6 +71,10 @@ jobs:
       - run: rustup show active-toolchain
       # Reused KMP assets and the encrypted bundled content must match their reviewed checksums.
       - run: node scripts/verify-fixtures.mjs
+      # Release engineering gate (ADR-21): versions/versionCode/target SDK/manifest, licence report.
+      - run: node --test scripts/release-check.test.mjs scripts/licenses.test.mjs
+      - run: node scripts/release-check.mjs
+      - run: node scripts/licenses.mjs --check
       - uses: Swatinem/rust-cache@v2
       # tauri::generate_context! embeds frontendDist at compile time; the frontend job builds the real one.
       # tauri.conf.json is the release variant, so the stub lives in dist-release.

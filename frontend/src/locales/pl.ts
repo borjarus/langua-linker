@@ -1090,6 +1090,9 @@ export const pl: LocaleResource = {
       title: 'Twoje dane',
       body: 'Twoje talie, karty i historia powtórek zostają na tym urządzeniu. Nie ma konta ani synchronizacji w chmurze.',
       logs: 'Dzienniki diagnostyczne nigdy nie zawierają treści kart, zapytań do AI ani kluczy.',
+      ai: 'Tylko gdy poprosisz o skojarzenie AI, przód i tył tej karty trafiają do wybranego przez Ciebie dostawcy AI, z Twoim własnym kluczem. Nic więcej nie opuszcza urządzenia.',
+      export: 'Aby przechować dane gdzie indziej, zapisz kopię zapasową lub wyeksportuj talie (Ustawienia → Kopia zapasowa, Przenoszenie).',
+      policy: 'Polityka prywatności',
     },
     reset: {
       title: 'Resetowanie i usuwanie',

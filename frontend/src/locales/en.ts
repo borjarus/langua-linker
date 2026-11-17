@@ -996,6 +996,9 @@ export const en = {
       title: 'Your data',
       body: 'Your decks, cards and review history stay on this device. There is no account and no cloud synchronisation.',
       logs: 'Diagnostic logs never contain card content, prompts or keys.',
+      ai: 'Only when you ask for an AI association, the front and back of that card go to the AI provider you chose, with your own key. Nothing else leaves the device.',
+      export: 'To keep your data elsewhere, save a backup or export your decks (Settings → Backup, Transfer).',
+      policy: 'Privacy policy',
     },
     reset: {
       title: 'Reset and delete',

@@ -32,53 +32,35 @@ pub fn bundled() -> ArchiveSource {
     ArchiveSource::embedded(BUNDLED_ARCHIVE, BUNDLED_PASSWORD)
 }
 
-/// Main runtime dependencies shown on the Licences screen. A generated full list (cargo-about,
-/// npm licence report) replaces it with the release audit (plan Phase 16/17).
-const DEPENDENCIES: &[(&str, &str, &str)] = &[
-    ("Tauri", "MIT OR Apache-2.0", "https://tauri.app"),
-    ("Svelte", "MIT", "https://svelte.dev"),
-    ("i18next", "MIT", "https://www.i18next.com"),
-    ("TanStack Virtual", "MIT", "https://tanstack.com/virtual"),
-    (
-        "SQLite",
-        "Public Domain",
-        "https://sqlite.org/copyright.html",
-    ),
-    ("rusqlite", "MIT", "https://github.com/rusqlite/rusqlite"),
-    ("serde", "MIT OR Apache-2.0", "https://serde.rs"),
-    (
-        "unicode-normalization",
-        "MIT OR Apache-2.0",
-        "https://github.com/unicode-rs/unicode-normalization",
-    ),
-    (
-        "chrono",
-        "MIT OR Apache-2.0",
-        "https://github.com/chronotope/chrono",
-    ),
-    ("tracing", "MIT", "https://github.com/tokio-rs/tracing"),
-    (
-        "RustCrypto sha2",
-        "MIT OR Apache-2.0",
-        "https://github.com/RustCrypto/hashes",
-    ),
-    (
-        "keyring-core",
-        "MIT OR Apache-2.0",
-        "https://github.com/open-source-cooperative/keyring-core",
-    ),
-];
+/// Generated third-party licence report (`node scripts/licenses.mjs`, ADR-21): every Rust crate,
+/// npm package and native library that can ship in the mobile app, with an allowed licence.
+/// CI fails when it is stale (`--check`).
+static THIRD_PARTY: &str = include_str!("../third-party-licenses.json");
 
-pub fn attributions(content: Vec<(String, String, Option<String>)>) -> Vec<AttributionDto> {
-    let mut list: Vec<AttributionDto> = DEPENDENCIES
-        .iter()
-        .map(|(name, license, url)| AttributionDto {
-            name: (*name).to_owned(),
-            license: (*license).to_owned(),
-            url: Some((*url).to_owned()),
+#[derive(serde::Deserialize)]
+struct ThirdParty {
+    name: String,
+    version: String,
+    license: String,
+    url: String,
+}
+
+fn dependencies() -> Vec<AttributionDto> {
+    // The report is checked in CI; a broken file must not break the screen.
+    serde_json::from_str::<Vec<ThirdParty>>(THIRD_PARTY)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|item| AttributionDto {
+            name: format!("{} {}", item.name, item.version),
+            license: item.license,
+            url: Some(item.url),
             scope: AttributionScope::Dependency,
         })
-        .collect();
+        .collect()
+}
+
+pub fn attributions(content: Vec<(String, String, Option<String>)>) -> Vec<AttributionDto> {
+    let mut list = dependencies();
     list.extend(
         content
             .into_iter()
@@ -387,8 +369,33 @@ mod tests {
         let list = attributions(vec![("Deck".into(), "Licence".into(), None)]);
         assert_eq!(list.last().unwrap().scope, AttributionScope::Content);
         assert!(
-            list.iter()
-                .any(|item| item.name == "Tauri" && item.scope == AttributionScope::Dependency)
+            list.iter().any(|item| item.name.starts_with("tauri 2.")
+                && item.scope == AttributionScope::Dependency)
         );
+    }
+
+    #[test]
+    fn licence_report_is_complete_and_unique() {
+        let list = dependencies();
+        assert!(
+            list.len() > 100,
+            "the generated report lists the whole graph"
+        );
+        for name in [
+            "rusqlite ",
+            "svelte ",
+            "i18next ",
+            "androidx.webkit:webkit ",
+        ] {
+            assert!(
+                list.iter().any(|item| item.name.starts_with(name)),
+                "{name}missing"
+            );
+        }
+        let mut names: Vec<_> = list.iter().map(|item| item.name.as_str()).collect();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), list.len(), "names are list keys on the screen");
+        assert!(list.iter().all(|item| !item.license.is_empty()));
     }
 }
