@@ -134,7 +134,7 @@ for (const language of ['pl', 'en'] as const) {
         await page.getByRole('button', { name: locale.about.diagnostics.show }).click()
         await expect(page.getByRole('list', { name: locale.about.diagnostics.title })).toBeVisible()
         await check()
-        await go('#/settings/attributions', locale.attributions.scopes.content)
+        await go('#/settings/attributions', locale.attributions.scopes.dependency)
         await check()
 
         await go('#/settings/transfer', locale.transfer.import.title)
