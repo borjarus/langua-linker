@@ -4,7 +4,8 @@
 //
 //   node scripts/release-check.mjs            consistency checks (every push)
 //   node scripts/release-check.mjs --tag vX   also: the tag matches, CHANGELOG has the entry,
-//                                             a store build has its privacy-policy URL
+//                                             a final (store) build has its privacy-policy URL;
+//                                             a pre-release without it only warns
 //
 // Checks: one version in every manifest; the Android versionCode and the MSI version follow the
 // scheme below; Android targets the API level Google Play requires on submission day; the app
@@ -83,11 +84,24 @@ export function changelogHas(changelog, version) {
   return new RegExp(`^## \\[${version.replace(/\./g, '\\.')}\\]`, 'm').test(changelog)
 }
 
+/**
+ * The privacy-policy URL of a tagged build: a final release goes to the stores and needs it; a
+ * pre-release (`-alpha/-beta/-rc.N`) published on GitHub only may ship without the link (owner
+ * decision 2026-11-17, ADR-21). Returns `{ problem }`, `{ warning }` or `{}`.
+ */
+export function policyUrlCheck(version, env) {
+  if (env.VITE_PRIVACY_POLICY_URL?.startsWith('https://')) return {}
+  if (parseVersion(version).channel !== null) {
+    return { warning: `VITE_PRIVACY_POLICY_URL is not set: pre-release ${version} ships without the privacy-policy link (GitHub only, not for a store upload)` }
+  }
+  return { problem: 'VITE_PRIVACY_POLICY_URL (https) must be set for a store build: the app links to the published policy' }
+}
+
 function read(path) {
   return readFileSync(join(ROOT, path), 'utf8')
 }
 
-export function check({ tag = null, env = process.env } = {}) {
+export function check({ tag = null, env = process.env, warnings = [] } = {}) {
   const problems = []
   const tauri = JSON.parse(read('src-tauri/tauri.conf.json'))
   const version = tauri.version
@@ -121,9 +135,9 @@ export function check({ tag = null, env = process.env } = {}) {
   if (tag !== null) {
     if (tag !== `v${version}`) problems.push(`tag ${tag} does not match version ${version}`)
     if (!changelogHas(read('CHANGELOG.md'), version)) problems.push(`CHANGELOG.md has no "## [${version}]" entry`)
-    if (!env.VITE_PRIVACY_POLICY_URL?.startsWith('https://')) {
-      problems.push('VITE_PRIVACY_POLICY_URL (https) must be set for a store build: the app links to the published policy')
-    }
+    const policy = policyUrlCheck(version, env)
+    if (policy.problem) problems.push(policy.problem)
+    if (policy.warning) warnings.push(policy.warning)
   }
   return problems
 }
@@ -131,7 +145,9 @@ export function check({ tag = null, env = process.env } = {}) {
 function main() {
   const at = process.argv.indexOf('--tag')
   const tag = at === -1 ? null : process.argv[at + 1]
-  const problems = check({ tag })
+  const warnings = []
+  const problems = check({ tag, warnings })
+  for (const line of warnings) console.log(`::warning::release-check: ${line}`)
   if (problems.length > 0) {
     console.error(problems.map((line) => `release-check: ${line}`).join('\n'))
     process.exit(1)

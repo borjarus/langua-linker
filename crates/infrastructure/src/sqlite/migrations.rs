@@ -26,12 +26,26 @@ pub struct Migration {
 }
 
 impl Migration {
+    /// SHA-256 of the SQL with `\n` line ends. A Windows checkout with `core.autocrlf` compiles the
+    /// files with `\r\n`; hashing the raw bytes made such a build refuse every collection created
+    /// by an Android/macOS/Linux build (and its backups) with "checksum mismatch".
     pub fn checksum(&self) -> String {
-        Sha256::digest(self.sql.as_bytes())
-            .iter()
-            .map(|byte| format!("{byte:02x}"))
-            .collect()
+        sha256_hex(&self.sql.replace("\r\n", "\n"))
     }
+
+    /// Checksums an existing database may hold for this migration: the current one, and the raw
+    /// `\r\n` form written by Windows builds before line ends were normalized.
+    fn accepts(&self, stored: &str) -> bool {
+        stored == self.checksum()
+            || stored == sha256_hex(&self.sql.replace("\r\n", "\n").replace('\n', "\r\n"))
+    }
+}
+
+fn sha256_hex(text: &str) -> String {
+    Sha256::digest(text.as_bytes())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 /// The production migration list; versions start at 1 and have no gaps.
@@ -174,7 +188,7 @@ fn verify_checksums(conn: &Connection, migrations: &[Migration], applied: i64) -
             )
             .optional()
             .map_err(map_sqlite)?;
-        if stored.as_deref() != Some(migration.checksum().as_str()) {
+        if !stored.is_some_and(|stored| migration.accepts(&stored)) {
             return Err(AppError::Internal(format!(
                 "migration {} checksum mismatch",
                 migration.version
@@ -317,6 +331,41 @@ mod tests {
             matches!(error, AppError::Internal(ref m) if m.contains("checksum")),
             "{error:?}"
         );
+    }
+
+    /// Found on the device run of 2026-11-17: a build from a CRLF checkout refused the phone's
+    /// collection. Line ends do not change a migration; databases from either kind of build open.
+    #[test]
+    fn line_ends_do_not_change_the_checksum() {
+        let lf = MIGRATIONS[0];
+        let crlf_sql: &'static str = Box::leak(
+            lf.sql
+                .replace("\r\n", "\n")
+                .replace('\n', "\r\n")
+                .into_boxed_str(),
+        );
+        let crlf = Migration {
+            sql: crlf_sql,
+            ..lf
+        };
+        assert_eq!(lf.checksum(), crlf.checksum());
+
+        // A collection created by an LF build opens in a CRLF build, and the reverse.
+        for (create, open) in [(lf, crlf), (crlf, lf)] {
+            let mut conn = memory();
+            migrate(&mut conn, None, &[create], 1).unwrap();
+            migrate(&mut conn, None, &[open], 2).unwrap();
+        }
+
+        // A collection whose row holds the raw CRLF hash (Windows builds up to 0.4.0-beta.1).
+        let mut conn = memory();
+        migrate(&mut conn, None, &[lf], 1).unwrap();
+        conn.execute(
+            "UPDATE schema_migrations SET checksum = ?1 WHERE version = 1",
+            [sha256_hex(crlf_sql)],
+        )
+        .unwrap();
+        migrate(&mut conn, None, &[lf], 2).unwrap();
     }
 
     #[test]

@@ -49,9 +49,16 @@ pub fn guard<R: Runtime>() -> TauriPlugin<R> {
         .on_navigation(|webview, url| match classify(url) {
             Navigation::Allow => true,
             Navigation::OpenExternally => {
-                if let Err(error) = webview.opener().open_url(url.as_str(), None::<&str>) {
-                    tracing::warn!(target: "links", "external link not opened: {error}");
-                }
+                // Not from this callback's thread: on Android it is the main thread inside
+                // `shouldOverrideUrlLoading`, and the opener's Kotlin plugin call waits for that
+                // same thread — the app froze for good on the first link (device run 2026-11-17).
+                let webview = webview.clone();
+                let url = url.to_string();
+                std::thread::spawn(move || {
+                    if let Err(error) = webview.opener().open_url(url, None::<&str>) {
+                        tracing::warn!(target: "links", "external link not opened: {error}");
+                    }
+                });
                 false
             }
             Navigation::Block => {

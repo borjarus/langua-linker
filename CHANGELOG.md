@@ -4,6 +4,10 @@ All notable changes to LanguaLinker. Versions follow `X.Y.Z` / `X.Y.Z-(alpha|bet
 
 ## [Unreleased]
 
+## [0.5.0-beta.1] — 2026-11-17
+
+GitHub pre-release for testers: this build has no link to the published privacy policy yet and is not for store upload.
+
 ### Added
 - Report an AI-generated or bundled association (offensive, wrong, unclear): the app shows the message and opens your mail app addressed to the developer.
 - Privacy screen explains what leaves the device (only the card text you send for an AI association, to the provider you chose) and how to keep your data elsewhere; a link to the privacy policy in store builds.
@@ -13,6 +17,10 @@ All notable changes to LanguaLinker. Versions follow `X.Y.Z` / `X.Y.Z-(alpha|bet
 - Android: targets Android 16 (API 36) as Google Play requires; content is laid out around the system bars and the keyboard (edge-to-edge).
 - Android: no longer offered on Android TV.
 - Links to web pages open in the system browser instead of inside the app.
+
+### Fixed
+- A build made on Windows could refuse to open a collection (or a backup) created on Android, macOS or Linux.
+- Android: the status and navigation bars follow a light/dark system theme change while the app is open.
 
 ## [0.4.0-beta.1] — 2026-11-16
 

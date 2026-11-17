@@ -54,6 +54,30 @@ Legend: ☑ pass · ◐ partly verified (see notes) · ☒ fail · ☐ not run. 
 | 2026-10-13 | iOS Simulator `iPhone 17` (arm64), WKWebView / MobileSafari | iOS 26.5 | `001aaf3` | See iOS notes below. Screenshots in `docs/release/screenshots/`. |
 | 2026-11-06 | Physical Samsung Galaxy A56 `SM-A566B` (arm64-v8a), WebView 156.0.8078.47 | Android 16 (API 36) | `8e437d8` (beta debug APK; beta release profile signed with the debug key for H) | Phase 10 run, parts A–E, G, H done remotely over adb; F (TalkBack) and I (iOS) not run. See notes below. Screenshots `docs/release/screenshots/android-phase10-*.png`. |
 | 2026-11-10 | Physical Samsung Galaxy A56 `SM-A566B` (arm64-v8a), WebView 156.0.8078.47 | Android 16 (API 36) | `969f939` + Android build fix in `files.rs` (beta debug APK; beta release profile signed with the debug key for the start check) | Phase 11 and 12 run, remotely over adb; Phase 13 left for a later run with a real key. **Two P1 blockers** (start race, Browse paging). See notes below. Screenshots `docs/release/screenshots/android-phase11-12-*.png`. |
+| 2026-11-17 | Physical Samsung Galaxy A56 `SM-A566B` (arm64-v8a), WebView 157.0.8103.40 | Android 17 (API 37) | `1cd3db7` + fixes below (beta debug APK `0.5.0-beta.1`, targetSdk 36) | Pre-release check of 0.5.0-beta.1 (Phase 17 changes), remotely over adb. **Two P1 defects found and fixed in the run.** See notes below. |
+
+### 0.5.0-beta.1 physical Android run (2026-11-17)
+
+Driven remotely from the PC as in the earlier runs (`adb shell input tap/text` at element centres read over Chrome DevTools). Installed **as an update over the 0.4.0-beta.1 collection** (7 decks, 5 025 notes, 6 149 cards, 41 reviews, unfinished session). The APK was built from a worktree on an NTFS drive: the usual checkout is on exFAT, where `tauri android build` cannot create the `jniLibs` symlink ("Incorrect function").
+
+| Area | Result | Note |
+|---|---|---|
+| Update 0.4.0-beta.1 → 0.5.0-beta.1 | ☒ → ☑ | Every command failed with "An unexpected error occurred": `migration 1 checksum mismatch`. Migrations were hashed as raw bytes; the worktree was checked out with `core.autocrlf=true`, so the compiled SQL had CRLF. The same applies to the Windows job of the release workflow (an Android backup would not open on Windows). Fixed: the checksum is taken over LF-normalized SQL and the raw CRLF hash is still accepted; `.gitattributes` keeps the migrations LF. After the fix: collection opened, data and the unfinished session intact. |
+| External links (Licences) | ☒ → ☑ | The first tap on a licence link froze the app for good (UI and DevTools dead). `on_navigation` runs on the Android main thread inside `shouldOverrideUrlLoading`, and the opener's Kotlin call waits for that thread. Fixed: the link is opened from another thread. After the fix: Chrome opens the page, Back returns to the same screen and scroll position. |
+| Theme switch while open | ◐ → ☑ | Light → dark system theme left the status and navigation bars light until a restart (`uiMode` is in `configChanges`). Fixed in `MainActivity.onConfigurationChanged`. |
+| Edge-to-edge | ☑ | Portrait, landscape (content clear of the camera cutout and the 3-button bar, no horizontal scroll) and dark: header below the status bar, navigation above the system bar. |
+| Keyboard | ☑ | Report comment field: viewport shrinks 748 → 493 px, field and buttons above the keyboard. |
+| Licences, Privacy | ☑ | 367 components with licences. Privacy text as in the changelog; no policy link (no `VITE_PRIVACY_POLICY_URL` in this build). |
+| Association report | ☑ | Report → reason, comment, full message → Open e-mail → system chooser (Gmail, Outlook, Proton Mail…) and the "Thank you…" toast. Not sent. |
+| Study | ☑ | Resume session → Show answer (focus to the answer) → Good (2 → 3 reviews, next card) → Undo (back to the same card) → End session → summary. |
+| Backup | ☑ | Create backup (7.4 MB, retention applied); restore preview shows matching counts (not confirmed). |
+
+Open:
+
+- **P2 — the app closes about 1 s after a launch made right after `adb install -r`** (3 of 4 times; once with `FORTIFY: pthread_mutex_lock called on a destroyed mutex`). It happens during the `PACKAGE_REPLACED` broadcast, with a second `MainActivity` started by System UI. It was never seen on an ordinary start (8 starts).
+- **P3** — Back does not close the restore preview dialog (Cancel does); the association report quotes the raw Markdown front (`**Danke.**`).
+
+Not run: TalkBack listening, reminder delivery, restore and uninstall/reinstall, iOS.
 
 ### Phase 11–12 physical Android run (2026-11-10)
 

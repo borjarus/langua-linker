@@ -1,3 +1,5 @@
 # Checksummed reference assets (scripts/fixtures.lock.json): store and check out byte-for-byte.
 content/decks/** -text
 tests/fixtures/** -text
+# Compiled into the app (include_str!); LF in every checkout so all builds embed the same SQL.
+crates/infrastructure/migrations/*.sql text eol=lf

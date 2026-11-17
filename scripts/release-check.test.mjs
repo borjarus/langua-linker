@@ -1,7 +1,7 @@
 // node --test scripts/release-check.test.mjs scripts/licenses.test.mjs
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { androidVersionCode, changelogHas, check, gradleProblems, manifestProblems, parseVersion, wixVersion } from './release-check.mjs'
+import { androidVersionCode, changelogHas, check, gradleProblems, manifestProblems, parseVersion, policyUrlCheck, wixVersion } from './release-check.mjs'
 
 test('versionCode grows along semver order, pre-releases included', () => {
   const order = ['0.3.0', '0.4.0-alpha.1', '0.4.0-beta.1', '0.4.0-beta.2', '0.4.0-rc.1', '0.4.0', '0.4.1-beta.1', '0.4.1', '0.5.0', '1.0.0']
@@ -48,8 +48,15 @@ test('the repository passes its own gate', () => {
   assert.deepEqual(check(), [])
 })
 
-test('a tag needs the matching version and a privacy-policy URL', () => {
-  const problems = check({ tag: 'v9.9.9', env: {} })
+test('a tag needs the matching version', () => {
+  const problems = check({ tag: 'v9.9.9', env: { VITE_PRIVACY_POLICY_URL: 'https://example.org/privacy' } })
   assert.ok(problems.some((line) => line.includes('does not match')))
-  assert.ok(problems.some((line) => line.includes('VITE_PRIVACY_POLICY_URL')))
+})
+
+test('a final release needs a privacy-policy URL; a pre-release only warns', () => {
+  assert.ok(policyUrlCheck('1.0.0', {}).problem)
+  assert.ok(policyUrlCheck('1.0.0', { VITE_PRIVACY_POLICY_URL: 'http://example.org' }).problem)
+  assert.deepEqual(policyUrlCheck('1.0.0', { VITE_PRIVACY_POLICY_URL: 'https://example.org/privacy' }), {})
+  assert.ok(policyUrlCheck('0.5.0-beta.1', {}).warning)
+  assert.equal(policyUrlCheck('0.5.0-beta.1', {}).problem, undefined)
 })

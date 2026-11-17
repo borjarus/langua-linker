@@ -10,7 +10,8 @@ name: Release
 # ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
 # (the upload key when Play App Signing is used). Desktop packages are unsigned until D-01
 # decides on code signing/notarization; there is no desktop updater (ADR-21).
-# Repository variable PRIVACY_POLICY_URL: the published policy the app links to; a tag needs it.
+# Repository variable PRIVACY_POLICY_URL: the published policy the app links to; a final-release
+# tag needs it, a pre-release tag without it only warns (GitHub testers, not a store upload).
 # Store builds (Phase 17, ADR-21): the Android job also builds the Play bundle (AAB with native
 # symbol tables) and keeps the R8 mapping as a private workflow artifact; the release gets
 # SHA256SUMS and a build-provenance attestation.
