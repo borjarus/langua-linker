@@ -1,6 +1,6 @@
 # ADR-22: Local FSRS-6 optimizer
 
-- Status: Proposed (2026-11-18); implemented in Phase 18 steps 1–2. Acceptance after the owner accepts the optimizer screen and a run on a real collection on the Galaxy A56 (time, memory, held-out result).
+- Status: **Accepted** (2026-11-18) by the owner, after the optimizer screen and a run on the Galaxy A56 (time, memory, held-out result; generated one-year history by the owner's decision — see Consequences). Proposed 2026-11-18; implemented in Phase 18 steps 1–2.
 - Plan references: Phase 18 steps 1–7 and DoD; ADR-15 (FSRS-6 port, parameters hash), ADR-16 (learning flow), contract v1.5 ([contracts README](../contracts/README.md))
 
 ## Context
@@ -35,7 +35,7 @@ Presets carry 21 FSRS-6 weights; until now every learner used the defaults (or t
 
 ## Consequences
 
-- Desktop reference (release, development PC): reading 500 000 logs of one preset 0.73 s; training on 50 000 cards / 450 000 answers 1.0 s (5 epochs, 3 511 steps) — `cargo test --release -p langualinker-infrastructure --test budgets optimizer -- --ignored --nocapture`. Memory is the dataset (≈ 16 bytes per answer) plus constant model state. A phone measurement is open.
+- Desktop reference (release, development PC): reading 500 000 logs of one preset 0.73 s; training on 50 000 cards / 450 000 answers 1.0 s (5 epochs, 3 511 steps) — `cargo test --release -p langualinker-infrastructure --test budgets optimizer -- --ignored --nocapture`. Memory is the dataset (≈ 16 bytes per answer) plus constant model state. **Galaxy A56 (2026-11-18, [device-smoke](../release/device-smoke.md#phase-18-optimizer-run-on-the-galaxy-a56-2026-11-18))**: a generated one-year history (7 300 cards, 89 686 logs, 68 524 usable answers, drawn from known non-default weights) — the whole job 285–303 ms over 3 runs, RSS +8–11 MB during a run (PSS peak 259 MB for the app with the result on screen), held-out log loss 0.3229 → 0.3185 and RMSE 2.7 % → 0.8 % (recommended); apply and restore on the phone left the history and schedules untouched. The run used generated answers by the owner's decision; the owner accepted the screen and this ADR the same day.
 - Our numbers are not comparable to `fsrs-rs` results bit for bit (different pre-training and regularisation); quality is checked by recovery tests (answers simulated from known weights: the proposal's held-out loss comes within a quarter of the gap between the defaults and the true weights) and by the held-out comparison on every real run.
 - Changing the method means a new `OPTIMIZER_VERSION`; old runs keep theirs.
 - Not covered: per-deck (instead of per-preset) optimisation, optimising the desired retention, automatic periodic runs, recomputing memory states or rescheduling after apply (would need an explicit consent step and a preview of due-date changes).

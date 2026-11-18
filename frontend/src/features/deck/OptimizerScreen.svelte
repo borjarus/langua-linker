@@ -304,11 +304,20 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* The global `overflow-wrap: anywhere` would let the columns shrink to one character and break
+     "Current" or 0.3229 mid-word at phone width; labels wrap at spaces only, values never (the
+     wrapper scrolls if the table still does not fit). */
   th,
   td {
     padding: var(--space-1) var(--space-2);
     text-align: end;
     border-bottom: 1px solid var(--color-border);
+    overflow-wrap: normal;
+  }
+
+  td,
+  thead th:not(:first-child) {
+    white-space: nowrap;
   }
 
   th[scope='row'],

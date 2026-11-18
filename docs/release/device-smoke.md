@@ -55,6 +55,35 @@ Legend: ☑ pass · ◐ partly verified (see notes) · ☒ fail · ☐ not run. 
 | 2026-11-06 | Physical Samsung Galaxy A56 `SM-A566B` (arm64-v8a), WebView 156.0.8078.47 | Android 16 (API 36) | `8e437d8` (beta debug APK; beta release profile signed with the debug key for H) | Phase 10 run, parts A–E, G, H done remotely over adb; F (TalkBack) and I (iOS) not run. See notes below. Screenshots `docs/release/screenshots/android-phase10-*.png`. |
 | 2026-11-10 | Physical Samsung Galaxy A56 `SM-A566B` (arm64-v8a), WebView 156.0.8078.47 | Android 16 (API 36) | `969f939` + Android build fix in `files.rs` (beta debug APK; beta release profile signed with the debug key for the start check) | Phase 11 and 12 run, remotely over adb; Phase 13 left for a later run with a real key. **Two P1 blockers** (start race, Browse paging). See notes below. Screenshots `docs/release/screenshots/android-phase11-12-*.png`. |
 | 2026-11-17 | Physical Samsung Galaxy A56 `SM-A566B` (arm64-v8a), WebView 157.0.8103.40 | Android 17 (API 37) | `1cd3db7` + fixes below (beta debug APK `0.5.0-beta.1`, targetSdk 36) | Pre-release check of 0.5.0-beta.1 (Phase 17 changes), remotely over adb. **Two P1 defects found and fixed in the run.** See notes below. |
+| 2026-11-18 | Physical Samsung Galaxy A56 `SM-A566B` (arm64-v8a), WebView 157.0.8103.50 | Android 17 (API 37) | `4402bde` + uncommitted Phase 18 changes (beta debug APK, Rust `opt-level 3` for the core crates) | ADR-22 optimizer run on a generated one-year history (owner's choice), restore of deleted bundled decks, progress reset afterwards. See notes below. Screenshots `docs/release/screenshots/android-phase18-*.png`. |
+
+### Phase 18 optimizer run on the Galaxy A56 (2026-11-18)
+
+For the ADR-22 acceptance (time, memory, held-out result on the phone). Driven remotely as in the earlier runs (Chrome DevTools for reading the screen, a real `input tap` for the start). Installed **as an update** over the 0.5.0-beta.1 collection (schema v5 → v6, safety copy `collection.pre-v6.sqlite` written).
+
+**Build.** Beta debug APK (debuggable, so the database could be prepared over `run-as`), with the Rust core crates (`domain`, `application`, `infrastructure`, SQLite) at `opt-level 3` without debug assertions or overflow checks; the shell crate at `opt-level 1` (opt-level 3 ran out of memory on the build PC). The optimizer code is in the core crates, so the times stand for a release build.
+
+**Collection.** The phone held only 81 real answers (minimum 200), all decks deleted. The owner chose to generate the history for the run and reset it afterwards:
+
+1. The six bundled decks were brought back through *Set up languages and decks again* — this also checked the new restore of deleted bundled decks: all six back with 10 060 cards and their earlier progress, decks screen after 2.4 s.
+2. A one-year history was generated on the PC for the live cards and written into the pulled database (`history-gen` over `langualinker_domain::optimizer::replay_memory`): 20 new cards a day for 365 days, a first answer and a same-day step, reviews at 0.5–1.6× the scheduled interval answered by sampling the recall of **known weights that differ from the defaults** (w0 0.6, w2 5.0, w8 1.4, w9 0.25, w11 1.9, w20 0.35 — the recovery-test "truth"), a relearning step after each lapse. Result: 7 300 cards, 89 604 answers; on the screen 89 686 logs, **68 524 usable**, 3 undone excluded.
+
+| Check | Result |
+|---|---|
+| Time (job `started_at` → `finished_at`: read history, train, held-out evaluation, workload, store run) | **287 ms**, 285 ms, 303 ms (3 runs; 54 860 training answers, 274 300 progress units). Desktop reference: 1.0 s for 450 000 answers. |
+| Memory | PSS before the start 232 MB, peak **259 MB** right after the run (with the result rendered), 249 MB afterwards (`dumpsys meminfo`, ≈ 0.15 s samples). Runs 2–3 sampled from `/proc/<pid>/status` every ≈ 20 ms: RSS **+10.6 MB** and **+8.4 MB** during the run; `VmHWM` (328 MB, from the start and onboarding) unchanged. |
+| Held-out result | Recommended. Log loss **0.3229 → 0.3185**, calibration RMSE **2.7 % → 0.8 %** on 13 664 answers of cards never trained on. Workload preview: 257.9 → 334.9 reviews/day, median interval 140 → 67 days. Proposed weights moved from the defaults towards the generating weights: w0 0.21 → 0.50 (0.6), w2 2.31 → 5.57 (5.0), w8 1.87 → 1.55 (1.4), w9 0.17 → 0.23 (0.25), w20 0.15 → 0.25 (0.35); w11 1.48 → 1.38 (1.9) did not. |
+| Same data, same result | Runs 2 and 3 gave the same metrics (deterministic). |
+| Apply / restore | "Use the new weights" → status *Applied*, toast "New weights saved in “Default”"; "Restore previous weights" → *Reverted*, preset weights equal to the weights before the run (parsed values). Review logs and card schedules unchanged by both (counts, sums of due dates and stabilities compared). |
+| Clean-up | *Reset progress* (typed confirmation, no in-app backup: it would only hold the generated history; copies of the database before and after are on the test PC): 0 review logs, 10 060 cards new, 6 decks and their notes kept, `integrity_check` ok. The three optimizer runs stayed in *Earlier runs* (by design they survive a progress reset); deleted afterwards, see below. |
+
+Screenshots: `android-phase18-optimizer-start.png`, `-done.png` (the run finished before a progress screenshot could be taken), `-applied.png`, `-reverted.png`.
+
+Open:
+
+- ~~P2 — the comparison table breaks words at phone width~~ (headers "Curre/nt", "Propo/sed", log loss "0.322/9"; cause: the global `overflow-wrap: anywhere` lets table columns shrink to one character). **Fixed the same day**: in the optimizer tables labels wrap at spaces only, values and value headers never (the wrapper scrolls if needed). Checked in Chromium at the phone's CSS width (411 px, demo adapter): no word broken, no horizontal overflow. Not re-checked on the phone: the runs were deleted first.
+- The run is on generated answers, not on a learner's own history; the owner accepted this for the measurement, then accepted the screen and ADR-22 (2026-11-18).
+- Afterwards, at the owner's request, the three optimizer runs and their `optimize` jobs were deleted from the phone's collection (database edited over `run-as`, app stopped); the 9 answers given on the phone after the reset were kept.
 
 ### 0.5.0-beta.1 physical Android run (2026-11-17)
 
