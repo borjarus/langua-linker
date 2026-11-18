@@ -26,6 +26,9 @@ pub const MAX_BUNDLED_GUID_CHARS: usize = 48;
 /// Longest association or grammar tip, equal to the editor's `maxlength` (GUI limit).
 pub const MAX_SNIPPET_CHARS: usize = 500;
 
+/// Longest extended (Markdown) association; a line stays well under `MAX_LINE_BYTES`.
+pub const MAX_EXTENDED_CHARS: usize = 12_000;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Catalog {
@@ -263,6 +266,10 @@ pub struct AssociationRecord {
     /// person wrote it.
     pub prompt_version: Option<String>,
     pub model: Option<String>,
+    /// Long Markdown version (sections, lists, quotes) shown collapsed under the short text;
+    /// optional (prompt `association-extended-v1`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extended: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

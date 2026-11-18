@@ -3,6 +3,7 @@
   import { toErrorDto } from '../../api/errors'
   import { FSRS_WEIGHT_COUNT, type ErrorDto, type PresetConfigDto, type PresetDto } from '../../api/types'
   import { useServices } from '../../app/context'
+  import { href } from '../../app/routes'
   import Dialog from '../../components/Dialog.svelte'
   import Disclosure from '../../components/Disclosure.svelte'
   import ErrorState from '../../components/ErrorState.svelte'
@@ -149,6 +150,7 @@
         <textarea id="{ids}-weights" class="input mono" rows="4" bind:value={weights} aria-invalid={show('weights') !== null}></textarea>
         {#if show('weights')}<p class="field-error">{show('weights')}</p>{/if}
         <p class="muted hint">{i18n.t('deck.preset.weightsHint')}</p>
+        <a class="optimize" href={href({ name: 'optimizer', params: { id: initial.id } })}>{i18n.t('deck.preset.optimize')}</a>
       </div>
     </Disclosure>
     {#if touched && !valid}<p class="field-error" role="alert">{i18n.t('editor.errors.summary')}</p>{/if}

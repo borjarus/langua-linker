@@ -874,6 +874,7 @@ pub fn save_note(
                 model: None,
                 moderation: ModerationStatus::NotRequired,
                 cache_key: None,
+                extended: None,
             },
             now,
         )?;
@@ -1075,6 +1076,7 @@ pub fn update_note_content(
                     model: None,
                     moderation: ModerationStatus::NotRequired,
                     cache_key: None,
+                    extended: None,
                 },
                 now,
             )?;

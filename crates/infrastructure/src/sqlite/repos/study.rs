@@ -55,6 +55,7 @@ fn candidate_row(row: &Row<'_>) -> rusqlite::Result<Candidate> {
         note_id: NoteId(row.get(1)?),
         deck_id: DeckId(row.get(2)?),
         due_at: opt_ts(row, 3)?,
+        template_ordinal: row.get(4)?,
     })
 }
 
@@ -341,6 +342,39 @@ impl SchedulerQueries for SqliteRepos<'_> {
             .map_err(map_sqlite)
     }
 
+    fn new_introduced_since(
+        &mut self,
+        since: TimestampMs,
+        decks: &[DeckId],
+    ) -> AppResult<Vec<(u32, u32)>> {
+        if decks.is_empty() {
+            return Ok(Vec::new());
+        }
+        let sql = format!(
+            "SELECT c.template_ordinal, COUNT(*)
+             FROM review_logs l JOIN cards c ON c.id = l.card_id
+             WHERE l.reviewed_at >= ? AND {counted}
+               AND json_extract(l.card_before, '$.state') = {new}
+               AND c.deck_id IN ({decks})
+             GROUP BY c.template_ordinal",
+            counted = counted_reviews(),
+            new = CardState::New.db_code(),
+            decks = placeholders(decks.len()),
+        );
+        let mut args = vec![since.0];
+        args.extend(decks.iter().map(|deck| deck.0));
+        let mut statement = self.tx.prepare_cached(&sql).map_err(map_sqlite)?;
+        statement
+            .query_map(params_from_iter(args), |row| {
+                Ok((
+                    row.get::<_, u32>(0)?,
+                    row.get::<_, i64>(1)?.clamp(0, u32::MAX.into()) as u32,
+                ))
+            })
+            .and_then(Iterator::collect)
+            .map_err(map_sqlite)
+    }
+
     fn notes_reviewed_since(&mut self, since: TimestampMs) -> AppResult<Vec<NoteId>> {
         let sql = format!(
             "SELECT DISTINCT c.note_id FROM review_logs l JOIN cards c ON c.id = l.card_id
@@ -363,7 +397,7 @@ impl SchedulerQueries for SqliteRepos<'_> {
             return Ok(Vec::new());
         }
         let sql = format!(
-            "SELECT id, note_id, deck_id, due_at FROM cards
+            "SELECT id, note_id, deck_id, due_at, template_ordinal FROM cards
              WHERE deck_id IN ({}) AND queue = {} AND due_at < ?
                AND deleted_at IS NULL AND archived_at IS NULL
              ORDER BY due_at, id",
@@ -382,7 +416,7 @@ impl SchedulerQueries for SqliteRepos<'_> {
         limit: u32,
     ) -> AppResult<Vec<Candidate>> {
         let sql = format!(
-            "SELECT id, note_id, deck_id, due_at FROM cards
+            "SELECT id, note_id, deck_id, due_at, template_ordinal FROM cards
              WHERE deck_id = ?1 AND queue IN ({}, {}) AND due_at < ?2
                AND deleted_at IS NULL AND archived_at IS NULL
              ORDER BY due_at, id LIMIT ?3",
@@ -400,16 +434,22 @@ impl SchedulerQueries for SqliteRepos<'_> {
         limit: u32,
     ) -> AppResult<Vec<Candidate>> {
         // Random order is a per-day permutation (multiplicative hash of the id), stable all day.
+        // Up to `limit` cards per template ordinal, so the queue can alternate directions.
         let (order_by, args) = match order {
-            NewCardOrder::Position => ("position, id LIMIT ?2", vec![deck.0, i64::from(limit)]),
+            NewCardOrder::Position => ("position, id", vec![deck.0, i64::from(limit)]),
             NewCardOrder::Random => (
-                "(id * 2654435761 + ?2 * 40503) % 4294967311, id LIMIT ?3",
-                vec![deck.0, day, i64::from(limit)],
+                "(id * 2654435761 + ?3 * 40503) % 4294967311, id",
+                vec![deck.0, i64::from(limit), day],
             ),
         };
         let sql = format!(
-            "SELECT id, note_id, deck_id, due_at FROM cards
-             WHERE deck_id = ?1 AND queue = {} AND deleted_at IS NULL AND archived_at IS NULL
+            "SELECT id, note_id, deck_id, due_at, template_ordinal FROM (
+                 SELECT id, note_id, deck_id, due_at, template_ordinal, position,
+                        ROW_NUMBER() OVER (PARTITION BY template_ordinal ORDER BY {order_by}) AS rank
+                 FROM cards
+                 WHERE deck_id = ?1 AND queue = {} AND deleted_at IS NULL AND archived_at IS NULL
+             )
+             WHERE rank <= ?2
              ORDER BY {order_by}",
             QueueState::New.db_code(),
         );

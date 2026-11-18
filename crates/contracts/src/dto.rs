@@ -23,6 +23,8 @@ pub enum JobKind {
     Restore,
     Reset,
     Llm,
+    /// FSRS optimizer (contract 1.5).
+    Optimize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -140,6 +142,10 @@ pub enum JobResultDto {
         archived: u32,
         #[serde(default)]
         warnings: Vec<ContentWarningDto>,
+    },
+    /// A finished optimizer run (contract 1.5); read it with `getOptimizer`.
+    Optimize {
+        run_id: String,
     },
 }
 
@@ -707,6 +713,10 @@ pub struct AssociationDto {
     pub status: AssociationStatus,
     pub model: Option<String>,
     pub error: Option<ErrorDto>,
+    /// Since 1.4: long Markdown version shown collapsed under `text` (bundled content).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub extended: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -1189,6 +1199,119 @@ pub struct SavePresetInput {
     pub expected_version: Option<u32>,
     pub name: String,
     pub config: PresetConfigDto,
+}
+
+// ---------------------------------------------------------------- Phase 18: FSRS optimizer (1.5)
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GetOptimizerInput {
+    pub preset_id: String,
+}
+
+/// Review history of the preset's cards as the optimizer reads it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct OptimizerDatasetDto {
+    /// Every logged answer of the preset's cards.
+    pub reviews: u32,
+    /// Cards with a usable history.
+    pub cards: u32,
+    /// Answers the optimizer learns from and validates on (on a later study day).
+    pub usable: u32,
+    pub excluded_undone: u32,
+    pub excluded_manual: u32,
+    /// Answers of cards whose history does not start with the first learning answer.
+    pub excluded_incomplete: u32,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum OptimizerRunStatus {
+    /// Result ready; the preset is unchanged.
+    Proposed,
+    Applied,
+    /// Applied, then rolled back to the weights before it.
+    Reverted,
+}
+
+/// One weight vector measured on the held-out cards, with its workload preview.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct OptimizerMetricsDto {
+    /// Mean log loss per held-out answer (lower is better).
+    pub log_loss: f64,
+    /// Calibration error of the predicted recall, 0–1 (lower is better).
+    pub rmse: f64,
+    /// Steady-state reviews per day of the current cards.
+    pub daily_reviews: f64,
+    pub median_interval_days: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct OptimizerRunDto {
+    pub run_id: String,
+    pub status: OptimizerRunStatus,
+    pub created_at: String,
+    pub applied_at: Option<String>,
+    pub reverted_at: Option<String>,
+    /// Method and model the run used (provenance).
+    pub optimizer_version: String,
+    pub fsrs_version: String,
+    pub dataset: OptimizerDatasetDto,
+    pub training_reviews: u32,
+    pub validation_reviews: u32,
+    /// The preset's weights when the run started; a revert restores them.
+    pub weights_before: Vec<f64>,
+    pub weights_proposed: Vec<f64>,
+    pub current: OptimizerMetricsDto,
+    pub proposed: OptimizerMetricsDto,
+    /// The proposal predicts the held-out answers better than the weights before.
+    pub recommended: bool,
+    /// Fewer usable answers than `recommendedReviews`.
+    pub few_reviews: bool,
+    /// Proposed and the preset still has `weightsBefore`.
+    pub can_apply: bool,
+    /// Applied and the preset still has `weightsProposed`.
+    pub can_revert: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct OptimizerDto {
+    pub preset_id: String,
+    pub preset_name: String,
+    /// `expectedVersion` of apply and revert.
+    pub preset_version: u32,
+    pub desired_retention: f64,
+    pub current_weights: Vec<f64>,
+    pub default_weights: Vec<f64>,
+    pub dataset: OptimizerDatasetDto,
+    /// `startOptimizer` refuses below this many usable answers.
+    pub minimum_reviews: u32,
+    /// Heuristic: below this a result is shown with a warning.
+    pub recommended_reviews: u32,
+    /// Job of a run in progress for this preset.
+    pub running_job_id: Option<String>,
+    /// Newest first.
+    pub runs: Vec<OptimizerRunDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct StartOptimizerInput {
+    pub operation_id: String,
+    pub preset_id: String,
+}
+
+/// Apply or revert one run at the preset version shown.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct OptimizerRunActionInput {
+    pub operation_id: String,
+    pub run_id: String,
+    pub expected_version: u32,
 }
 
 // ---------------------------------------------------------------- Phase 11: details and editor
@@ -1693,6 +1816,14 @@ pub fn typescript() -> String {
         DeleteDeckResultDto::decl(&cfg),
         PresetConfigDto::decl(&cfg),
         PresetDto::decl(&cfg),
+        GetOptimizerInput::decl(&cfg),
+        OptimizerDatasetDto::decl(&cfg),
+        OptimizerRunStatus::decl(&cfg),
+        OptimizerMetricsDto::decl(&cfg),
+        OptimizerRunDto::decl(&cfg),
+        OptimizerDto::decl(&cfg),
+        StartOptimizerInput::decl(&cfg),
+        OptimizerRunActionInput::decl(&cfg),
         SavePresetInput::decl(&cfg),
         NoteDto::decl(&cfg),
         ReviewLogDto::decl(&cfg),

@@ -4,6 +4,14 @@ All notable changes to LanguaLinker. Versions follow `X.Y.Z` / `X.Y.Z-(alpha|bet
 
 ## [Unreleased]
 
+### Added
+- Optimize a preset's FSRS weights on your own answers, on the device: the screen compares the current and the proposed weights on answers held out from training, previews the daily workload, and applies the proposal only when you choose. Earlier weights can be restored; no card is rescheduled and your history never leaves the device.
+- Word associations have an extended version (sound split, story, quick hook, alternative route, chain, example sentences, grammar, a culture scene, related words). It sits under the short association and starts collapsed.
+
+### Changed
+- Sentence decks study both directions: from the target language, and from Polish into the target language. An update adds the missing reverse cards; existing progress stays.
+- New cards of a session come half from the front side and half from the reverse side, each from a different note.
+
 ## [0.5.0-beta.1] — 2026-11-17
 
 GitHub pre-release for testers: this build has no link to the published privacy policy yet and is not for store upload.

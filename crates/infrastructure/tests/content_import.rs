@@ -228,7 +228,10 @@ fn rewrite(dir: &Path, stem: &str, version: &str, change: impl FnOnce(&mut Vec<V
     let path = dir.join(format!("{stem}.json"));
     let mut manifest: Value =
         serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
-    let templates = if manifest["noteType"] == "BasicAndReversed" {
+    let templates = if manifest["noteType"]
+        .as_str()
+        .is_some_and(|kind| kind.ends_with("AndReversed"))
+    {
         2
     } else {
         1
@@ -256,8 +259,19 @@ fn fresh_install_contains_the_four_decks_with_content_and_links() {
         4
     );
     assert_eq!(harness.count("SELECT COUNT(*) FROM notes"), 3112);
-    // 486 words × 2 templates + 2626 sentences × 1.
-    assert_eq!(harness.count("SELECT COUNT(*) FROM cards"), 3598);
+    // 486 words × 2 templates + 2626 sentences × 2 (both decks types are reversed).
+    assert_eq!(harness.count("SELECT COUNT(*) FROM cards"), 6224);
+    assert_eq!(
+        harness.count("SELECT COUNT(*) FROM cards WHERE template_ordinal = 1"),
+        3112
+    );
+    // Every German word ships an extended association.
+    assert!(
+        harness.count(
+            "SELECT COUNT(*) FROM associations a JOIN notes n ON n.id = a.note_id
+             WHERE a.extended LIKE '## 1.%' AND n.guid LIKE 'dew-%'"
+        ) >= 151
+    );
     assert_eq!(
         harness.count("SELECT COUNT(*) FROM cards WHERE state <> 0 OR due_at IS NOT NULL"),
         0
@@ -274,7 +288,7 @@ fn fresh_install_contains_the_four_decks_with_content_and_links() {
     assert!(harness.count("SELECT COUNT(*) FROM sentence_word_links") > 50);
     assert_eq!(
         harness.count("SELECT COUNT(DISTINCT guid) FROM cards"),
-        3598,
+        6224,
         "card GUIDs are generated"
     );
     assert_eq!(
@@ -545,6 +559,94 @@ impl ContentSource for FailingSecondRead {
     }
 }
 
+/// A sentence deck installed as `Sentence` (one card per note) gets its reverse cards when a
+/// newer version ships `SentenceAndReversed`; forward progress is untouched and the extended
+/// text of a word association follows the bundle.
+#[test]
+fn update_to_a_reversed_sentence_type_adds_reverse_cards_and_keeps_progress() {
+    let harness = Harness::new();
+    let old = copy_content();
+    rewrite(old.path(), "de_sentences_a1", "2026.11.09", |_| {});
+    let manifest = old.path().join("de_sentences_a1.json");
+    let mut value: Value =
+        serde_json::from_str(&std::fs::read_to_string(&manifest).unwrap()).unwrap();
+    let notes = value["expectedNotes"].clone();
+    value["noteType"] = "Sentence".into();
+    value["expectedCards"] = notes.clone();
+    std::fs::write(&manifest, serde_json::to_string_pretty(&value).unwrap()).unwrap();
+    rewrite(old.path(), "de_words_a1", "2026.11.09", |records| {
+        for record in records.iter_mut() {
+            record["associations"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove("extended");
+        }
+    });
+    let original = harness.service(Arc::new(DirSource::new(old.path())));
+    harness.wait(
+        &original
+            .complete_onboarding(onboarding(
+                "op-1",
+                &["bundled-de-words-a1", "bundled-de-sentences-a1"],
+            ))
+            .unwrap(),
+    );
+    let sentences = notes.as_i64().unwrap();
+    assert_eq!(
+        harness.count("SELECT COUNT(*) FROM cards WHERE template_ordinal = 1"),
+        151
+    );
+    assert_eq!(
+        harness.count("SELECT COUNT(*) FROM associations WHERE extended IS NOT NULL"),
+        0
+    );
+    let studied = harness
+        .db
+        .write(|tx| {
+            let note = tx
+                .note_by_guid(&Guid::parse("des-dedc82c8adea").unwrap())?
+                .unwrap();
+            let mut card = tx.cards_of_note(note.id)?.remove(0);
+            card.state = CardState::Review;
+            card.queue = QueueState::Review;
+            card.due_at = Some(TimestampMs(T0 + 86_400_000 * 3));
+            card.reps = 4;
+            tx.update_card(&card, TimestampMs(T0 + 10))
+        })
+        .unwrap();
+
+    let updated = harness.service(Arc::new(DirSource::new(content_dir())));
+    let job = updated
+        .resume()
+        .unwrap()
+        .expect("the newer version queues both decks");
+    harness.wait(&job);
+    assert_eq!(
+        harness.count("SELECT COUNT(*) FROM cards WHERE template_ordinal = 1"),
+        151 + sentences
+    );
+    assert_eq!(
+        harness.count("SELECT COUNT(*) FROM associations WHERE extended IS NOT NULL"),
+        151
+    );
+    let (forward, reverse) = harness
+        .db
+        .read(move |tx| {
+            let mut cards = tx.cards_of_note(studied.note_id)?;
+            cards.sort_by_key(|card| card.template_ordinal);
+            Ok((cards[0].clone(), cards[1].clone()))
+        })
+        .unwrap();
+    assert_eq!(
+        (forward.id, forward.reps, forward.state),
+        (studied.id, 4, CardState::Review)
+    );
+    assert_eq!(
+        (reverse.template_ordinal, reverse.state),
+        (1, CardState::New)
+    );
+}
+
 #[test]
 fn failure_inside_a_deck_leaves_no_partial_deck_and_restart_completes() {
     let dir = tempfile::tempdir().unwrap();
@@ -622,6 +724,73 @@ fn sentence_links_resolve_when_the_word_deck_arrives_later() {
         harness.count("SELECT COUNT(*) FROM sentence_word_links WHERE resolution = 1"),
         links
     );
+}
+
+#[test]
+fn choosing_deleted_decks_again_restores_them_with_progress_and_links() {
+    let harness = Harness::new();
+    let content = harness.service(Arc::new(DirSource::new(content_dir())));
+    let decks = ["bundled-de-words-a1", "bundled-de-sentences-a1"];
+    harness.wait(&content.complete_onboarding(onboarding("op-1", &decks)).unwrap());
+    let live_cards = "SELECT COUNT(*) FROM cards WHERE deleted_at IS NULL";
+    let live_notes = "SELECT COUNT(*) FROM notes WHERE deleted_at IS NULL";
+    let resolved = "SELECT COUNT(*) FROM sentence_word_links WHERE resolution = 1";
+    let (cards, notes, links) = (
+        harness.count(live_cards),
+        harness.count(live_notes),
+        harness.count(resolved),
+    );
+    assert!(links > 0);
+    harness
+        .db
+        .with_connection(|conn| {
+            conn.execute("UPDATE cards SET reps = 3 WHERE id = (SELECT MIN(id) FROM cards)", [])
+                .map(drop)
+                .map_err(|error| langualinker_application::AppError::Internal(error.to_string()))
+        })
+        .unwrap();
+    for (index, deck) in decks.iter().enumerate() {
+        let guid = Guid::parse(deck).unwrap();
+        harness
+            .db
+            .write(move |tx| {
+                let deck = tx.deck_by_guid(&guid)?.unwrap();
+                langualinker_application::management::delete_deck(
+                    tx,
+                    &format!("delete-{index}"),
+                    deck.id,
+                    deck.version,
+                    TimestampMs(T0 + 500),
+                )
+                .map(drop)
+            })
+            .unwrap();
+    }
+    assert_eq!(harness.count(live_cards), 0);
+    assert_eq!(harness.count(live_notes), 0);
+
+    // Only the sentences first: they come back whole, their links wait for the words.
+    let job = content
+        .complete_onboarding(onboarding("op-2", &["bundled-de-sentences-a1"]))
+        .unwrap();
+    assert_eq!(harness.wait(&job).status, JobStatus::Succeeded);
+    assert_eq!(harness.count("SELECT COUNT(*) FROM decks WHERE deleted_at IS NULL"), 1);
+    assert!(harness.count(live_cards) > 0);
+    assert_eq!(harness.count(resolved), 0);
+
+    let job = content
+        .complete_onboarding(onboarding("op-3", &["bundled-de-words-a1"]))
+        .unwrap();
+    assert_eq!(harness.wait(&job).status, JobStatus::Succeeded);
+    assert_eq!(harness.count(live_cards), cards, "no duplicate cards");
+    assert_eq!(harness.count(live_notes), notes);
+    assert_eq!(harness.count(resolved), links);
+    assert_eq!(
+        harness.count("SELECT reps FROM cards WHERE id = (SELECT MIN(id) FROM cards)"),
+        3,
+        "progress kept"
+    );
+    assert!(harness.pending().is_empty());
 }
 
 #[test]

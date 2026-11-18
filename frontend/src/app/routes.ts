@@ -5,6 +5,7 @@
 export const ROUTE_PATTERNS = {
   home: '/home',
   deck: '/deck/:id',
+  optimizer: '/preset/:id/optimizer',
   study: '/study/:deckId',
   summary: '/summary/:sessionId',
   card: '/card/:id',

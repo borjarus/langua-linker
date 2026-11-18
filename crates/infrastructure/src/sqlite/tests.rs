@@ -503,6 +503,7 @@ fn association(note: NoteId, n: u8, text: &str) -> NewAssociation {
         model: None,
         moderation: ModerationStatus::NotRequired,
         cache_key: None,
+        extended: None,
     }
 }
 

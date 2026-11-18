@@ -113,6 +113,8 @@ export interface AssociationRecord {
   status: 'ready' | 'pending' | 'offlineQueued' | 'error' | 'blocked'
   /** Why a generated association failed: provider error, unusable output or moderation. */
   errorCode?: 'PROVIDER_ERROR' | 'INVALID_PROVIDER_OUTPUT' | 'MODERATION_BLOCKED'
+  /** Long Markdown version (contract 1.4), shown collapsed under the text. */
+  extended?: string
 }
 
 export interface TipRecord {
@@ -158,12 +160,46 @@ interface NoteSeed {
   back: string
   tags?: string[]
   association?: string
+  extended?: string
   tips?: string[]
   reversed?: boolean
 }
 
+const KUEHLSCHRANK_EXTENDED = [
+  '## 1. Rozkład dźwiękowy (TSZ – Technika Słów Zastępczych)',
+  '',
+  '**„Kühlschrank”** wymawia się [ˈkyːlʃʁaŋk] – brzmi podobnie do:',
+  '',
+  '- **kühl** – „kül” jak *kul się* (z zimna)',
+  '- **Schrank** – „szrank” jak polska **szranka**, szafa',
+  '',
+  '**Najlepsze skojarzenie dźwiękowe:** **kühl** (chłodny) + **Schrank** (szafa) = **chłodna szafa** – lodówka.',
+  '',
+  '---',
+  '',
+  '## 2. Główna historyjka (obraz + akcja + emocje) – najlepsze skojarzenie',
+  '',
+  '**Wyobraź sobie:** otwierasz **lodówkę**, mroźne powietrze uderza cię w twarz i krzyczysz: *„Kul się!”*.',
+  '',
+  '**Emocja:** dreszcz zimna.',
+  '',
+  '---',
+  '',
+  '## 6. Zdanie do utrwalenia',
+  '',
+  '> **„Die Milch steht im Kühlschrank.”**',
+  '> (Mleko stoi w lodówce.)',
+  '',
+  '---',
+  '',
+  '## 7. Rodzajnik – **der Kühlschrank** (męski)',
+  '',
+  '- **der Kühlschrank** – lodówka',
+  '- **die Kühlschränke** – lodówki',
+].join('\n')
+
 const DE_WORDS: NoteSeed[] = [
-  { front: 'der Kühlschrank', back: 'lodówka', tags: ['dom'], association: '„Kul się, szrank!” — chłód z lodówki każe się skulić ❄️', tips: ['Rodzaj męski: der Kühlschrank, die Kühlschränke.', 'Złożenie: kühl (chłodny) + der Schrank (szafa).'] },
+  { front: 'der Kühlschrank', back: 'lodówka', tags: ['dom'], association: '„Kul się, szrank!” — chłód z lodówki każe się skulić ❄️', extended: KUEHLSCHRANK_EXTENDED, tips: ['Rodzaj męski: der Kühlschrank, die Kühlschränke.', 'Złożenie: kühl (chłodny) + der Schrank (szafa).'] },
   { front: 'das Frühstück', back: 'śniadanie', tags: ['jedzenie'], association: 'Früh (wcześnie) + Stück (kawałek) — wczesny kawałek dnia przy stole 🥐', tips: ['Rodzaj nijaki: das Frühstück.'] },
   { front: 'heute Abend', back: 'dziś wieczorem', tags: ['czas'], association: 'Heute = „hojnie” dziś, Abend = „abendowo” wieczorem 🌙', tips: ['Wyrażenie wielowyrazowe — nie rozdzielaj w nauce.'] },
   { front: 'der Tee', back: 'herbata', tags: ['jedzenie'], association: 'Tee brzmi jak „T” — kształt filiżanki herbaty ☕' },
@@ -324,7 +360,7 @@ export function createCollection({ seed, nowMs, ambiguousLinks }: CollectionOpti
         }
       }
       if (seedNote.association) {
-        collection.associations.push({ id: String(extraSeq++), noteId, text: seedNote.association, provenance: 'bundled', favorite: true, status: 'ready' })
+        collection.associations.push({ id: String(extraSeq++), noteId, text: seedNote.association, provenance: 'bundled', favorite: true, status: 'ready', ...(seedNote.extended ? { extended: seedNote.extended } : {}) })
       }
       ;(seedNote.tips ?? []).forEach((text, order) => {
         collection.tips.push({ id: String(extraSeq++), noteId, text, order })

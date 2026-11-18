@@ -10,8 +10,8 @@ use langualinker_domain::text::{is_nfc, utf16_slice};
 use langualinker_domain::{Guid, validation};
 
 use crate::format::{
-    CardStateName, Catalog, ContentKind, DeckManifest, MAX_BUNDLED_GUID_CHARS, MAX_SNIPPET_CHARS,
-    NoteRecord, QueueName, ReviewStatus, SCHEMA_VERSION, SourceKind,
+    CardStateName, Catalog, ContentKind, DeckManifest, MAX_BUNDLED_GUID_CHARS, MAX_EXTENDED_CHARS,
+    MAX_SNIPPET_CHARS, NoteRecord, QueueName, ReviewStatus, SCHEMA_VERSION, SourceKind,
 };
 use crate::source::is_plain_file_name;
 
@@ -660,6 +660,17 @@ impl<'a> DeckChecker<'a> {
                 line,
                 issues,
             );
+            if let Some(extended) = &association.extended {
+                check_text(
+                    "extended association",
+                    extended,
+                    MAX_EXTENDED_CHARS,
+                    true,
+                    &file,
+                    line,
+                    issues,
+                );
+            }
             match (&association.prompt_version, &association.model) {
                 (Some(prompt), _) if !is_prompt_id(prompt) => issues.error(
                     "association.promptVersion",

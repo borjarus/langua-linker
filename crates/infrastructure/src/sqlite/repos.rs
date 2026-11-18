@@ -35,6 +35,7 @@ use super::{codec, map_sqlite};
 mod bundled;
 mod llm;
 mod management;
+mod optimizer;
 mod stats;
 mod study;
 
@@ -1028,7 +1029,7 @@ impl ReviewLogRepository for SqliteRepos<'_> {
 
 const ASSOCIATION_COLUMNS: &str = "id, guid, note_id, text, provenance, native_language,
     target_language, prompt_version, model, moderation, cache_key, sort_order, is_favorite,
-    created_at, updated_at, deleted_at, usn";
+    created_at, updated_at, deleted_at, usn, extended";
 
 fn association_row(row: &Row<'_>) -> rusqlite::Result<Association> {
     Ok(Association {
@@ -1049,6 +1050,7 @@ fn association_row(row: &Row<'_>) -> rusqlite::Result<Association> {
         updated_at: ts(row, 14)?,
         deleted_at: opt_ts(row, 15)?,
         usn: row.get(16)?,
+        extended: row.get(17)?,
     })
 }
 
@@ -1082,10 +1084,10 @@ impl ContentRepository for SqliteRepos<'_> {
             .execute(
                 "INSERT INTO associations (guid, note_id, text, provenance, native_language,
                      target_language, prompt_version, model, moderation, cache_key, sort_order,
-                     created_at, updated_at, usn)
+                     created_at, updated_at, usn, extended)
                  VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10,
                      (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM associations WHERE note_id = ?2),
-                     ?11, ?11, ?12)",
+                     ?11, ?11, ?12, ?13)",
                 params![
                     association.guid.as_str(),
                     association.note_id.0,
@@ -1099,6 +1101,7 @@ impl ContentRepository for SqliteRepos<'_> {
                     association.cache_key,
                     at.0,
                     LOCAL_USN,
+                    association.extended,
                 ],
             )
             .map_err(map_sqlite)?;

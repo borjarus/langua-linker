@@ -124,6 +124,16 @@ export async function recordContractSamples(raw: AppApi): Promise<ContractSample
   const renamed = await api.updateDeck({ operationId: operationId(), deckId: created.deck.id, expectedVersion: created.deck.version, patch: { name: 'Kontrakt v1' } })
   await api.deleteDeck({ operationId: operationId(), deckId: renamed.deck.id, expectedVersion: renamed.deck.version })
 
+  // optimizer (1.5): a refused start, a run, apply and revert (the preset ends as it started)
+  const light = required(presets.find((item) => item.id !== preset.id), 'second preset')
+  await api.startOptimizer({ operationId: operationId(), presetId: light.id }).catch(() => null)
+  await api.getOptimizer({ presetId: preset.id })
+  await finish(await api.startOptimizer({ operationId: operationId(), presetId: preset.id }))
+  const optimized = await api.getOptimizer({ presetId: preset.id })
+  const run = required(optimized.runs[0], 'optimizer run')
+  const applied = await api.applyOptimizerRun({ operationId: operationId(), runId: run.runId, expectedVersion: optimized.presetVersion })
+  await api.revertOptimizerRun({ operationId: operationId(), runId: run.runId, expectedVersion: applied.version })
+
   // study
   const session = await api.startStudy({ operationId: operationId(), deckId: '1' })
   const card = required(session.current, 'due card')

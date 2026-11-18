@@ -68,6 +68,13 @@ import {
   type PreviewDeckImportInput,
   type PresetConfigDto,
   type PresetDto,
+  type GetOptimizerInput,
+  type OptimizerDatasetDto,
+  type OptimizerDto,
+  type OptimizerMetricsDto,
+  type OptimizerRunActionInput,
+  type OptimizerRunDto,
+  type StartOptimizerInput,
   type PreviewInput,
   type QueueState,
   type RateCardInput,
@@ -116,6 +123,7 @@ import {
   DEMO_CSV_FILES,
   DEMO_EPOCH_MS,
   DEMO_FILES,
+  DEFAULT_WEIGHTS,
   LARGE_COLLECTION_SIZE,
   capabilitiesFor,
   createCollection,
@@ -268,6 +276,10 @@ export class MockAppApi implements AppApi {
   #nowMs = DEMO_EPOCH_MS
   #collection: Collection = EMPTY_COLLECTION()
   #presets: PresetRecord[] = createPresets()
+  /** Optimizer runs per preset, newest first (Phase 18). */
+  #optimizerRuns = new Map<string, OptimizerRunDto[]>()
+  /** Optimizer job per preset while it may still be running. */
+  #optimizerJobs = new Map<string, string>()
   #pendingCollection: Collection | null = null
   #sessions = new Map<string, SessionRecord>()
   #operations = new Map<string, unknown>()
@@ -340,6 +352,8 @@ export class MockAppApi implements AppApi {
     this.#firstCompletedSessionId = null
     this.#generations = 0
     this.#presets = createPresets()
+    this.#optimizerRuns.clear()
+    this.#optimizerJobs.clear()
 
     const full = createCollection({ seed: this.#options.seed, nowMs: this.#nowMs, ambiguousLinks: scenario === 'ambiguous' })
     this.#onboardingCompleted = scenario !== 'newUser'
@@ -1042,6 +1056,110 @@ export class MockAppApi implements AppApi {
       const preset = this.#preset(input.presetId)
       if (preset.version !== input.expectedVersion) fail('VERSION_CONFLICT', { currentVersion: preset.version })
       Object.assign(preset, config, { name, version: preset.version + 1 })
+      return this.#presetDto(preset)
+    })
+  }
+
+  // ------------------------------------------------------------ optimizer (Phase 18)
+
+  /** The preset's answers as the Rust optimizer would read them; fixture reps stand in for logs. */
+  #optimizerDataset(presetId: Id): OptimizerDatasetDto {
+    const decks = new Set(this.#collection.decks.filter((deck) => deck.presetId === presetId).map((deck) => deck.id))
+    const cards = this.#liveCards().filter((card) => decks.has(card.deckId) && card.reps > 0)
+    const cardIds = new Set(cards.map((card) => card.id))
+    const sessionAnswers = this.#collection.logs.filter((log) => cardIds.has(log.cardId)).length
+    const reps = cards.reduce((sum, card) => sum + card.reps, 0)
+    // Fixture reps stand for three answers each; the first answer and a same-day step per card
+    // are not targets; every 17th card was imported mid-way (incomplete history).
+    const reviews = reps * 3 + sessionAnswers
+    const incomplete = cards.filter((card) => Number(card.id) % 17 === 0)
+    const excludedIncomplete = incomplete.reduce((sum, card) => sum + card.reps * 3, 0)
+    const excludedUndone = Math.floor(reviews / 97)
+    const complete = cards.length - incomplete.length
+    const usable = Math.max(0, reviews - excludedIncomplete - excludedUndone - 2 * complete)
+    return { reviews, cards: complete, usable, excludedUndone, excludedManual: 0, excludedIncomplete }
+  }
+
+  #optimizerRunDto(run: OptimizerRunDto, weights: number[]): OptimizerRunDto {
+    return {
+      ...run,
+      canApply: run.status === 'proposed' && sameWeights(weights, run.weightsBefore),
+      canRevert: run.status === 'applied' && sameWeights(weights, run.weightsProposed),
+    }
+  }
+
+  #runningOptimizerJob(presetId: Id): JobDto | null {
+    const jobId = this.#optimizerJobs.get(presetId)
+    const job = jobId === undefined ? undefined : this.#jobs.get(jobId)
+    return job && (job.status === 'queued' || job.status === 'running') ? job : null
+  }
+
+  getOptimizer(input: GetOptimizerInput) {
+    return this.#query('getOptimizer', (): OptimizerDto => {
+      const preset = this.#preset(input.presetId)
+      return {
+        presetId: preset.id,
+        presetName: preset.name,
+        presetVersion: preset.version,
+        desiredRetention: preset.desiredRetention,
+        currentWeights: [...preset.weights],
+        defaultWeights: [...DEFAULT_WEIGHTS],
+        dataset: this.#optimizerDataset(preset.id),
+        minimumReviews: OPTIMIZER_MINIMUM_REVIEWS,
+        recommendedReviews: OPTIMIZER_RECOMMENDED_REVIEWS,
+        runningJobId: this.#runningOptimizerJob(preset.id)?.jobId ?? null,
+        runs: (this.#optimizerRuns.get(preset.id) ?? []).map((run) => this.#optimizerRunDto(run, preset.weights)),
+      }
+    })
+  }
+
+  startOptimizer(input: StartOptimizerInput) {
+    return this.#mutate('startOptimizer', input.operationId, [], (): JobDto => {
+      const preset = this.#preset(input.presetId)
+      const running = this.#runningOptimizerJob(preset.id)
+      if (running) return running
+      const dataset = this.#optimizerDataset(preset.id)
+      if (dataset.usable < OPTIMIZER_MINIMUM_REVIEWS) fail('VALIDATION_FAILED', { field: 'presetId', reason: 'notEnoughReviews' })
+      const weightsBefore = [...preset.weights]
+      const job = this.#startJob('optimize', 5, () => {
+        const runs = this.#optimizerRuns.get(preset.id) ?? []
+        const run = mockOptimizerRun(this.#nextId('run-'), iso(this.#nowMs), dataset, weightsBefore)
+        this.#optimizerRuns.set(preset.id, [run, ...runs])
+        return { result: { type: 'optimize', runId: run.runId } }
+      })
+      this.#optimizerJobs.set(preset.id, job.jobId)
+      return job
+    })
+  }
+
+  applyOptimizerRun(input: OptimizerRunActionInput) {
+    return this.#optimizerAction('applyOptimizerRun', input, 'proposed', (run) => [run.weightsBefore, run.weightsProposed, { status: 'applied', appliedAt: iso(this.#nowMs) }])
+  }
+
+  revertOptimizerRun(input: OptimizerRunActionInput) {
+    return this.#optimizerAction('revertOptimizerRun', input, 'applied', (run) => [run.weightsProposed, run.weightsBefore, { status: 'reverted', revertedAt: iso(this.#nowMs) }])
+  }
+
+  /** `change` gives the weights the preset must still have, the weights it gets and the run update. */
+  #optimizerAction(
+    operation: 'applyOptimizerRun' | 'revertOptimizerRun',
+    input: OptimizerRunActionInput,
+    status: OptimizerRunDto['status'],
+    change: (run: OptimizerRunDto) => [number[], number[], Partial<OptimizerRunDto>],
+  ) {
+    return this.#mutate(operation, input.operationId, ['decks', 'cards'], (): PresetDto => {
+      const entry = [...this.#optimizerRuns.entries()].find(([, runs]) => runs.some((run) => run.runId === input.runId))
+      if (!entry) return fail('NOT_FOUND', { entity: 'optimizerRun', id: input.runId })
+      const [presetId, runs] = entry
+      const run = runs.find((item) => item.runId === input.runId) as OptimizerRunDto
+      const preset = this.#preset(presetId)
+      if (preset.version !== input.expectedVersion) fail('VERSION_CONFLICT', { currentVersion: preset.version })
+      if (run.status !== status) fail('VALIDATION_FAILED', { field: 'runId', reason: 'status' })
+      const [expected, next, update] = change(run)
+      if (!sameWeights(preset.weights, expected)) fail('VALIDATION_FAILED', { field: 'runId', reason: 'stale' })
+      // Only the weights change: no card is rescheduled, due dates stay.
+      Object.assign(preset, { weights: [...next], version: preset.version + 1 })
+      Object.assign(run, update)
       return this.#presetDto(preset)
     })
   }
@@ -2497,4 +2615,51 @@ export function parseSearch(query: string): ParsedSearch {
   }
   result.text = words.join(' ')
   return result
+}
+
+// ------------------------------------------------------------ optimizer stand-in (Phase 18)
+
+const OPTIMIZER_MINIMUM_REVIEWS = 200
+const OPTIMIZER_RECOMMENDED_REVIEWS = 1000
+const FSRS_LOWER = [0.001, 0.001, 0.001, 0.001, 1, 0.001, 0.001, 0.001, 0, 0, 0.001, 0.001, 0.001, 0.001, 0, 0, 1, 0, 0, 0, 0.1]
+const FSRS_UPPER = [100, 100, 100, 100, 10, 4, 4, 0.75, 4.5, 0.8, 3.5, 5, 0.25, 0.9, 4, 1, 6, 2, 2, 0.8, 0.8]
+
+const sameWeights = (a: readonly number[], b: readonly number[]): boolean => a.length === b.length && a.every((value, index) => value === b[index])
+
+/**
+ * Deterministic stand-in for the Rust optimizer: the same answers always give the same proposal,
+ * so a second run after applying finds nothing better (not recommended).
+ */
+export function mockOptimizerRun(runId: string, createdAt: string, dataset: OptimizerDatasetDto, weightsBefore: number[]): OptimizerRunDto {
+  const weightsProposed = DEFAULT_WEIGHTS.map((weight, index) => {
+    const nudged = weight * (1 + 0.18 * Math.sin((index + 1) * 1.7 + dataset.usable / 101))
+    const rounded = Math.round(nudged * 10_000) / 10_000
+    return Math.min(FSRS_UPPER[index] ?? rounded, Math.max(FSRS_LOWER[index] ?? rounded, rounded))
+  })
+  const fitted = sameWeights(weightsBefore, weightsProposed)
+  const validationReviews = Math.round(dataset.usable * 0.2)
+  const metrics = (logLoss: number, rmse: number, dailyReviews: number, medianIntervalDays: number): OptimizerMetricsDto => ({ logLoss, rmse, dailyReviews, medianIntervalDays })
+  const scale = Math.max(1, dataset.cards) / 10
+  const proposed = metrics(0.3412, 0.0231, Math.round(scale * 9.4) / 10, 14)
+  const current = fitted ? proposed : metrics(0.3654, 0.0489, Math.round(scale * 11.8) / 10, 11)
+  return {
+    runId,
+    status: 'proposed',
+    createdAt,
+    appliedAt: null,
+    revertedAt: null,
+    optimizerVersion: 'langualinker-fsrs6-adam-1',
+    fsrsVersion: 'fsrs-6/py-fsrs-6.3.0',
+    dataset,
+    trainingReviews: dataset.usable - validationReviews,
+    validationReviews,
+    weightsBefore: [...weightsBefore],
+    weightsProposed,
+    current,
+    proposed,
+    recommended: proposed.logLoss < current.logLoss - 1e-4,
+    fewReviews: dataset.usable < OPTIMIZER_RECOMMENDED_REVIEWS,
+    canApply: false,
+    canRevert: false,
+  }
 }

@@ -2181,6 +2181,12 @@
           "markdownDescription": "Enables the apply_card_action command without any pre-configured scope."
         },
         {
+          "description": "Enables the apply_optimizer_run command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-apply-optimizer-run",
+          "markdownDescription": "Enables the apply_optimizer_run command without any pre-configured scope."
+        },
+        {
           "description": "Enables the cancel_job command without any pre-configured scope.",
           "type": "string",
           "const": "allow-cancel-job",
@@ -2311,6 +2317,12 @@
           "type": "string",
           "const": "allow-get-onboarding-state",
           "markdownDescription": "Enables the get_onboarding_state command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_optimizer command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-optimizer",
+          "markdownDescription": "Enables the get_optimizer command without any pre-configured scope."
         },
         {
           "description": "Enables the get_rating_preview command without any pre-configured scope.",
@@ -2451,6 +2463,12 @@
           "markdownDescription": "Enables the resume_study command without any pre-configured scope."
         },
         {
+          "description": "Enables the revert_optimizer_run command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-revert-optimizer-run",
+          "markdownDescription": "Enables the revert_optimizer_run command without any pre-configured scope."
+        },
+        {
           "description": "Enables the save_note command without any pre-configured scope.",
           "type": "string",
           "const": "allow-save-note",
@@ -2503,6 +2521,12 @@
           "type": "string",
           "const": "allow-speech-status",
           "markdownDescription": "Enables the speech_status command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the start_optimizer command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-start-optimizer",
+          "markdownDescription": "Enables the start_optimizer command without any pre-configured scope."
         },
         {
           "description": "Enables the start_study command without any pre-configured scope.",
@@ -2569,6 +2593,12 @@
           "type": "string",
           "const": "deny-apply-card-action",
           "markdownDescription": "Denies the apply_card_action command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the apply_optimizer_run command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-apply-optimizer-run",
+          "markdownDescription": "Denies the apply_optimizer_run command without any pre-configured scope."
         },
         {
           "description": "Denies the cancel_job command without any pre-configured scope.",
@@ -2701,6 +2731,12 @@
           "type": "string",
           "const": "deny-get-onboarding-state",
           "markdownDescription": "Denies the get_onboarding_state command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_optimizer command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-optimizer",
+          "markdownDescription": "Denies the get_optimizer command without any pre-configured scope."
         },
         {
           "description": "Denies the get_rating_preview command without any pre-configured scope.",
@@ -2841,6 +2877,12 @@
           "markdownDescription": "Denies the resume_study command without any pre-configured scope."
         },
         {
+          "description": "Denies the revert_optimizer_run command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-revert-optimizer-run",
+          "markdownDescription": "Denies the revert_optimizer_run command without any pre-configured scope."
+        },
+        {
           "description": "Denies the save_note command without any pre-configured scope.",
           "type": "string",
           "const": "deny-save-note",
@@ -2893,6 +2935,12 @@
           "type": "string",
           "const": "deny-speech-status",
           "markdownDescription": "Denies the speech_status command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the start_optimizer command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-start-optimizer",
+          "markdownDescription": "Denies the start_optimizer command without any pre-configured scope."
         },
         {
           "description": "Denies the start_study command without any pre-configured scope.",

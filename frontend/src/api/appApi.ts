@@ -42,6 +42,10 @@ import type {
   DeckImportPreviewDto,
   PickFileInput,
   PresetDto,
+  GetOptimizerInput,
+  OptimizerDto,
+  OptimizerRunActionInput,
+  StartOptimizerInput,
   PreviewInput,
   RateCardInput,
   RequestPermissionInput,
@@ -101,6 +105,14 @@ export interface AppApi {
   listPresets(): Promise<PresetDto[]>
   /** Creates (also clones) or updates a preset; a change applies to every dependent deck. */
   savePreset(input: SavePresetInput): Promise<PresetDto>
+  /** Optimizer state of a preset: usable history, running job, earlier runs (Phase 18). */
+  getOptimizer(input: GetOptimizerInput): Promise<OptimizerDto>
+  /** Job `optimize`: trains on the device; the preset stays unchanged until a run is applied. */
+  startOptimizer(input: StartOptimizerInput): Promise<JobDto>
+  /** Sets the preset weights to the run's proposal; no card is rescheduled. */
+  applyOptimizerRun(input: OptimizerRunActionInput): Promise<PresetDto>
+  /** Restores the weights the preset had before the applied run. */
+  revertOptimizerRun(input: OptimizerRunActionInput): Promise<PresetDto>
 
   // study
   startStudy(input: StartStudyInput): Promise<StudySessionDto>

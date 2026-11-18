@@ -70,6 +70,16 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "llm_outbox",
         sql: include_str!("../../migrations/0004_llm_outbox.sql"),
     },
+    Migration {
+        version: 5,
+        name: "extended_associations",
+        sql: include_str!("../../migrations/0005_extended_associations.sql"),
+    },
+    Migration {
+        version: 6,
+        name: "optimizer_runs",
+        sql: include_str!("../../migrations/0006_optimizer_runs.sql"),
+    },
 ];
 
 /// Highest schema version this build understands.
@@ -486,6 +496,77 @@ mod tests {
         );
     }
 
+    /// v4 → v5: associations gain an empty `extended` column; existing rows keep their text.
+    #[test]
+    fn v4_collection_upgrades_to_extended_associations() {
+        let mut conn = memory();
+        migrate(&mut conn, None, &MIGRATIONS[..4], 1).unwrap();
+        insert_deck(&conn);
+        conn.execute_batch(
+            "INSERT INTO notes (id, guid, note_type_id, fields, sort_field, created_at, updated_at)
+                 VALUES (7, 'n7', 1, '{\"front\":\"Hund\",\"back\":\"pies\"}', 'hund', 0, 0);
+             INSERT INTO associations (id, guid, note_id, text, provenance, native_language,
+                     target_language, created_at, updated_at)
+                 VALUES (4, 'a4', 7, 'Hund — chód', 1, 'pl', 'de', 0, 0);",
+        )
+        .unwrap();
+        let report = migrate(&mut conn, None, &MIGRATIONS[..5], 2).unwrap();
+        assert_eq!((report.from_version, report.to_version), (4, 5));
+        let (text, extended): (String, Option<String>) = conn
+            .query_row(
+                "SELECT text, extended FROM associations WHERE id = 4",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!((text.as_str(), extended), ("Hund — chód", None));
+        conn.execute(
+            "UPDATE associations SET extended = '## 1.' WHERE id = 4",
+            [],
+        )
+        .unwrap();
+    }
+
+    /// v5 → v6 (Phase 18): an empty `optimizer_runs` table; presets and history are untouched
+    /// and a run row checks its status and JSON columns.
+    #[test]
+    fn v5_collection_upgrades_to_optimizer_runs() {
+        let mut conn = memory();
+        migrate(&mut conn, None, &MIGRATIONS[..5], 1).unwrap();
+        let weights: String = conn
+            .query_row(
+                "SELECT fsrs_weights FROM deck_config WHERE id = 1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let report = migrate(&mut conn, None, MIGRATIONS, 2).unwrap();
+        assert_eq!((report.from_version, report.to_version), (5, 6));
+        let after: String = conn
+            .query_row(
+                "SELECT fsrs_weights FROM deck_config WHERE id = 1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(after, weights);
+        let runs: i64 = conn
+            .query_row("SELECT COUNT(*) FROM optimizer_runs", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(runs, 0);
+        let insert = |status: i64, report: &str| {
+            conn.execute(
+                "INSERT INTO optimizer_runs (preset_id, status, optimizer_version, fsrs_version,
+                     dataset_hash, weights_before, weights_proposed, report, created_at)
+                 VALUES (1, ?1, 'v', 'f', 'h', '[]', '[]', ?2, 0)",
+                rusqlite::params![status, report],
+            )
+        };
+        assert!(insert(0, "{}").is_ok());
+        assert!(insert(3, "{}").is_err());
+        assert!(insert(0, "not json").is_err());
+    }
+
     /// v3 → v4 (Phase 13): the never-written v1 outbox is rebuilt with its new columns and
     /// statuses; associations, the cache and notes are untouched; deleting a note removes its
     /// requests, deleting an association only unlinks them.
@@ -505,7 +586,7 @@ mod tests {
                  VALUES ('k0', 'cached', 'm', 'v1', 1, 0);",
         )
         .unwrap();
-        let report = migrate(&mut conn, None, MIGRATIONS, 2).unwrap();
+        let report = migrate(&mut conn, None, &MIGRATIONS[..4], 2).unwrap();
         assert_eq!((report.from_version, report.to_version), (3, 4));
         conn.execute_batch(
             "INSERT INTO llm_requests (id, note_id, operation_id, variant, status, prompt_kind,

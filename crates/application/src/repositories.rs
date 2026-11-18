@@ -183,6 +183,10 @@ pub struct BundledNote {
 pub trait BundledContentRepository {
     /// Any deck with this GUID, including a soft-deleted one.
     fn deck_by_guid(&mut self, guid: &Guid) -> AppResult<Option<Deck>>;
+    /// Undoes the deletion of a bundled deck: the deck, its bundled notes and their cards in the
+    /// deck come back with their scheduling and history (one live card per note and template).
+    fn restore_bundled_deck(&mut self, deck: DeckId, deck_guid: &str, at: TimestampMs)
+    -> AppResult<()>;
     fn bundled_note(&mut self, note: NoteId) -> AppResult<Option<BundledNote>>;
     fn put_bundled_note(&mut self, note: &BundledNote) -> AppResult<()>;
     /// Bundled notes of a deck whose note is not soft-deleted, with the note GUID.
@@ -203,6 +207,12 @@ pub trait BundledContentRepository {
         &mut self,
         id: AssociationId,
         text: &str,
+        at: TimestampMs,
+    ) -> AppResult<()>;
+    fn update_association_extended(
+        &mut self,
+        id: AssociationId,
+        extended: Option<&str>,
         at: TimestampMs,
     ) -> AppResult<()>;
     /// Any grammar tip with this GUID, including a soft-deleted one.
@@ -444,6 +454,13 @@ pub trait SchedulerQueries {
     /// Valid ratings at or after `since`, by the deck of the rated card: introduced new cards,
     /// and reviews of review or day-learning cards (both use the review limit).
     fn done_since(&mut self, since: TimestampMs) -> AppResult<Vec<(DeckId, DoneToday)>>;
+    /// New cards of the decks introduced (first valid rating) at or after `since`, per template
+    /// ordinal: `(ordinal, count)`.
+    fn new_introduced_since(
+        &mut self,
+        since: TimestampMs,
+        decks: &[DeckId],
+    ) -> AppResult<Vec<(u32, u32)>>;
     /// Notes with a valid rating at or after `since`.
     fn notes_reviewed_since(&mut self, since: TimestampMs) -> AppResult<Vec<NoteId>>;
     /// Intraday learning cards of the decks due before `until`, by due time.
@@ -459,7 +476,8 @@ pub trait SchedulerQueries {
         until: TimestampMs,
         limit: u32,
     ) -> AppResult<Vec<Candidate>>;
-    /// New cards of one deck in introduction order; `Random` shuffles per `day`.
+    /// New cards of one deck in introduction order; `Random` shuffles per `day`. Up to `limit`
+    /// cards per template ordinal (direction).
     fn new_candidates(
         &mut self,
         deck: DeckId,
@@ -836,6 +854,32 @@ pub trait LlmRepository {
     fn llm_call_durations(&mut self, since: TimestampMs) -> AppResult<Vec<i64>>;
 }
 
+// ---------------------------------------------------------------- FSRS optimizer (Phase 18)
+
+/// Review history for the optimizer and its stored runs.
+pub trait OptimizerRepository {
+    /// Every logged answer (undone ones flagged) of the live cards in live decks using the preset.
+    fn optimizer_logs(
+        &mut self,
+        preset: DeckConfigId,
+    ) -> AppResult<Vec<crate::optimizer::OptimizerLog>>;
+    fn insert_optimizer_run(&mut self, run: &crate::optimizer::NewOptimizerRun) -> AppResult<i64>;
+    fn optimizer_run(&mut self, id: i64) -> AppResult<Option<crate::optimizer::OptimizerRun>>;
+    /// Runs of a preset, newest first.
+    fn optimizer_runs(
+        &mut self,
+        preset: DeckConfigId,
+        limit: u32,
+    ) -> AppResult<Vec<crate::optimizer::OptimizerRun>>;
+    /// Applied sets `applied_at`, reverted sets `reverted_at`.
+    fn set_optimizer_run_status(
+        &mut self,
+        id: i64,
+        status: crate::optimizer::RunStatus,
+        at: TimestampMs,
+    ) -> AppResult<()>;
+}
+
 /// Every repository inside one transaction.
 pub trait Repositories:
     DeckRepository
@@ -856,6 +900,7 @@ pub trait Repositories:
     + StatsQueries
     + MaintenanceRepository
     + LlmRepository
+    + OptimizerRepository
 {
 }
 
@@ -878,6 +923,7 @@ impl<T> Repositories for T where
         + StatsQueries
         + MaintenanceRepository
         + LlmRepository
+        + OptimizerRepository
 {
 }
 

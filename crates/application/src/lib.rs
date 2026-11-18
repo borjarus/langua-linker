@@ -9,6 +9,7 @@ pub mod jobs;
 pub mod learning;
 pub mod llm;
 pub mod management;
+pub mod optimizer;
 pub mod ports;
 pub mod reminders;
 pub mod repositories;

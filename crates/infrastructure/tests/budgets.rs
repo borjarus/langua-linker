@@ -218,3 +218,92 @@ fn csv_import_of_five_thousand_rows() {
     println!("5000 rows: preview {preview_time:?}, preview + import {total:?}");
     assert!(total.as_secs_f64() < 5.0, "import {total:?}");
 }
+
+/// Phase 18: the local optimizer on the plan collection's size. Reading the history of 500 000
+/// logs (one preset) and training on 50 000 cards / 500 000 answers, cancellable all along. No
+/// plan budget exists; the ADR-22 target is < 1 s for the read and < 60 s for the training on
+/// the desktop reference (a phone is several times slower; the job shows progress and runs in the
+/// background).
+#[test]
+#[ignore = "budget: 50k cards, 500k logs"]
+fn optimizer_on_the_plan_collection() {
+    use langualinker_application::optimizer;
+    use langualinker_domain::DeckConfigId;
+    use langualinker_domain::fsrs::DEFAULT_WEIGHTS;
+    use langualinker_domain::optimizer::{LoggedReview, OptimizeRequest, build_dataset, optimize};
+    use langualinker_domain::review::{Rating, ReviewKind};
+
+    let dir = tempfile::tempdir().unwrap();
+    let path = seeded_file(dir.path());
+    let db = SqliteDatabase::open(&path, &clock()).unwrap().database;
+    let started = Instant::now();
+    let read = db
+        .read(|tx| optimizer::dataset(tx, DeckConfigId(1)))
+        .unwrap();
+    let read_time = started.elapsed();
+    println!(
+        "optimizer dataset read: {read_time:?} ({} logs)",
+        read.stats.reviews
+    );
+    assert_eq!(read.stats.reviews, 500_000);
+    assert!(read_time.as_millis() < 1_000, "dataset read {read_time:?}");
+
+    // The seeded logs have no learning answers; train on histories of the same size that do.
+    let mut logs = Vec::with_capacity(500_000);
+    let mut state = 0x9E37_79B9_7F4A_7C15_u64;
+    for card in 0..50_000_i64 {
+        let mut day = 0;
+        for answer in 0..10 {
+            state ^= state << 13;
+            state ^= state >> 7;
+            state ^= state << 17;
+            let rating = match state % 100 {
+                0..=11 => Rating::Again,
+                12..=21 => Rating::Hard,
+                22..=93 => Rating::Good,
+                _ => Rating::Easy,
+            };
+            day += if answer == 0 {
+                0
+            } else {
+                1 + (state >> 8) as i64 % (answer * 6)
+            };
+            logs.push(LoggedReview {
+                card,
+                rating,
+                kind: if answer == 0 {
+                    ReviewKind::Learning
+                } else {
+                    ReviewKind::Review
+                },
+                day,
+                at: day * 86_400_000 + card,
+                undone: false,
+            });
+        }
+    }
+    let dataset = build_dataset(logs);
+    let started = Instant::now();
+    let mut updates = 0;
+    let result = optimize(
+        &OptimizeRequest {
+            dataset: &dataset,
+            current_weights: DEFAULT_WEIGHTS,
+            desired_retention: 0.9,
+            maximum_interval_days: 36_500,
+        },
+        |_, _| {
+            updates += 1;
+            true
+        },
+    )
+    .unwrap();
+    let training = started.elapsed();
+    println!(
+        "optimizer training: {training:?} ({} answers, {updates} progress calls, held-out log loss {:.4} -> {:.4})",
+        dataset.stats.usable,
+        result.current.validation.log_loss,
+        result.proposed.validation.log_loss
+    );
+    assert!(training.as_secs() < 60, "training {training:?}");
+}

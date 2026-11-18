@@ -28,6 +28,8 @@ pub struct Association {
     pub model: Option<String>,
     pub moderation: ModerationStatus,
     pub cache_key: Option<String>,
+    /// Long Markdown version shipped with bundled content; shown collapsed under `text`.
+    pub extended: Option<String>,
     pub sort_order: i64,
     pub is_favorite: bool,
     pub created_at: TimestampMs,
@@ -48,16 +50,28 @@ pub struct NewAssociation {
     pub model: Option<String>,
     pub moderation: ModerationStatus,
     pub cache_key: Option<String>,
+    pub extended: Option<String>,
 }
 
 impl NewAssociation {
     pub fn validated(mut self) -> ValidationResult<Self> {
         self.text = validation::required_text("text", &self.text, validation::MAX_SNIPPET_CHARS)?;
+        self.extended = validated_extended(self.extended.as_deref())?;
         if self.moderation == ModerationStatus::Blocked {
             // Blocked output is never stored as an association.
             return Err(ValidationError::new("moderation", "blocked"));
         }
         Ok(self)
+    }
+}
+
+/// An empty extended text is stored as none.
+pub fn validated_extended(extended: Option<&str>) -> ValidationResult<Option<String>> {
+    match extended.map(str::trim) {
+        None | Some("") => Ok(None),
+        Some(text) => {
+            validation::bounded_text("extended", text, validation::MAX_EXTENDED_CHARS).map(Some)
+        }
     }
 }
 
@@ -186,6 +200,7 @@ mod tests {
             model: Some("m".into()),
             moderation: ModerationStatus::Blocked,
             cache_key: None,
+            extended: None,
         };
         assert_eq!(new.validated().unwrap_err().reason, "blocked");
     }

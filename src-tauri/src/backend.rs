@@ -10,6 +10,7 @@ use langualinker_application::jobs::{
     JobDetail, JobEvent, JobKind, JobRecord, JobService, JobStatus,
 };
 use langualinker_application::llm::LlmService;
+use langualinker_application::optimizer::OptimizerService;
 use langualinker_application::ports::{
     Clock, CollectionScope, EventSink, LlmClient, Rng, SecretStore,
 };
@@ -56,6 +57,8 @@ pub struct Collection {
     pub transfer: TransferService,
     /// Opt-in usage metrics (Phase 16); records nothing without consent.
     pub telemetry: Arc<LocalTelemetry>,
+    /// Local FSRS optimizer runs (Phase 18).
+    pub optimizer: OptimizerService<SqliteDatabase>,
 }
 
 impl Backend {
@@ -257,6 +260,12 @@ impl Collection {
             secrets.clone(),
         )
         .with_telemetry(telemetry.clone());
+        let optimizer = OptimizerService::new(
+            db.clone(),
+            jobs.clone(),
+            clock.clone(),
+            crate::optimizer::encode_run,
+        );
         Ok(Self {
             db,
             jobs,
@@ -269,6 +278,7 @@ impl Collection {
             llm,
             transfer,
             telemetry,
+            optimizer,
         })
     }
 }
@@ -343,6 +353,7 @@ fn kind_dto(kind: JobKind) -> dto::JobKind {
         JobKind::Restore => dto::JobKind::Restore,
         JobKind::Reset => dto::JobKind::Reset,
         JobKind::Llm => dto::JobKind::Llm,
+        JobKind::Optimize => dto::JobKind::Optimize,
     }
 }
 

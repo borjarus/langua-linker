@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { WordLinkDto } from '../src/api/types'
 import { richSegments } from '../src/components/LinkedText.svelte'
-import { inlineRuns, stripInlineMarkdown } from '../src/services/markdown'
+import { inlineRuns, speechText, stripInlineMarkdown } from '../src/services/markdown'
 
 const styled = (text: string) => inlineRuns(text).map((run) => [run.text, run.bold, run.italic])
 
@@ -40,5 +40,15 @@ describe('inline Markdown of card text', () => {
       ['.', true],
       [' /ˈdaŋkə/', false],
     ])
+  })
+
+  it('reads aloud only the bold part and never the IPA between slashes', () => {
+    expect(speechText("**he's** /hiːz/")).toBe("he's")
+    expect(speechText('**Danke.** /ˈdaŋkə/')).toBe('Danke.')
+    expect(speechText('**ein** kleiner **Hund**')).toBe('ein Hund')
+    expect(speechText('**ein *kleiner* Hund**')).toBe('ein kleiner Hund')
+    expect(speechText('Danke /ˈdaŋkə/ schön')).toBe('Danke schön')
+    expect(speechText('und/oder')).toBe('und/oder')
+    expect(speechText('ein *kleiner* Hund')).toBe('ein kleiner Hund')
   })
 })

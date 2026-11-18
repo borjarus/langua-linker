@@ -2,6 +2,7 @@
   import BrowserScreen from '../features/browser/BrowserScreen.svelte'
   import CardScreen from '../features/card/CardScreen.svelte'
   import DeckScreen from '../features/deck/DeckScreen.svelte'
+  import OptimizerScreen from '../features/deck/OptimizerScreen.svelte'
   import EditorScreen from '../features/editor/EditorScreen.svelte'
   import HomeScreen from '../features/home/HomeScreen.svelte'
   import NotFoundScreen from '../features/NotFoundScreen.svelte'
@@ -33,6 +34,8 @@
     <HomeScreen />
   {:else if route.name === 'deck'}
     <DeckScreen id={route.params.id} />
+  {:else if route.name === 'optimizer'}
+    <OptimizerScreen id={route.params.id} />
   {:else if route.name === 'study'}
     <StudyScreen deckId={route.params.deckId} sessionId={route.query.session ?? null} />
   {:else if route.name === 'summary'}

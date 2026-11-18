@@ -114,3 +114,19 @@ export function stripInlineMarkdown(text: string): string {
     .map((run) => run.text)
     .join('')
 }
+
+/** IPA transcriptions written between slashes, e.g. `/hiːz/`. */
+const IPA = /(^|\s)\/[^/\n]+\/(?=$|[\s.,;:!?)])/gu
+
+/**
+ * The text to read aloud: the bold part when the card marks one (`**he's** /hiːz/` → `he's`),
+ * otherwise the whole visible text; IPA between slashes is never read.
+ */
+export function speechText(text: string): string {
+  const runs = inlineRuns(text)
+  const spoken = runs.some((run) => run.bold)
+    ? // Separate bold parts get a space; a bold part split only by style (`**a *b***`) stays whole.
+      runs.map((run) => (run.bold ? run.text : ' ')).join('')
+    : runs.map((run) => run.text).join('')
+  return spoken.replace(IPA, '$1').replace(/\s+/gu, ' ').trim()
+}

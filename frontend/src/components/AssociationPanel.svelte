@@ -5,6 +5,7 @@
   import Chip from './Chip.svelte'
   import Disclosure from './Disclosure.svelte'
   import Icon from './Icon.svelte'
+  import ExtendedAssociation from './ExtendedAssociation.svelte'
   import ReportAssociationDialog from './ReportAssociationDialog.svelte'
 
   interface Props {
@@ -33,6 +34,7 @@
         <li class="item status-{association.status}" class:favorite={association.favorite}>
           {#if association.status === 'ready'}
             <p class="text">{association.text}</p>
+            {#if association.extended}<ExtendedAssociation text={association.extended} />{/if}
           {:else}
             <p class="state row" aria-busy={association.status === 'pending'}>
               <Icon name={association.status === 'offlineQueued' ? 'offline' : association.status === 'pending' ? 'clock' : 'alert'} />

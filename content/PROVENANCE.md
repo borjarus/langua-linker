@@ -5,6 +5,7 @@ Every asset that may ship in the app or is used as a test fixture is listed here
 | Asset | Origin | Declared license | Authorship / generation | Native review | Release status |
 |---|---|---|---|---|---|
 | `content/tools/prompts/association-candidates-v1.md` | written for Phase 8 | project | project | — | tooling, not bundled |
+| `content/tools/prompts/association-extended-v1.md` | written 2026-11-18 from the owner's nine-section template | project | project | — | tooling, not bundled |
 | `content/tools/prompts/*-candidates-v2.md` | v1 prompts extended with Spanish (2026-11-09) | project | project | — | tooling, not bundled |
 | `tests/fixtures/kmp/content.7z` | KMP commit `c2fa62f` (the original v1 files, byte-identical, moved from `content/decks`; encrypted like the bundled content, ADR-14 §14) | `source: original`, no attribution | not recorded | — | **test/reference only**, never bundled |
 | `tests/fixtures/unicode/ranges.json` | written for Phase 8 (plan §14.1) | project | project | — | test only |
@@ -25,6 +26,10 @@ All 89 associations are candidates. The generating session flagged these as weak
 - **EN:** to come, where, what, every, Monday, much, name; context-only: this, the, a, from, do not, weather.
 - **Facts to confirm:** *Sie* capitalisation, *an dem* → *am*, *aus* → *Ausgang*, *ein* ↔ *eins*, pronunciation note for *wie*, false-friend warnings (we/my, to, on), the splits under-stand / to-day / to-night / Pol-land (images, not etymology), *e-learning* (lernen, to learn), *mityng* (to meet), *IT* (it), colloquial *Dojczland* (Deutsch), tone of *drze się* (der).
 - The KMP grammar tip of "Wie heißt du?" ("questions without a question word at the end…") reads oddly and should be checked with the other inherited tips.
+
+## Extended associations (2026-11-18)
+
+Every word note's association carries an `extended` Markdown text generated with `association-extended-v1` (claude-opus-5-5). Like the short candidates, all of them need native review. The generating sessions flagged etymology and culture claims to verify first, among them: *trafić* ← *treffen*, *kosztować* ← *kosten*/Latin *constare*, *musieć* ← *müssen*, *sztymować* ← *stimmen*; cognates seit–since, Abend–even, wohnen–wont, Stadt–stead, wirklich–work, schön–sheen, schlecht–slight, Zeit–tide, warten–ward, lieben–love–lubić; *tschüs* ← Low German *adjüs*; plurals *Euros*/*Cents* in casual speech; Berlin from an Old Slavic word for marsh (labelled as a hypothesis); culture details (Zugspitze 2 962 m, Cologne Cathedral 157 m, Bremen cathedral-step sweeping at 30, the bottle deposit amount).
 
 ## To close the content rights item (owner)
 

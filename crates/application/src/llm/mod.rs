@@ -863,6 +863,7 @@ fn attach(
             model: Some(model),
             moderation: ModerationStatus::Passed,
             cache_key: Some(row.cache_key.clone()),
+            extended: None,
         },
         now,
     )?;

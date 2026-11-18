@@ -1,12 +1,12 @@
 {
-  "apiVersion": "1.3",
+  "apiVersion": "1.5",
   "calls": [
     {
       "operation": "getAppInfo",
       "command": "get_app_info",
       "args": [],
       "output": {
-        "apiVersion": "1.3",
+        "apiVersion": "1.5",
         "appName": "LanguaLinker",
         "appVersion": "0.1.0",
         "mode": "demo"
@@ -55,7 +55,7 @@
       "args": [],
       "output": {
         "appVersion": "0.1.0",
-        "apiVersion": "1.3",
+        "apiVersion": "1.5",
         "schemaVersion": null,
         "fsrsVersion": "FSRS-6",
         "contentVersion": "2026.02-demo",
@@ -778,16 +778,419 @@
       }
     },
     {
+      "operation": "startOptimizer",
+      "command": "start_optimizer",
+      "args": [
+        {
+          "operationId": "contract-5",
+          "presetId": "preset-light"
+        }
+      ],
+      "error": {
+        "code": "VALIDATION_FAILED",
+        "messageKey": "errors.VALIDATION_FAILED",
+        "retryable": false,
+        "details": {
+          "field": "presetId",
+          "reason": "notEnoughReviews"
+        }
+      }
+    },
+    {
+      "operation": "getOptimizer",
+      "command": "get_optimizer",
+      "args": [
+        {
+          "presetId": "preset-default"
+        }
+      ],
+      "output": {
+        "presetId": "preset-default",
+        "presetName": "Domyślny (20 nowych/dzień)",
+        "presetVersion": 1,
+        "desiredRetention": 0.9,
+        "currentWeights": [
+          0.212,
+          1.2931,
+          2.3065,
+          8.2956,
+          6.4133,
+          0.8334,
+          3.0194,
+          0.001,
+          1.8722,
+          0.1666,
+          0.796,
+          1.4835,
+          0.0614,
+          0.2629,
+          1.6483,
+          0.6014,
+          1.8729,
+          0.5425,
+          0.0912,
+          0.0658,
+          0.1542
+        ],
+        "defaultWeights": [
+          0.212,
+          1.2931,
+          2.3065,
+          8.2956,
+          6.4133,
+          0.8334,
+          3.0194,
+          0.001,
+          1.8722,
+          0.1666,
+          0.796,
+          1.4835,
+          0.0614,
+          0.2629,
+          1.6483,
+          0.6014,
+          1.8729,
+          0.5425,
+          0.0912,
+          0.0658,
+          0.1542
+        ],
+        "dataset": {
+          "reviews": 331,
+          "cards": 13,
+          "usable": 239,
+          "excludedUndone": 3,
+          "excludedManual": 0,
+          "excludedIncomplete": 63
+        },
+        "minimumReviews": 200,
+        "recommendedReviews": 1000,
+        "runningJobId": null,
+        "runs": []
+      }
+    },
+    {
+      "operation": "startOptimizer",
+      "command": "start_optimizer",
+      "args": [
+        {
+          "operationId": "contract-6",
+          "presetId": "preset-default"
+        }
+      ],
+      "output": {
+        "jobId": "job-90004",
+        "kind": "optimize",
+        "status": "queued",
+        "sequence": 0,
+        "progress": {
+          "done": 0,
+          "total": 5
+        },
+        "startedAt": "2026-03-02T08:00:00.000Z",
+        "finishedAt": null,
+        "error": null,
+        "result": null
+      }
+    },
+    {
+      "operation": "getJobStatus",
+      "command": "get_job_status",
+      "args": [
+        "job-90004"
+      ],
+      "output": {
+        "jobId": "job-90004",
+        "kind": "optimize",
+        "status": "succeeded",
+        "sequence": 5,
+        "progress": {
+          "done": 5,
+          "total": 5
+        },
+        "startedAt": "2026-03-02T08:00:00.000Z",
+        "finishedAt": "2026-03-02T08:00:00.000Z",
+        "error": null,
+        "result": {
+          "type": "optimize",
+          "runId": "run-90005"
+        }
+      }
+    },
+    {
+      "operation": "getOptimizer",
+      "command": "get_optimizer",
+      "args": [
+        {
+          "presetId": "preset-default"
+        }
+      ],
+      "output": {
+        "presetId": "preset-default",
+        "presetName": "Domyślny (20 nowych/dzień)",
+        "presetVersion": 1,
+        "desiredRetention": 0.9,
+        "currentWeights": [
+          0.212,
+          1.2931,
+          2.3065,
+          8.2956,
+          6.4133,
+          0.8334,
+          3.0194,
+          0.001,
+          1.8722,
+          0.1666,
+          0.796,
+          1.4835,
+          0.0614,
+          0.2629,
+          1.6483,
+          0.6014,
+          1.8729,
+          0.5425,
+          0.0912,
+          0.0658,
+          0.1542
+        ],
+        "defaultWeights": [
+          0.212,
+          1.2931,
+          2.3065,
+          8.2956,
+          6.4133,
+          0.8334,
+          3.0194,
+          0.001,
+          1.8722,
+          0.1666,
+          0.796,
+          1.4835,
+          0.0614,
+          0.2629,
+          1.6483,
+          0.6014,
+          1.8729,
+          0.5425,
+          0.0912,
+          0.0658,
+          0.1542
+        ],
+        "dataset": {
+          "reviews": 331,
+          "cards": 13,
+          "usable": 239,
+          "excludedUndone": 3,
+          "excludedManual": 0,
+          "excludedIncomplete": 63
+        },
+        "minimumReviews": 200,
+        "recommendedReviews": 1000,
+        "runningJobId": null,
+        "runs": [
+          {
+            "runId": "run-90005",
+            "status": "proposed",
+            "createdAt": "2026-03-02T08:00:00.000Z",
+            "appliedAt": null,
+            "revertedAt": null,
+            "optimizerVersion": "langualinker-fsrs6-adam-1",
+            "fsrsVersion": "fsrs-6/py-fsrs-6.3.0",
+            "dataset": {
+              "reviews": 331,
+              "cards": 13,
+              "usable": 239,
+              "excludedUndone": 3,
+              "excludedManual": 0,
+              "excludedIncomplete": 63
+            },
+            "trainingReviews": 191,
+            "validationReviews": 48,
+            "weightsBefore": [
+              0.212,
+              1.2931,
+              2.3065,
+              8.2956,
+              6.4133,
+              0.8334,
+              3.0194,
+              0.001,
+              1.8722,
+              0.1666,
+              0.796,
+              1.4835,
+              0.0614,
+              0.2629,
+              1.6483,
+              0.6014,
+              1.8729,
+              0.5425,
+              0.0912,
+              0.0658,
+              0.1542
+            ],
+            "weightsProposed": [
+              0.1815,
+              1.1781,
+              2.6909,
+              8.6772,
+              5.2685,
+              0.8334,
+              3.5584,
+              0.001,
+              1.5602,
+              0.1814,
+              0.9104,
+              1.2966,
+              0.0546,
+              0.3036,
+              1.766,
+              0.4973,
+              1.8227,
+              0.6401,
+              0.0894,
+              0.0543,
+              0.1642
+            ],
+            "current": {
+              "logLoss": 0.3654,
+              "rmse": 0.0489,
+              "dailyReviews": 1.5,
+              "medianIntervalDays": 11
+            },
+            "proposed": {
+              "logLoss": 0.3412,
+              "rmse": 0.0231,
+              "dailyReviews": 1.2,
+              "medianIntervalDays": 14
+            },
+            "recommended": true,
+            "fewReviews": true,
+            "canApply": true,
+            "canRevert": false
+          }
+        ]
+      }
+    },
+    {
+      "operation": "applyOptimizerRun",
+      "command": "apply_optimizer_run",
+      "args": [
+        {
+          "operationId": "contract-7",
+          "runId": "run-90005",
+          "expectedVersion": 1
+        }
+      ],
+      "output": {
+        "id": "preset-default",
+        "name": "Domyślny (20 nowych/dzień)",
+        "version": 2,
+        "builtIn": true,
+        "dependentDecks": 4,
+        "config": {
+          "reviewsPerDay": 200,
+          "desiredRetention": 0.9,
+          "maxIntervalDays": 36500,
+          "learningStepsMinutes": [
+            1,
+            10
+          ],
+          "relearningStepsMinutes": [
+            10
+          ],
+          "weights": [
+            0.1815,
+            1.1781,
+            2.6909,
+            8.6772,
+            5.2685,
+            0.8334,
+            3.5584,
+            0.001,
+            1.5602,
+            0.1814,
+            0.9104,
+            1.2966,
+            0.0546,
+            0.3036,
+            1.766,
+            0.4973,
+            1.8227,
+            0.6401,
+            0.0894,
+            0.0543,
+            0.1642
+          ],
+          "newPerDay": 20
+        }
+      }
+    },
+    {
+      "operation": "revertOptimizerRun",
+      "command": "revert_optimizer_run",
+      "args": [
+        {
+          "operationId": "contract-8",
+          "runId": "run-90005",
+          "expectedVersion": 2
+        }
+      ],
+      "output": {
+        "id": "preset-default",
+        "name": "Domyślny (20 nowych/dzień)",
+        "version": 3,
+        "builtIn": true,
+        "dependentDecks": 4,
+        "config": {
+          "reviewsPerDay": 200,
+          "desiredRetention": 0.9,
+          "maxIntervalDays": 36500,
+          "learningStepsMinutes": [
+            1,
+            10
+          ],
+          "relearningStepsMinutes": [
+            10
+          ],
+          "weights": [
+            0.212,
+            1.2931,
+            2.3065,
+            8.2956,
+            6.4133,
+            0.8334,
+            3.0194,
+            0.001,
+            1.8722,
+            0.1666,
+            0.796,
+            1.4835,
+            0.0614,
+            0.2629,
+            1.6483,
+            0.6014,
+            1.8729,
+            0.5425,
+            0.0912,
+            0.0658,
+            0.1542
+          ],
+          "newPerDay": 20
+        }
+      }
+    },
+    {
       "operation": "startStudy",
       "command": "start_study",
       "args": [
         {
-          "operationId": "contract-5",
+          "operationId": "contract-9",
           "deckId": "1"
         }
       ],
       "output": {
-        "sessionId": "session-90004",
+        "sessionId": "session-90006",
         "deckId": "1",
         "deckName": "Niemiecki — słówka A1",
         "status": "active",
@@ -840,10 +1243,10 @@
       "operation": "resumeStudy",
       "command": "resume_study",
       "args": [
-        "session-90004"
+        "session-90006"
       ],
       "output": {
-        "sessionId": "session-90004",
+        "sessionId": "session-90006",
         "deckId": "1",
         "deckName": "Niemiecki — słówka A1",
         "status": "active",
@@ -897,7 +1300,7 @@
       "command": "get_rating_preview",
       "args": [
         {
-          "sessionId": "session-90004",
+          "sessionId": "session-90006",
           "cardId": "1012",
           "cardVersion": 1
         }
@@ -931,8 +1334,8 @@
       "command": "rate_card",
       "args": [
         {
-          "operationId": "contract-6",
-          "sessionId": "session-90004",
+          "operationId": "contract-10",
+          "sessionId": "session-90006",
           "cardId": "1012",
           "cardVersion": 1,
           "previewToken": "p1-1012-v1",
@@ -941,8 +1344,8 @@
         }
       ],
       "output": {
-        "operationId": "contract-6",
-        "sessionId": "session-90004",
+        "operationId": "contract-10",
+        "sessionId": "session-90006",
         "reviewed": {
           "cardId": "1012",
           "version": 2,
@@ -999,13 +1402,13 @@
       "command": "undo_review",
       "args": [
         {
-          "operationId": "contract-7",
-          "sessionId": "session-90004"
+          "operationId": "contract-11",
+          "sessionId": "session-90006"
         }
       ],
       "output": {
-        "operationId": "contract-7",
-        "sessionId": "session-90004",
+        "operationId": "contract-11",
+        "sessionId": "session-90006",
         "reviewed": {
           "cardId": "1012",
           "version": 3,
@@ -1062,13 +1465,13 @@
       "command": "update_study_session",
       "args": [
         {
-          "operationId": "contract-8",
-          "sessionId": "session-90004",
+          "operationId": "contract-12",
+          "sessionId": "session-90006",
           "action": "pause"
         }
       ],
       "output": {
-        "sessionId": "session-90004",
+        "sessionId": "session-90006",
         "deckId": "1",
         "deckName": "Niemiecki — słówka A1",
         "status": "paused",
@@ -1122,13 +1525,13 @@
       "command": "update_study_session",
       "args": [
         {
-          "operationId": "contract-9",
-          "sessionId": "session-90004",
+          "operationId": "contract-13",
+          "sessionId": "session-90006",
           "action": "resume"
         }
       ],
       "output": {
-        "sessionId": "session-90004",
+        "sessionId": "session-90006",
         "deckId": "1",
         "deckName": "Niemiecki — słówka A1",
         "status": "active",
@@ -1182,7 +1585,7 @@
       "command": "get_rating_preview",
       "args": [
         {
-          "sessionId": "session-90004",
+          "sessionId": "session-90006",
           "cardId": "1012",
           "cardVersion": 3
         }
@@ -1216,8 +1619,8 @@
       "command": "rate_card",
       "args": [
         {
-          "operationId": "contract-10",
-          "sessionId": "session-90004",
+          "operationId": "contract-14",
+          "sessionId": "session-90006",
           "cardId": "1012",
           "cardVersion": 3,
           "previewToken": "p1-1012-v3",
@@ -1226,8 +1629,8 @@
         }
       ],
       "output": {
-        "operationId": "contract-10",
-        "sessionId": "session-90004",
+        "operationId": "contract-14",
+        "sessionId": "session-90006",
         "reviewed": {
           "cardId": "1012",
           "version": 4,
@@ -1317,13 +1720,13 @@
       "command": "update_study_session",
       "args": [
         {
-          "operationId": "contract-11",
-          "sessionId": "session-90004",
+          "operationId": "contract-15",
+          "sessionId": "session-90006",
           "action": "end"
         }
       ],
       "output": {
-        "sessionId": "session-90004",
+        "sessionId": "session-90006",
         "deckId": "1",
         "deckName": "Niemiecki — słówka A1",
         "status": "finished",
@@ -1344,10 +1747,10 @@
       "operation": "getSessionSummary",
       "command": "get_session_summary",
       "args": [
-        "session-90004"
+        "session-90006"
       ],
       "output": {
-        "sessionId": "session-90004",
+        "sessionId": "session-90006",
         "deckId": "1",
         "deckName": "Niemiecki — słówka A1",
         "status": "finished",
@@ -1433,7 +1836,7 @@
             "version": 4,
             "history": [
               {
-                "id": "90006",
+                "id": "90008",
                 "reviewedAt": "2026-03-02T08:00:13.300Z",
                 "rating": "Again",
                 "stateBefore": "Relearning",
@@ -1484,7 +1887,7 @@
       "command": "apply_card_action",
       "args": [
         {
-          "operationId": "contract-12",
+          "operationId": "contract-16",
           "cardId": "1012",
           "expectedVersion": 4,
           "action": "flag",
@@ -1504,7 +1907,7 @@
       "command": "set_favorite_association",
       "args": [
         {
-          "operationId": "contract-13",
+          "operationId": "contract-17",
           "noteId": "112",
           "associationId": "5056"
         }
@@ -1687,7 +2090,7 @@
       "command": "save_note",
       "args": [
         {
-          "operationId": "contract-14",
+          "operationId": "contract-18",
           "noteId": null,
           "expectedVersion": null,
           "deckId": "1",
@@ -1715,8 +2118,8 @@
         },
         "archivedOrdinals": [],
         "note": {
-          "id": "90007",
-          "guid": "note-90007",
+          "id": "90009",
+          "guid": "note-90009",
           "noteTypeKind": "Basic",
           "front": "der Vertrag",
           "back": "umowa",
@@ -1729,8 +2132,8 @@
         },
         "cards": [
           {
-            "id": "90008",
-            "noteId": "90007",
+            "id": "90010",
+            "noteId": "90009",
             "deckId": "1",
             "deckName": "Niemiecki — słówka A1",
             "ordinal": 0,
@@ -1750,8 +2153,8 @@
         ],
         "associations": [
           {
-            "id": "90009",
-            "noteId": "90007",
+            "id": "90011",
+            "noteId": "90009",
             "text": "Wer trägt den Vertrag? — wór z umową",
             "provenance": "manual",
             "favorite": false,
@@ -1762,8 +2165,8 @@
         ],
         "grammarTips": [
           {
-            "id": "90010",
-            "noteId": "90007",
+            "id": "90012",
+            "noteId": "90009",
             "text": "der Vertrag, die Verträge",
             "order": 0
           }
@@ -1776,8 +2179,8 @@
       "command": "update_note_content",
       "args": [
         {
-          "operationId": "contract-15",
-          "noteId": "90007",
+          "operationId": "contract-19",
+          "noteId": "90009",
           "change": {
             "type": "addTip",
             "text": "vertragen — znosić"
@@ -1795,8 +2198,8 @@
         },
         "archivedOrdinals": [],
         "note": {
-          "id": "90007",
-          "guid": "note-90007",
+          "id": "90009",
+          "guid": "note-90009",
           "noteTypeKind": "Basic",
           "front": "der Vertrag",
           "back": "umowa",
@@ -1809,8 +2212,8 @@
         },
         "cards": [
           {
-            "id": "90008",
-            "noteId": "90007",
+            "id": "90010",
+            "noteId": "90009",
             "deckId": "1",
             "deckName": "Niemiecki — słówka A1",
             "ordinal": 0,
@@ -1830,8 +2233,8 @@
         ],
         "associations": [
           {
-            "id": "90009",
-            "noteId": "90007",
+            "id": "90011",
+            "noteId": "90009",
             "text": "Wer trägt den Vertrag? — wór z umową",
             "provenance": "manual",
             "favorite": false,
@@ -1842,14 +2245,14 @@
         ],
         "grammarTips": [
           {
-            "id": "90010",
-            "noteId": "90007",
+            "id": "90012",
+            "noteId": "90009",
             "text": "der Vertrag, die Verträge",
             "order": 0
           },
           {
-            "id": "90011",
-            "noteId": "90007",
+            "id": "90013",
+            "noteId": "90009",
             "text": "vertragen — znosić",
             "order": 1
           }
@@ -1882,13 +2285,13 @@
       "command": "generate_association",
       "args": [
         {
-          "operationId": "contract-16",
-          "noteId": "90007",
+          "operationId": "contract-20",
+          "noteId": "90009",
           "variants": 1
         }
       ],
       "output": {
-        "jobId": "job-90013",
+        "jobId": "job-90015",
         "kind": "llm",
         "status": "queued",
         "sequence": 0,
@@ -1906,10 +2309,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90013"
+        "job-90015"
       ],
       "output": {
-        "jobId": "job-90013",
+        "jobId": "job-90015",
         "kind": "llm",
         "status": "succeeded",
         "sequence": 3,
@@ -1928,8 +2331,8 @@
       "command": "delete_note",
       "args": [
         {
-          "operationId": "contract-17",
-          "noteId": "90007",
+          "operationId": "contract-21",
+          "noteId": "90009",
           "expectedVersion": 1
         }
       ],
@@ -2067,7 +2470,7 @@
       "command": "resolve_word_link",
       "args": [
         {
-          "operationId": "contract-18",
+          "operationId": "contract-22",
           "linkId": "5119",
           "wordNoteId": "101"
         }
@@ -2199,7 +2602,7 @@
         ],
         "nextCursor": "5",
         "total": 13,
-        "filterVersion": "19:[\"\",\"1\",null,[],[],\"due\",\"asc\"]"
+        "filterVersion": "23:[\"\",\"1\",null,[],[],\"due\",\"asc\"]"
       }
     },
     {
@@ -2232,7 +2635,7 @@
       "command": "apply_bulk_action",
       "args": [
         {
-          "operationId": "contract-19",
+          "operationId": "contract-23",
           "selection": {
             "kind": "ids",
             "cardIds": [
@@ -2765,7 +3168,7 @@
       "command": "update_settings",
       "args": [
         {
-          "operationId": "contract-20",
+          "operationId": "contract-24",
           "expectedVersion": 1,
           "patch": {
             "dailyGoal": 25
@@ -2851,7 +3254,7 @@
       "command": "set_ai_api_key",
       "args": [
         {
-          "operationId": "contract-21",
+          "operationId": "contract-25",
           "apiKey": "contract-test-key"
         }
       ],
@@ -2912,7 +3315,7 @@
       "command": "request_notification_permission",
       "args": [
         {
-          "operationId": "contract-22"
+          "operationId": "contract-26"
         }
       ],
       "output": {
@@ -3046,7 +3449,7 @@
       "command": "complete_onboarding",
       "args": [
         {
-          "operationId": "contract-23",
+          "operationId": "contract-27",
           "nativeLanguage": "pl",
           "targetLanguages": [
             "de",
@@ -3057,7 +3460,7 @@
         }
       ],
       "output": {
-        "jobId": "job-90014",
+        "jobId": "job-90016",
         "kind": "prepareContent",
         "status": "queued",
         "sequence": 0,
@@ -3075,10 +3478,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90014"
+        "job-90016"
       ],
       "output": {
-        "jobId": "job-90014",
+        "jobId": "job-90016",
         "kind": "prepareContent",
         "status": "succeeded",
         "sequence": 2,
@@ -3197,7 +3600,7 @@
         "targetDeckId": "1",
         "targetDeckName": "Niemiecki — słówka A1",
         "newDecks": [],
-        "previewToken": "import-25-1"
+        "previewToken": "import-29-1"
       }
     },
     {
@@ -3205,12 +3608,12 @@
       "command": "commit_import",
       "args": [
         {
-          "operationId": "contract-24",
-          "previewToken": "import-25-1"
+          "operationId": "contract-28",
+          "previewToken": "import-29-1"
         }
       ],
       "output": {
-        "jobId": "job-90015",
+        "jobId": "job-90017",
         "kind": "import",
         "status": "queued",
         "sequence": 0,
@@ -3228,10 +3631,10 @@
       "operation": "cancelJob",
       "command": "cancel_job",
       "args": [
-        "job-90015"
+        "job-90017"
       ],
       "output": {
-        "jobId": "job-90015",
+        "jobId": "job-90017",
         "kind": "import",
         "status": "cancelled",
         "sequence": 1,
@@ -3249,10 +3652,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90015"
+        "job-90017"
       ],
       "output": {
-        "jobId": "job-90015",
+        "jobId": "job-90017",
         "kind": "import",
         "status": "cancelled",
         "sequence": 1,
@@ -3348,7 +3751,7 @@
         "targetDeckId": "1",
         "targetDeckName": "Niemiecki — słówka A1",
         "newDecks": [],
-        "previewToken": "import-27-2"
+        "previewToken": "import-31-2"
       }
     },
     {
@@ -3356,12 +3759,12 @@
       "command": "commit_import",
       "args": [
         {
-          "operationId": "contract-25",
-          "previewToken": "import-27-2"
+          "operationId": "contract-29",
+          "previewToken": "import-31-2"
         }
       ],
       "output": {
-        "jobId": "job-90016",
+        "jobId": "job-90018",
         "kind": "import",
         "status": "queued",
         "sequence": 0,
@@ -3379,10 +3782,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90016"
+        "job-90018"
       ],
       "output": {
-        "jobId": "job-90016",
+        "jobId": "job-90018",
         "kind": "import",
         "status": "succeeded",
         "sequence": 4,
@@ -3470,7 +3873,7 @@
             "line": 4
           }
         ],
-        "previewToken": "deck-preview-29-90041"
+        "previewToken": "deck-preview-33-90043"
       }
     },
     {
@@ -3478,12 +3881,12 @@
       "command": "commit_deck_import",
       "args": [
         {
-          "operationId": "contract-26",
-          "previewToken": "deck-preview-29-90041"
+          "operationId": "contract-30",
+          "previewToken": "deck-preview-33-90043"
         }
       ],
       "output": {
-        "jobId": "job-90042",
+        "jobId": "job-90044",
         "kind": "import",
         "status": "queued",
         "sequence": 0,
@@ -3501,10 +3904,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90042"
+        "job-90044"
       ],
       "output": {
-        "jobId": "job-90042",
+        "jobId": "job-90044",
         "kind": "import",
         "status": "succeeded",
         "sequence": 3,
@@ -3517,7 +3920,7 @@
         "error": null,
         "result": {
           "type": "import",
-          "deckId": "90043",
+          "deckId": "90045",
           "create": 3,
           "update": 0,
           "skip": 0,
@@ -3532,14 +3935,14 @@
       "command": "export_deck",
       "args": [
         {
-          "operationId": "contract-27",
+          "operationId": "contract-31",
           "deckId": "1",
           "format": "csv",
           "includeScheduling": true
         }
       ],
       "output": {
-        "jobId": "job-90050",
+        "jobId": "job-90052",
         "kind": "export",
         "status": "queued",
         "sequence": 0,
@@ -3557,10 +3960,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90050"
+        "job-90052"
       ],
       "output": {
-        "jobId": "job-90050",
+        "jobId": "job-90052",
         "kind": "export",
         "status": "succeeded",
         "sequence": 4,
@@ -3590,10 +3993,10 @@
       "command": "share_file",
       "args": [
         {
-          "operationId": "contract-28",
+          "operationId": "contract-32",
           "target": {
             "kind": "export",
-            "jobId": "job-90050"
+            "jobId": "job-90052"
           }
         }
       ],
@@ -3640,11 +4043,11 @@
       "command": "create_backup",
       "args": [
         {
-          "operationId": "contract-29"
+          "operationId": "contract-33"
         }
       ],
       "output": {
-        "jobId": "job-90051",
+        "jobId": "job-90053",
         "kind": "backup",
         "status": "queued",
         "sequence": 0,
@@ -3662,10 +4065,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90051"
+        "job-90053"
       ],
       "output": {
-        "jobId": "job-90051",
+        "jobId": "job-90053",
         "kind": "backup",
         "status": "succeeded",
         "sequence": 5,
@@ -3678,7 +4081,7 @@
         "error": null,
         "result": {
           "type": "backup",
-          "backupId": "backup-90052"
+          "backupId": "backup-90054"
         }
       }
     },
@@ -3687,7 +4090,7 @@
       "command": "share_file",
       "args": [
         {
-          "operationId": "contract-30",
+          "operationId": "contract-34",
           "target": {
             "kind": "backup",
             "backupId": "backup-3"
@@ -3745,7 +4148,7 @@
         },
         "compatible": true,
         "issues": [],
-        "previewToken": "restore-37-3"
+        "previewToken": "restore-41-3"
       }
     },
     {
@@ -3753,12 +4156,12 @@
       "command": "restore_backup",
       "args": [
         {
-          "operationId": "contract-31",
-          "previewToken": "restore-37-3"
+          "operationId": "contract-35",
+          "previewToken": "restore-41-3"
         }
       ],
       "output": {
-        "jobId": "job-90054",
+        "jobId": "job-90056",
         "kind": "restore",
         "status": "queued",
         "sequence": 0,
@@ -3776,10 +4179,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90054"
+        "job-90056"
       ],
       "output": {
-        "jobId": "job-90054",
+        "jobId": "job-90056",
         "kind": "restore",
         "status": "succeeded",
         "sequence": 6,
@@ -3792,7 +4195,7 @@
         "error": null,
         "result": {
           "type": "restore",
-          "safetyBackupId": "backup-90053"
+          "safetyBackupId": "backup-90055"
         }
       }
     },
@@ -3814,7 +4217,7 @@
         },
         "confirmationPhrase": "RESETUJ POSTĘP",
         "latestBackupAt": "2026-03-02T08:02:13.300Z",
-        "previewToken": "reset-39-progress"
+        "previewToken": "reset-43-progress"
       }
     },
     {
@@ -3822,14 +4225,14 @@
       "command": "reset_collection",
       "args": [
         {
-          "operationId": "contract-32",
-          "previewToken": "reset-39-progress",
+          "operationId": "contract-36",
+          "previewToken": "reset-43-progress",
           "safetyBackupId": null,
           "confirmationPhrase": "RESETUJ POSTĘP"
         }
       ],
       "output": {
-        "jobId": "job-90055",
+        "jobId": "job-90057",
         "kind": "reset",
         "status": "queued",
         "sequence": 0,
@@ -3847,10 +4250,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90055"
+        "job-90057"
       ],
       "output": {
-        "jobId": "job-90055",
+        "jobId": "job-90057",
         "kind": "reset",
         "status": "succeeded",
         "sequence": 4,
@@ -3870,13 +4273,13 @@
   ],
   "events": {
     "job_progress": {
-      "jobId": "job-90013",
-      "kind": "llm",
+      "jobId": "job-90004",
+      "kind": "optimize",
       "sequence": 0,
       "status": "queued",
       "progress": {
         "done": 0,
-        "total": 3
+        "total": 5
       }
     },
     "collection_changed": {

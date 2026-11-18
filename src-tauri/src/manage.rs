@@ -135,7 +135,7 @@ fn overview_dto(overview: DeckOverview) -> DeckOverviewDto {
     }
 }
 
-fn preset_dto((config, dependents): (DeckConfig, u32)) -> PresetDto {
+pub(crate) fn preset_dto((config, dependents): (DeckConfig, u32)) -> PresetDto {
     let options = config.options;
     PresetDto {
         id: text_id(config.id.0),

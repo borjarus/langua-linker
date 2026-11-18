@@ -42,6 +42,45 @@ impl BundledContentRepository for SqliteRepos<'_> {
             .map_err(map_sqlite)
     }
 
+    fn restore_bundled_deck(
+        &mut self,
+        deck: DeckId,
+        deck_guid: &str,
+        at: TimestampMs,
+    ) -> AppResult<()> {
+        self.tx
+            .execute(
+                "UPDATE decks SET deleted_at = NULL, updated_at = ?1, usn = ?2, version = version + 1
+                 WHERE id = ?3 AND deleted_at IS NOT NULL",
+                params![at.0, LOCAL_USN, deck.0],
+            )
+            .map_err(map_sqlite)?;
+        self.tx
+            .execute(
+                "UPDATE notes SET deleted_at = NULL, updated_at = ?1, usn = ?2, version = version + 1
+                 WHERE deleted_at IS NOT NULL
+                   AND id IN (SELECT note_id FROM bundled_notes WHERE deck_guid = ?3)",
+                params![at.0, LOCAL_USN, deck_guid],
+            )
+            .map_err(map_sqlite)?;
+        // The newest deleted card per note and template, unless that template has a live card.
+        self.tx
+            .execute(
+                "UPDATE cards SET deleted_at = NULL, updated_at = ?1, usn = ?2, version = version + 1
+                 WHERE id IN (
+                     SELECT MAX(c.id) FROM cards c
+                     WHERE c.deck_id = ?3 AND c.deleted_at IS NOT NULL
+                       AND c.note_id IN (SELECT note_id FROM bundled_notes WHERE deck_guid = ?4)
+                       AND NOT EXISTS (SELECT 1 FROM cards l WHERE l.note_id = c.note_id
+                                       AND l.template_ordinal = c.template_ordinal
+                                       AND l.deleted_at IS NULL)
+                     GROUP BY c.note_id, c.template_ordinal)",
+                params![at.0, LOCAL_USN, deck.0, deck_guid],
+            )
+            .map_err(map_sqlite)?;
+        Ok(())
+    }
+
     fn bundled_note(&mut self, note: NoteId) -> AppResult<Option<BundledNote>> {
         self.tx
             .prepare_cached(
@@ -150,6 +189,29 @@ impl BundledContentRepository for SqliteRepos<'_> {
                 "UPDATE associations SET text = ?1, updated_at = ?2, usn = ?3
                  WHERE id = ?4 AND deleted_at IS NULL",
                 params![text, at.0, LOCAL_USN, id.0],
+            )
+            .map_err(map_sqlite)?;
+        if changed == 0 {
+            return Err(AppError::NotFound {
+                entity: "association",
+            });
+        }
+        Ok(())
+    }
+
+    fn update_association_extended(
+        &mut self,
+        id: AssociationId,
+        extended: Option<&str>,
+        at: TimestampMs,
+    ) -> AppResult<()> {
+        let extended = langualinker_domain::content::validated_extended(extended)?;
+        let changed = self
+            .tx
+            .execute(
+                "UPDATE associations SET extended = ?1, updated_at = ?2, usn = ?3
+                 WHERE id = ?4 AND deleted_at IS NULL",
+                params![extended, at.0, LOCAL_USN, id.0],
             )
             .map_err(map_sqlite)?;
         if changed == 0 {

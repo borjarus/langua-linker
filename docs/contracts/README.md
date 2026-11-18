@@ -73,6 +73,21 @@ Phase 7 extends the Rust side per command: the DTO deserializes its frozen input
 - `collection_changed` after a committed rating/undo (`cards`, `stats`; undo also `notes`), card action (`cards`, `decks`; a delete also `notes`, `stats`), favorite or link choice (`notes`), and ending a session (`stats`).
 - Known deviation from checklist rule 3, fixed with the next minor version: `startStudy`, `getRatingPreview` and `rateCard` can answer `VALIDATION_FAILED` (paused or finished session, card outside the session, card not studyable) or `DELETED`; `setFavoriteAssociation` and `resolveWordLink` can answer `DELETED` for a deleted note.
 
+## Changes in v1.5 (Phase 18, FSRS optimizer, 2026-11-18)
+
+- Minor (additive). New operations, all `permission: none`:
+  - `getOptimizer` (query, `get_optimizer`, `{ presetId }` → `OptimizerDto`): the preset (`presetName`, `presetVersion`, `desiredRetention`, `currentWeights`, `defaultWeights`), the usable history `dataset` (`OptimizerDatasetDto`: `reviews`, `cards`, `usable`, `excludedUndone`, `excludedManual`, `excludedIncomplete`), `minimumReviews` (200, below it the start is refused) and `recommendedReviews` (1000, a UX heuristic: below it results carry `fewReviews`), `runningJobId` of a run in progress and `runs` (`OptimizerRunDto`, newest first). Errors `NOT_FOUND`, `DB_BUSY`.
+  - `startOptimizer` (job, `start_optimizer`, `{ operationId, presetId }` → `JobDto` kind `optimize`, emits `job_progress`; cancellable with `cancelJob`). Result `JobResultDto` `{ type: "optimize", runId }`. A start while a run of the same preset is in progress returns that job. Errors `VALIDATION_FAILED { field: "presetId", reason: "notEnoughReviews" }`, `NOT_FOUND`, `DB_BUSY`, `CANCELLED`.
+  - `applyOptimizerRun` / `revertOptimizerRun` (mutations, `apply_optimizer_run` / `revert_optimizer_run`, `OptimizerRunActionInput { operationId, runId, expectedVersion }` with the preset version → `PresetDto`, emit `collection_changed` `decks`, `cards`). Apply sets the preset weights to `weightsProposed` (run `proposed` → `applied`); revert restores `weightsBefore` (`applied` → `reverted`). Errors: `VERSION_CONFLICT` (preset version), `VALIDATION_FAILED { field: "runId", reason: "status" }` (run not in the needed status) or `reason: "stale"` (the preset weights are no longer the ones the run started from / proposed), `NOT_FOUND`, `DB_BUSY`.
+- `OptimizerRunDto`: `runId`, `status` (`proposed` | `applied` | `reverted`), `createdAt`, `appliedAt`, `revertedAt`, provenance (`optimizerVersion`, `fsrsVersion`, `dataset`), `trainingReviews` / `validationReviews` (whole cards held out, no card on both sides), `weightsBefore`, `weightsProposed`, `current` and `proposed` (`OptimizerMetricsDto`: held-out `logLoss` and `rmse`, workload preview `dailyReviews` and `medianIntervalDays`), `recommended`, `fewReviews`, and the derived `canApply` / `canRevert`.
+- Only the preset weights change: no card is rescheduled, due dates stay, the new weights apply from the next answer; review history stays on the device.
+- `JobKind` gains `optimize` — a new member in an output enum, accepted as a documented deviation because frontend and backend ship as one app (as in v1.3). `JobResultDto` gains `optimize { runId }`.
+- Screen `optimizer` (route `/preset/:id/optimizer`), reached from the deck screen and the preset editor's advanced section.
+
+## Changes in v1.4 (extended associations, 2026-11-18)
+
+- Minor (additive): `AssociationDto` gains optional `extended` — the long Markdown version of a bundled association (headings, paragraphs, `-` lists, `>` quotes, `---` rules, inline bold/italic). The UI renders it as text nodes, collapsed by default. Absent for generated and manual associations and for LLM placeholders; a 1.3 payload without it still deserializes.
+
 ## Changes in v1.3 (Phase 14a, CSV and Anki export)
 
 - Minor (additive), [ADR-19](../adr/ADR-19-csv-anki-interop.md). Rust became the DTO source for `ImportInput`, `ImportPreviewDto`, `CommitImportInput`, `ExportDeckInput` and the enums `CsvDelimiter`, `DuplicatePolicy`, `CsvColumnTarget`; new `CsvEncoding`, `ExportFormat`, `ExportLossDto`.

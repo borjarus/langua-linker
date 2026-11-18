@@ -199,6 +199,7 @@
           <button type="button" class="btn" onclick={() => (dialog = 'edit')}><Icon name="edit" />{i18n.t('deck.edit.open')}</button>
           <button type="button" class="btn" onclick={() => (dialog = 'type')}><Icon name="cards" />{i18n.t('deck.typeChange.open')}</button>
           <button type="button" class="btn" onclick={() => (dialog = 'presets')}><Icon name="settings" />{i18n.t('deck.preset.open')}</button>
+          <a class="btn" href={href({ name: 'optimizer', params: { id: data.presetId } })}><Icon name="sparkles" />{i18n.t('deck.preset.optimize')}</a>
           <button type="button" class="btn btn-ghost danger" onclick={() => { deleteError = null; dialog = 'delete' }}><Icon name="trash" />{i18n.t('deck.delete.open')}</button>
         </div>
       </section>

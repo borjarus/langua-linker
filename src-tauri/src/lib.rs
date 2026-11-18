@@ -10,6 +10,7 @@ mod links;
 mod manage;
 mod metrics;
 mod native;
+mod optimizer;
 mod reminders;
 mod settings;
 mod study;
@@ -143,6 +144,10 @@ fn configure<R: Runtime>(
         manage::delete_deck,
         manage::list_presets,
         manage::save_preset,
+        optimizer::get_optimizer,
+        optimizer::start_optimizer,
+        optimizer::apply_optimizer_run,
+        optimizer::revert_optimizer_run,
         manage::get_note_details,
         manage::get_editor_data,
         manage::check_duplicate,
@@ -586,7 +591,7 @@ mod tests {
         let window = main_window(&app);
         let about = invoke(&window, "get_about_info", serde_json::json!({})).unwrap();
         let about: AboutDto = serde_json::from_value(about).unwrap();
-        assert_eq!(about.schema_version, Some(4));
+        assert_eq!(about.schema_version, Some(6));
         assert_eq!(about.api_version, API_VERSION);
         assert_eq!(
             (about.fsrs_version.as_str(), about.content_version.as_str()),
@@ -596,6 +601,59 @@ mod tests {
         let report: DiagnosticsReportDto = serde_json::from_value(report).unwrap();
         assert!(report.lines.is_empty());
         assert_eq!(report.generated_at.len(), 24);
+    }
+
+    /// Phase 18 over IPC: the optimizer view of a preset without history, the refusal to start
+    /// below the minimum and the errors of apply/revert, all in contract shapes.
+    #[test]
+    fn optimizer_commands_answer_in_the_contract_shapes() {
+        use langualinker_contracts::dto::{OptimizerDto, PresetDto};
+        let app = app();
+        let window = main_window(&app);
+        let call = |command: &str, input: serde_json::Value| {
+            invoke(&window, command, serde_json::json!({ "input": input }))
+        };
+        let presets: Vec<PresetDto> =
+            serde_json::from_value(call("list_presets", serde_json::json!(null)).unwrap()).unwrap();
+        let preset = &presets[0];
+        let view: OptimizerDto = serde_json::from_value(
+            call(
+                "get_optimizer",
+                serde_json::json!({ "presetId": preset.id }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(view.preset_id, preset.id);
+        assert_eq!(view.preset_version, preset.version);
+        assert_eq!(view.current_weights, preset.config.weights);
+        assert_eq!(view.default_weights.len(), 21);
+        assert_eq!((view.dataset.usable, view.minimum_reviews), (0, 200));
+        assert_eq!(view.recommended_reviews, 1000);
+        assert!(view.runs.is_empty() && view.running_job_id.is_none());
+
+        let refused = call(
+            "start_optimizer",
+            serde_json::json!({ "operationId": "o1", "presetId": preset.id }),
+        )
+        .unwrap_err();
+        let refused: ErrorDto = serde_json::from_value(refused).unwrap();
+        assert_eq!(refused.code, ErrorCode::ValidationFailed);
+        assert_eq!(refused.details.unwrap()["reason"], "notEnoughReviews");
+
+        for command in ["apply_optimizer_run", "revert_optimizer_run"] {
+            let missing = call(
+                command,
+                serde_json::json!({ "operationId": format!("{command}-1"), "runId": "99",
+                "expectedVersion": preset.version }),
+            )
+            .unwrap_err();
+            assert_eq!(error_code(missing), ErrorCode::NotFound, "{command}");
+        }
+        let unknown = call("get_optimizer", serde_json::json!({ "presetId": "999" })).unwrap_err();
+        assert_eq!(error_code(unknown), ErrorCode::NotFound);
+        let malformed = call("get_optimizer", serde_json::json!({ "presetId": "x" })).unwrap_err();
+        assert_eq!(error_code(malformed), ErrorCode::ValidationFailed);
     }
 
     /// Phase 8 over IPC: onboarding installs the bundled decks through the prepare job, and the
@@ -654,7 +712,7 @@ mod tests {
                 .iter()
                 .map(|deck| deck.counts.total)
                 .sum::<u32>(),
-            6147
+            10048
         );
         // New cards shown for today respect the preset's daily limit (Phase 10).
         assert!(dashboard.decks.iter().all(|deck| deck.counts.new <= 20));

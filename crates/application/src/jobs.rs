@@ -35,6 +35,7 @@ pub enum JobKind {
     Restore,
     Reset,
     Llm,
+    Optimize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -54,7 +55,7 @@ impl JobStatus {
 
 /// Persisted names; explicit so renaming a variant never changes stored rows.
 impl JobKind {
-    pub const ALL: [JobKind; 7] = [
+    pub const ALL: [JobKind; 8] = [
         Self::PrepareContent,
         Self::Import,
         Self::Export,
@@ -62,6 +63,7 @@ impl JobKind {
         Self::Restore,
         Self::Reset,
         Self::Llm,
+        Self::Optimize,
     ];
 
     pub fn as_str(self) -> &'static str {
@@ -73,6 +75,7 @@ impl JobKind {
             Self::Restore => "restore",
             Self::Reset => "reset",
             Self::Llm => "llm",
+            Self::Optimize => "optimize",
         }
     }
 

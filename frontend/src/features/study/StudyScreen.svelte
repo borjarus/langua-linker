@@ -19,7 +19,7 @@
   import CardActions, { type HidingAction } from './CardActions.svelte'
   import SpeakButton from './SpeakButton.svelte'
   import RichText from '../../components/RichText.svelte'
-  import { stripInlineMarkdown } from '../../services/markdown'
+  import { speechText } from '../../services/markdown'
   import { StudyController } from './studyController.svelte'
   import WordSheet from './WordSheet.svelte'
 
@@ -241,7 +241,7 @@
             <RichText text={card.front} />
           {/if}
         </div>
-        {#if card.capabilities.tts && targetSide === 'front'}<SpeakButton text={stripInlineMarkdown(card.front)} lang={card.targetLanguage} />{/if}
+        {#if card.capabilities.tts && targetSide === 'front'}<SpeakButton text={speechText(card.front)} lang={card.targetLanguage} />{/if}
         {#if study.phase !== 'question'}
           <hr />
           <div class="back" tabindex="-1" bind:this={answerEl} lang={card.direction === 'forward' ? 'pl' : card.targetLanguage}>
@@ -251,7 +251,7 @@
               <RichText text={card.back} />
             {/if}
           </div>
-          {#if card.capabilities.tts && targetSide === 'back'}<SpeakButton text={stripInlineMarkdown(card.back)} lang={card.targetLanguage} />{/if}
+          {#if card.capabilities.tts && targetSide === 'back'}<SpeakButton text={speechText(card.back)} lang={card.targetLanguage} />{/if}
         {/if}
       </section>
 

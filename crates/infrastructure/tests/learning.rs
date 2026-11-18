@@ -142,6 +142,7 @@ fn association(db: &Arc<SqliteDatabase>, seed: u64, note: NoteId, text: &str) ->
                     model: None,
                     moderation: ModerationStatus::NotRequired,
                     cache_key: None,
+                    extended: None,
                 },
                 TimestampMs(0),
             )?

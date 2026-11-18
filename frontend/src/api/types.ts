@@ -116,6 +116,14 @@ import type {
   PresetConfigDto,
   PresetDto,
   SavePresetInput,
+  GetOptimizerInput,
+  OptimizerDatasetDto,
+  OptimizerRunStatus,
+  OptimizerMetricsDto,
+  OptimizerRunDto,
+  OptimizerDto,
+  StartOptimizerInput,
+  OptimizerRunActionInput,
   NoteDto,
   ReviewLogDto,
   RetrievabilityDto,
@@ -276,6 +284,14 @@ export type {
   PresetConfigDto,
   PresetDto,
   SavePresetInput,
+  GetOptimizerInput,
+  OptimizerDatasetDto,
+  OptimizerRunStatus,
+  OptimizerMetricsDto,
+  OptimizerRunDto,
+  OptimizerDto,
+  StartOptimizerInput,
+  OptimizerRunActionInput,
   NoteDto,
   ReviewLogDto,
   RetrievabilityDto,
@@ -354,7 +370,7 @@ export type {
   ExportLossDto,
 }
 
-export const API_VERSION = '1.3'
+export const API_VERSION = '1.5'
 
 /** Equal sets of members: guards runtime lists against the Rust enums. */
 type SameMembers<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false

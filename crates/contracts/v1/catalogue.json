@@ -1,5 +1,5 @@
 {
-  "apiVersion": "1.3",
+  "apiVersion": "1.5",
   "errorCodes": [
     "VALIDATION_FAILED",
     "VERSION_CONFLICT",
@@ -123,6 +123,58 @@
     "savePreset": {
       "kind": "mutation",
       "command": "save_preset",
+      "errors": [
+        "VALIDATION_FAILED",
+        "VERSION_CONFLICT",
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "getOptimizer": {
+      "kind": "query",
+      "command": "get_optimizer",
+      "errors": [
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [],
+      "permission": "none"
+    },
+    "startOptimizer": {
+      "kind": "job",
+      "command": "start_optimizer",
+      "errors": [
+        "VALIDATION_FAILED",
+        "NOT_FOUND",
+        "DB_BUSY",
+        "CANCELLED"
+      ],
+      "emits": [
+        "job_progress"
+      ],
+      "permission": "none"
+    },
+    "applyOptimizerRun": {
+      "kind": "mutation",
+      "command": "apply_optimizer_run",
+      "errors": [
+        "VALIDATION_FAILED",
+        "VERSION_CONFLICT",
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
+    "revertOptimizerRun": {
+      "kind": "mutation",
+      "command": "revert_optimizer_run",
       "errors": [
         "VALIDATION_FAILED",
         "VERSION_CONFLICT",

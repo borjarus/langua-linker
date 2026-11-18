@@ -224,6 +224,7 @@ fn candidate(card: &Card) -> Candidate {
         note_id: card.note_id,
         deck_id: card.deck_id,
         due_at: card.due_at,
+        template_ordinal: card.template_ordinal,
     }
 }
 
@@ -453,6 +454,7 @@ fn plan_for_scope(
             learning,
             reviews,
             news,
+            introduced_new: tx.new_introduced_since(moment.day_start, &scope_decks)?,
         },
         limits,
         &seen,

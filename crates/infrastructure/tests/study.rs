@@ -676,6 +676,31 @@ fn reviews_and_new_cards_interleave_and_overdue_cards_are_counted() {
     assert_eq!(view.session.status, SessionStatus::Finished);
 }
 
+/// The queue is rebuilt after every rating; new cards of a reversed sentence deck still come
+/// half forward, half reverse, each from another note.
+#[test]
+fn new_cards_of_a_reversed_deck_alternate_directions_across_ratings() {
+    let db = db();
+    let deck = default_deck(&db);
+    for seed in 0..12 {
+        note(&db, 30 + seed, deck, NoteTypeKind::SentenceAndReversed);
+    }
+    let mut view = start(&db, "start", Some(deck), None, NOON).unwrap();
+    let mut seen = Vec::new();
+    for step in 0..10 {
+        let current = view.current.clone().unwrap();
+        let stored = card(&db, current.id);
+        seen.push((stored.note_id, stored.template_ordinal));
+        view = rate(&db, &view, &format!("r{step}"), Rating::Easy, NOON + step)
+            .unwrap()
+            .view;
+    }
+    let ordinals: Vec<u32> = seen.iter().map(|(_, ordinal)| *ordinal).collect();
+    assert_eq!(ordinals, [0, 1, 0, 1, 0, 1, 0, 1, 0, 1]);
+    let notes: std::collections::HashSet<_> = seen.iter().map(|(note, _)| *note).collect();
+    assert_eq!(notes.len(), 10, "siblings are buried for the day");
+}
+
 #[test]
 fn chosen_card_sessions_ignore_limits_and_bring_learning_cards_back() {
     let db = db();

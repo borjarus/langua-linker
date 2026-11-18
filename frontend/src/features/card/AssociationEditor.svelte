@@ -2,6 +2,7 @@
   import type { AssociationDto, Id, NoteContentChange } from '../../api/types'
   import { useServices } from '../../app/context'
   import Chip from '../../components/Chip.svelte'
+  import ExtendedAssociation from '../../components/ExtendedAssociation.svelte'
   import Icon from '../../components/Icon.svelte'
 
   interface Props {
@@ -60,6 +61,7 @@
           {:else}
             {#if association.status === 'ready'}
               <p class="text">{association.text}</p>
+              {#if association.extended}<ExtendedAssociation text={association.extended} />{/if}
             {:else}
               <p class="muted row" aria-busy={association.status === 'pending'}>
                 <Icon name={association.status === 'offlineQueued' ? 'offline' : association.status === 'pending' ? 'clock' : 'alert'} />

@@ -11,7 +11,8 @@
 //! - **Idempotent.** Notes, associations and tips are matched by GUID, cards by (note, template).
 //!   A second run creates nothing; scheduling columns are never written.
 //! - **User data wins.** Fields listed in `content_overrides` are kept; a differing bundled value
-//!   is reported as an `overrideConflict` warning. Deleted notes stay deleted. Notes a newer
+//!   is reported as an `overrideConflict` warning. Deleted notes stay deleted, unless the user
+//!   chooses their deleted deck again in onboarding, which restores it. Notes a newer
 //!   version no longer ships are kept when they have progress or edits, archived otherwise.
 
 use std::collections::{BTreeMap, HashSet};
@@ -587,8 +588,8 @@ impl<U: UnitOfWork> ContentService<U> {
         })
     }
 
-    /// Saves the answers, queues the chosen decks that are not installed yet and starts the
-    /// prepare job. A repeated `operation_id` returns the first job.
+    /// Saves the answers, queues the chosen decks that are not installed yet — restoring a chosen
+    /// deck the user deleted, with its notes, cards and progress — and starts the prepare job. A repeated `operation_id` returns the first job.
     pub fn complete_onboarding(&self, input: OnboardingInput) -> AppResult<JobRecord> {
         validation::in_range("dailyGoal", input.daily_goal.into(), 1, 500)?;
         if input.target_languages.is_empty() {
@@ -622,6 +623,7 @@ impl<U: UnitOfWork> ContentService<U> {
                 .collect(),
             daily_goal: input.daily_goal,
         };
+        let bundle = self.bundle()?;
         let at = self.clock.now();
         self.db.write(move |tx| {
             let json = serde_json::to_string(&stored)
@@ -629,15 +631,41 @@ impl<U: UnitOfWork> ContentService<U> {
             tx.put_setting(ONBOARDING_KEY, &json, at)?;
             tx.put_setting(DAILY_GOAL_KEY, &input.daily_goal.to_string(), at)?;
             let mut pending = read_pending(tx)?;
-            for guid in chosen {
-                let installed = Guid::parse(&guid)
+            let mut queue = |guid: &String| {
+                if !pending.contains(guid) {
+                    pending.push(guid.clone());
+                }
+            };
+            for guid in &chosen {
+                let existing = Guid::parse(guid)
                     .ok()
                     .map(|parsed| tx.deck_by_guid(&parsed))
                     .transpose()?
-                    .flatten()
-                    .is_some();
-                if !installed && !pending.contains(&guid) {
-                    pending.push(guid);
+                    .flatten();
+                match existing {
+                    Some(deck) if deck.deleted_at.is_none() => {}
+                    Some(deck) => {
+                        // Chosen again after a deletion: the user wants it back.
+                        tx.restore_bundled_deck(deck.id, guid, at)?;
+                        queue(guid);
+                        // Sentence decks relink against the restored words.
+                        for dependent in bundle
+                            .decks
+                            .iter()
+                            .filter(|other| other.depends_on.contains(guid))
+                        {
+                            let active = Guid::parse(&dependent.deck_guid)
+                                .ok()
+                                .map(|parsed| tx.deck_by_guid(&parsed))
+                                .transpose()?
+                                .flatten()
+                                .is_some_and(|deck| deck.deleted_at.is_none());
+                            if active || chosen.contains(&dependent.deck_guid) {
+                                queue(&dependent.deck_guid);
+                            }
+                        }
+                    }
+                    None => queue(guid),
                 }
             }
             write_pending(tx, &pending, at)
@@ -1262,6 +1290,11 @@ impl Installer<'_> {
         for association in &record.associations {
             let association_guid = guid(&association.guid)?;
             let text = nfc(association.text.trim());
+            let extended = association
+                .extended
+                .as_deref()
+                .map(|text| nfc(text.trim()))
+                .filter(|text| !text.is_empty());
             match self.tx.association_by_guid(&association_guid)? {
                 None => {
                     self.tx.insert_association(
@@ -1276,19 +1309,31 @@ impl Installer<'_> {
                             model: association.model.clone(),
                             moderation: ModerationStatus::NotRequired,
                             cache_key: None,
+                            extended: extended.clone(),
                         },
                         self.at,
                     )?;
                     changed = true;
                 }
-                Some(existing) if existing.deleted_at.is_some() || existing.text == text => {}
+                Some(existing) if existing.deleted_at.is_some() => {}
                 Some(existing) => {
-                    let field = format!("association:{}", association.guid);
-                    if overrides.contains(&field) {
-                        self.conflict(record, field, outcome);
-                    } else {
-                        self.tx
-                            .update_association_text(existing.id, &text, self.at)?;
+                    if existing.text != text {
+                        let field = format!("association:{}", association.guid);
+                        if overrides.contains(&field) {
+                            self.conflict(record, field, outcome);
+                        } else {
+                            self.tx
+                                .update_association_text(existing.id, &text, self.at)?;
+                            changed = true;
+                        }
+                    }
+                    // Learners never edit the extended text, so it always follows the bundle.
+                    if existing.extended != extended {
+                        self.tx.update_association_extended(
+                            existing.id,
+                            extended.as_deref(),
+                            self.at,
+                        )?;
                         changed = true;
                     }
                 }

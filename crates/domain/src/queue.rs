@@ -13,6 +13,9 @@
 //! - With sibling burying on, at most one card of a note is gathered per day.
 //! - Order: intraday learning cards due now; then reviews (by due) mixed evenly with new cards (by
 //!   position, or a per-day shuffle); then learning cards due within the learn-ahead window.
+//! - New cards are taken in turn from each card direction (template ordinal), starting with the
+//!   direction that had fewer new cards introduced today, so a session of a reversed note type
+//!   introduces as many reverse cards as forward ones, each from another note.
 //! - Suspended, buried, archived and deleted cards are never candidates.
 
 use std::collections::{HashMap, HashSet};
@@ -29,6 +32,8 @@ pub struct Candidate {
     pub note_id: NoteId,
     pub deck_id: DeckId,
     pub due_at: Option<TimestampMs>,
+    /// Card template ordinal: 0 forward, 1 reverse.
+    pub template_ordinal: u32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -223,6 +228,9 @@ pub struct Candidates {
     pub reviews: Vec<Candidate>,
     /// New cards in introduction order.
     pub news: Vec<Candidate>,
+    /// New cards introduced today in the scope, per template ordinal: `(ordinal, count)`. The
+    /// direction with fewer goes first, so the balance holds across queue rebuilds.
+    pub introduced_new: Vec<(u32, u32)>,
 }
 
 /// Today's queue after limits and sibling rules.
@@ -270,12 +278,37 @@ impl QueuePlan {
             .filter(|card| admit(card, false, &mut tree))
             .copied()
             .collect();
-        let news = candidates
-            .news
-            .iter()
-            .filter(|card| admit(card, true, &mut tree))
-            .copied()
-            .collect();
+        // New cards: one direction after the other, each stream keeping its own order. A card
+        // refused (sibling or limit) passes the turn to the next card of the same stream.
+        let mut streams: Vec<(u32, std::collections::VecDeque<Candidate>)> = Vec::new();
+        for card in &candidates.news {
+            match streams
+                .iter_mut()
+                .find(|(ordinal, _)| *ordinal == card.template_ordinal)
+            {
+                Some((_, stream)) => stream.push_back(*card),
+                None => streams.push((card.template_ordinal, [*card].into())),
+            }
+        }
+        let introduced = |ordinal: u32| {
+            candidates
+                .introduced_new
+                .iter()
+                .find(|(known, _)| *known == ordinal)
+                .map_or(0, |(_, count)| *count)
+        };
+        streams.sort_by_key(|(ordinal, _)| (introduced(*ordinal), *ordinal));
+        let mut news = Vec::new();
+        while streams.iter().any(|(_, stream)| !stream.is_empty()) {
+            for (_, stream) in &mut streams {
+                while let Some(card) = stream.pop_front() {
+                    if admit(&card, true, &mut tree) {
+                        news.push(card);
+                        break;
+                    }
+                }
+            }
+        }
         Self {
             learning: candidates.learning,
             reviews,
@@ -381,6 +414,7 @@ mod tests {
             note_id: NoteId(id),
             deck_id: DeckId(deck),
             due_at: due.map(TimestampMs),
+            template_ordinal: 0,
         }
     }
 
@@ -557,6 +591,85 @@ mod tests {
     }
 
     #[test]
+    fn new_cards_alternate_directions_and_each_comes_from_another_note() {
+        let mut decks = [node(1, None, 6, 10)];
+        decks[0].bury_siblings = true;
+        // Fresh install: forward and reverse card of each note next to each other.
+        let fresh: Vec<Candidate> = (1..=8)
+            .flat_map(|note| {
+                [0, 1].map(|ordinal| Candidate {
+                    card_id: CardId(note * 10 + ordinal),
+                    note_id: NoteId(note),
+                    deck_id: DeckId(1),
+                    due_at: None,
+                    template_ordinal: ordinal as u32,
+                })
+            })
+            .collect();
+        let candidates = Candidates {
+            news: fresh,
+            ..Default::default()
+        };
+        let result = plan(&decks, &[], Some(1), candidates);
+        let picked: Vec<(i64, u32)> = result
+            .news
+            .iter()
+            .map(|c| (c.note_id.0, c.template_ordinal))
+            .collect();
+        assert_eq!(picked, [(1, 0), (2, 1), (3, 0), (4, 1), (5, 0), (6, 1)]);
+
+        // Update to a reversed type: reverse cards were appended after every forward card.
+        let mut news: Vec<Candidate> = (20..=25).map(|note| card(note, 1, None)).collect();
+        news.extend((1..=6).map(|note| {
+            let mut reverse = card(100 + note, 1, None);
+            reverse.note_id = NoteId(note);
+            reverse.template_ordinal = 1;
+            reverse
+        }));
+        let result = plan(
+            &decks,
+            &[],
+            Some(1),
+            Candidates {
+                news,
+                ..Default::default()
+            },
+        );
+        let ordinals: Vec<u32> = result.news.iter().map(|c| c.template_ordinal).collect();
+        assert_eq!(ordinals, [0, 1, 0, 1, 0, 1]);
+
+        // The queue is rebuilt after every rating: once a forward card was introduced today,
+        // the reverse direction goes first.
+        let mut news: Vec<Candidate> = (20..=25).map(|note| card(note, 1, None)).collect();
+        let mut reverse = card(101, 1, None);
+        reverse.note_id = NoteId(1);
+        reverse.template_ordinal = 1;
+        news.push(reverse);
+        let rebuilt = plan(
+            &decks,
+            &[],
+            Some(1),
+            Candidates {
+                news,
+                introduced_new: vec![(0, 1)],
+                ..Default::default()
+            },
+        );
+        assert_eq!(rebuilt.news[0].template_ordinal, 1);
+        let balanced = plan(
+            &decks,
+            &[],
+            Some(1),
+            Candidates {
+                news: rebuilt.news.clone(),
+                introduced_new: vec![(0, 1), (1, 1)],
+                ..Default::default()
+            },
+        );
+        assert_eq!(balanced.news[0].template_ordinal, 0);
+    }
+
+    #[test]
     fn learning_due_now_comes_first_then_reviews_mix_with_new_cards() {
         let decks = [node(1, None, 10, 10)];
         let candidates = Candidates {
@@ -566,6 +679,7 @@ mod tests {
             ],
             reviews: (1..=4).map(|i| card(i, 1, Some(0))).collect(),
             news: vec![card(20, 1, None), card(21, 1, None)],
+            introduced_new: Vec::new(),
         };
         let result = plan(&decks, &[], Some(1), candidates);
         assert_eq!(

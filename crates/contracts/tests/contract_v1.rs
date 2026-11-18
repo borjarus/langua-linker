@@ -602,3 +602,33 @@ fn phase13_samples_round_trip_through_their_rust_dtos() {
     }
     assert!(seen >= 2);
 }
+
+#[test]
+fn phase18_samples_round_trip_through_their_rust_dtos() {
+    use langualinker_contracts::dto::{
+        GetOptimizerInput, OptimizerDto, OptimizerRunActionInput, PresetDto, StartOptimizerInput,
+    };
+    fn back<T: DeserializeOwned + Serialize>(input: &Value) -> Value {
+        serde_json::to_value(serde_json::from_value::<T>(input.clone()).unwrap()).unwrap()
+    }
+    assert!(round_trips::<OptimizerDto>("getOptimizer") >= 1);
+    assert!(round_trips::<JobDto>("startOptimizer") >= 1);
+    assert!(round_trips::<PresetDto>("applyOptimizerRun") >= 1);
+    assert!(round_trips::<PresetDto>("revertOptimizerRun") >= 1);
+    let samples = samples();
+    let mut seen = 0;
+    for call in samples["calls"].as_array().expect("calls") {
+        let input = &call["args"][0];
+        let read = match call["operation"].as_str() {
+            Some("getOptimizer") => back::<GetOptimizerInput>(input),
+            Some("startOptimizer") => back::<StartOptimizerInput>(input),
+            Some("applyOptimizerRun" | "revertOptimizerRun") => {
+                back::<OptimizerRunActionInput>(input)
+            }
+            _ => continue,
+        };
+        assert_eq!(&read, input, "{}", call["operation"]);
+        seen += 1;
+    }
+    assert!(seen >= 4);
+}

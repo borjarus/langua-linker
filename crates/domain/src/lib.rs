@@ -10,6 +10,7 @@ pub mod deck;
 pub mod fsrs;
 pub mod ids;
 pub mod note;
+pub mod optimizer;
 pub mod queue;
 pub mod review;
 pub mod scheduling;

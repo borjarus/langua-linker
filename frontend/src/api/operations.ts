@@ -22,6 +22,7 @@ export type ScreenId =
   | 'transfer'
   | 'backup'
   | 'attributions'
+  | 'optimizer'
 
 export interface OperationSpec {
   kind: OperationKind
@@ -56,6 +57,10 @@ export const OPERATIONS = {
   deleteDeck: op({ kind: 'mutation', command: 'delete_deck', errors: ['VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['deck'], backendPhase: 11 }),
   listPresets: op({ kind: 'query', command: 'list_presets', errors: ['DB_BUSY'], emits: [], permission: 'none', screens: ['deck', 'settings'], backendPhase: 11 }),
   savePreset: op({ kind: 'mutation', command: 'save_preset', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['deck'], backendPhase: 11 }),
+  getOptimizer: op({ kind: 'query', command: 'get_optimizer', errors: ['NOT_FOUND', 'DB_BUSY'], emits: [], permission: 'none', screens: ['optimizer'], backendPhase: 18 }),
+  startOptimizer: op({ kind: 'job', command: 'start_optimizer', errors: ['VALIDATION_FAILED', 'NOT_FOUND', 'DB_BUSY', 'CANCELLED'], emits: ['job_progress'], permission: 'none', screens: ['optimizer'], backendPhase: 18 }),
+  applyOptimizerRun: op({ kind: 'mutation', command: 'apply_optimizer_run', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['optimizer'], backendPhase: 18 }),
+  revertOptimizerRun: op({ kind: 'mutation', command: 'revert_optimizer_run', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['optimizer'], backendPhase: 18 }),
 
   startStudy: op({ kind: 'mutation', command: 'start_study', errors: ['NOT_FOUND', 'DB_BUSY'], emits: [], permission: 'none', screens: ['home', 'deck', 'study', 'summary'], backendPhase: 10 }),
   resumeStudy: op({ kind: 'query', command: 'resume_study', errors: ['NOT_FOUND', 'DB_BUSY'], emits: [], permission: 'none', screens: ['home', 'study'], backendPhase: 10 }),
@@ -104,9 +109,9 @@ export const OPERATIONS = {
   validateRestore: op({ kind: 'query', command: 'validate_restore', errors: ['BACKUP_CORRUPT', 'SCHEMA_TOO_NEW', 'UNSUPPORTED_FORMAT', 'NOT_FOUND'], emits: [], permission: 'file', screens: ['backup'], backendPhase: 12 }),
   restoreBackup: op({ kind: 'job', command: 'restore_backup', errors: ['PREVIEW_STALE', 'BACKUP_CORRUPT', 'STORAGE_FULL'], emits: ['job_progress', 'collection_changed'], permission: 'file', screens: ['backup'], backendPhase: 12 }),
 
-  getJobStatus: op({ kind: 'query', command: 'get_job_status', errors: ['NOT_FOUND'], emits: [], permission: 'none', screens: ['onboarding', 'transfer', 'backup', 'privacy', 'study'], backendPhase: 7 }),
-  cancelJob: op({ kind: 'mutation', command: 'cancel_job', errors: ['NOT_FOUND'], emits: ['job_progress'], permission: 'none', screens: ['onboarding', 'transfer', 'backup', 'privacy'], backendPhase: 7 }),
-  onJobEvent: op({ kind: 'subscription', command: 'job_progress', errors: [], emits: [], permission: 'none', screens: ['onboarding', 'transfer', 'backup', 'privacy', 'study', 'card'], backendPhase: 7 }),
+  getJobStatus: op({ kind: 'query', command: 'get_job_status', errors: ['NOT_FOUND'], emits: [], permission: 'none', screens: ['onboarding', 'transfer', 'backup', 'privacy', 'study', 'optimizer'], backendPhase: 7 }),
+  cancelJob: op({ kind: 'mutation', command: 'cancel_job', errors: ['NOT_FOUND'], emits: ['job_progress'], permission: 'none', screens: ['onboarding', 'transfer', 'backup', 'privacy', 'optimizer'], backendPhase: 7 }),
+  onJobEvent: op({ kind: 'subscription', command: 'job_progress', errors: [], emits: [], permission: 'none', screens: ['onboarding', 'transfer', 'backup', 'privacy', 'study', 'card', 'optimizer'], backendPhase: 7 }),
   onCollectionChanged: op({ kind: 'subscription', command: 'collection_changed', errors: [], emits: [], permission: 'none', screens: ['shell'], backendPhase: 7 }),
 } as const satisfies Record<AppApiOperation, OperationSpec>
 

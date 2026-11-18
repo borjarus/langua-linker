@@ -16,7 +16,7 @@ export type AppInfoDto = { apiVersion: string, appName: string, appVersion: stri
  */
 mode: 'demo' | 'dev' | 'beta' | 'release', };
 
-export type JobKind = "prepareContent" | "import" | "export" | "backup" | "restore" | "reset" | "llm";
+export type JobKind = "prepareContent" | "import" | "export" | "backup" | "restore" | "reset" | "llm" | "optimize";
 
 export type JobStatus = "queued" | "running" | "succeeded" | "failed" | "cancelled";
 
@@ -50,7 +50,7 @@ kept: number,
 /**
  * Removed from the bundled content without progress: cards archived, history intact.
  */
-archived: number, warnings: Array<ContentWarningDto>, };
+archived: number, warnings: Array<ContentWarningDto>, } | { "type": "optimize", runId: string, };
 
 export type CollectionScope = "decks" | "cards" | "notes" | "settings" | "stats" | "backups";
 
@@ -259,7 +259,11 @@ export type AssociationProvenance = "bundled" | "generated" | "manual";
 
 export type AssociationStatus = "ready" | "pending" | "offlineQueued" | "error" | "blocked";
 
-export type AssociationDto = { id: string, noteId: string, text: string, provenance: AssociationProvenance, favorite: boolean, status: AssociationStatus, model: string | null, error: ErrorDto | null, };
+export type AssociationDto = { id: string, noteId: string, text: string, provenance: AssociationProvenance, favorite: boolean, status: AssociationStatus, model: string | null, error: ErrorDto | null, 
+/**
+ * Since 1.4: long Markdown version shown collapsed under `text` (bundled content).
+ */
+extended?: string, };
 
 export type GrammarTipDto = { id: string, noteId: string, text: string, order: number, };
 
@@ -417,6 +421,94 @@ builtIn: boolean,
  * Decks using this preset; a change applies to all of them.
  */
 dependentDecks: number, config: PresetConfigDto, };
+
+export type GetOptimizerInput = { presetId: string, };
+
+export type OptimizerDatasetDto = { 
+/**
+ * Every logged answer of the preset's cards.
+ */
+reviews: number, 
+/**
+ * Cards with a usable history.
+ */
+cards: number, 
+/**
+ * Answers the optimizer learns from and validates on (on a later study day).
+ */
+usable: number, excludedUndone: number, excludedManual: number, 
+/**
+ * Answers of cards whose history does not start with the first learning answer.
+ */
+excludedIncomplete: number, };
+
+export type OptimizerRunStatus = "proposed" | "applied" | "reverted";
+
+export type OptimizerMetricsDto = { 
+/**
+ * Mean log loss per held-out answer (lower is better).
+ */
+logLoss: number, 
+/**
+ * Calibration error of the predicted recall, 0–1 (lower is better).
+ */
+rmse: number, 
+/**
+ * Steady-state reviews per day of the current cards.
+ */
+dailyReviews: number, medianIntervalDays: number, };
+
+export type OptimizerRunDto = { runId: string, status: OptimizerRunStatus, createdAt: string, appliedAt: string | null, revertedAt: string | null, 
+/**
+ * Method and model the run used (provenance).
+ */
+optimizerVersion: string, fsrsVersion: string, dataset: OptimizerDatasetDto, trainingReviews: number, validationReviews: number, 
+/**
+ * The preset's weights when the run started; a revert restores them.
+ */
+weightsBefore: Array<number>, weightsProposed: Array<number>, current: OptimizerMetricsDto, proposed: OptimizerMetricsDto, 
+/**
+ * The proposal predicts the held-out answers better than the weights before.
+ */
+recommended: boolean, 
+/**
+ * Fewer usable answers than `recommendedReviews`.
+ */
+fewReviews: boolean, 
+/**
+ * Proposed and the preset still has `weightsBefore`.
+ */
+canApply: boolean, 
+/**
+ * Applied and the preset still has `weightsProposed`.
+ */
+canRevert: boolean, };
+
+export type OptimizerDto = { presetId: string, presetName: string, 
+/**
+ * `expectedVersion` of apply and revert.
+ */
+presetVersion: number, desiredRetention: number, currentWeights: Array<number>, defaultWeights: Array<number>, dataset: OptimizerDatasetDto, 
+/**
+ * `startOptimizer` refuses below this many usable answers.
+ */
+minimumReviews: number, 
+/**
+ * Heuristic: below this a result is shown with a warning.
+ */
+recommendedReviews: number, 
+/**
+ * Job of a run in progress for this preset.
+ */
+runningJobId: string | null, 
+/**
+ * Newest first.
+ */
+runs: Array<OptimizerRunDto>, };
+
+export type StartOptimizerInput = { operationId: string, presetId: string, };
+
+export type OptimizerRunActionInput = { operationId: string, runId: string, expectedVersion: number, };
 
 export type SavePresetInput = { operationId: string, 
 /**

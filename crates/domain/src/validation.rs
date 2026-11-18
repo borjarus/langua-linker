@@ -26,6 +26,8 @@ pub const MAX_DESCRIPTION_CHARS: usize = 2_000;
 pub const MAX_FIELD_CHARS: usize = 10_000;
 /// Maximum characters of an association or grammar tip.
 pub const MAX_SNIPPET_CHARS: usize = 2_000;
+/// Maximum characters of an extended (Markdown) association.
+pub const MAX_EXTENDED_CHARS: usize = 12_000;
 /// Maximum characters of one tag; tags hold no whitespace.
 pub const MAX_TAG_CHARS: usize = 64;
 /// Maximum tags on one note.

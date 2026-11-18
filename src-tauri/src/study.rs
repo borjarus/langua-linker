@@ -161,6 +161,7 @@ pub(crate) fn association_dto(association: Association) -> AssociationDto {
         status: AssociationStatus::Ready,
         model: association.model,
         error: None,
+        extended: association.extended,
     }
 }
 
@@ -181,6 +182,7 @@ pub(crate) fn generation_dto(generation: Generation) -> AssociationDto {
         },
         model: Some(generation.model),
         error: generation.error.as_ref().map(error_dto),
+        extended: None,
     }
 }
 
