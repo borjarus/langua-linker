@@ -51,5 +51,8 @@ jobs:
         with: { node-version: 24 }
       - run: npm ci
         working-directory: frontend
+      # xcodebuild runs cargo from its own build phase, which does not see the workflow env;
+      # src-tauri/build.rs falls back to the repository .env (git-ignored; the runner is discarded).
+      - run: printf 'LANGUA_DECKS_PASSWORD=%s\n' "$LANGUA_DECKS_PASSWORD" > .env
       - run: npm run variant -- dev ios build --debug --target aarch64-sim
         working-directory: frontend
