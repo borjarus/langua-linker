@@ -1121,8 +1121,25 @@ pub fn update_note_content(
 }
 
 /// Editor lookups: active decks (name order) and the tags in use.
-pub fn editor_data(tx: &mut dyn Repositories) -> AppResult<(Vec<Deck>, Vec<String>)> {
-    Ok((tx.active_decks()?, tx.all_tags()?))
+/// Live decks with the number of word notes each holds, and all tags.
+pub type EditorData = (Vec<(Deck, u32)>, Vec<String>);
+
+/// GetEditorData: live decks with the number of word notes each holds (a new word made from a
+/// sentence goes to the deck with the most words of its language), and all tags.
+pub fn editor_data(tx: &mut dyn Repositories) -> AppResult<EditorData> {
+    let counts = tx.word_note_counts()?;
+    let decks = tx
+        .active_decks()?
+        .into_iter()
+        .map(|deck| {
+            let words = counts
+                .iter()
+                .find(|(id, _)| *id == deck.id)
+                .map_or(0, |(_, count)| *count);
+            (deck, words)
+        })
+        .collect();
+    Ok((decks, tx.all_tags()?))
 }
 
 /// CheckDuplicate: notes in the deck (with subdecks) whose front matches after trimming, NFC and

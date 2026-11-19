@@ -1,11 +1,11 @@
 import { screen, waitFor, within } from '@testing-library/svelte'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import type { ErrorDto } from '../src/api/types'
 import { href } from '../src/app/routes'
 import { MockAppApi } from '../src/demo/mockAppApi'
 import { levelLabel } from '../src/features/deck/level'
-import GrammarScreen from '../src/features/grammar/GrammarScreen.svelte'
+import GrammarScreen, { forgetGrammarScreen } from '../src/features/grammar/GrammarScreen.svelte'
 import { createTestServices, renderWith } from './helpers/services'
 
 async function rejection(promise: Promise<unknown>): Promise<ErrorDto> {
@@ -43,6 +43,8 @@ describe('MockAppApi grammar', () => {
 })
 
 describe('GrammarScreen', () => {
+  beforeEach(() => forgetGrammarScreen())
+
   it('shows numbered chapters of the deck and opens the card of a tip', async () => {
     const services = await createTestServices({ language: 'pl' })
     renderWith(GrammarScreen, services, {})
@@ -77,6 +79,25 @@ describe('GrammarScreen', () => {
     renderWith(GrammarScreen, services, { deckId: '4' })
     expect(await screen.findByRole('heading', { level: 2, name: 'Niemiecki — słówka A1' })).toBeInTheDocument()
     expect(href({ name: 'grammar', query: { deck: '5' } })).toBe('#/grammar?deck=5')
+  })
+
+  it('comes back with the same deck, search and open chapters after a card', async () => {
+    const services = await createTestServices({ language: 'pl' })
+    const first = renderWith(GrammarScreen, services, {})
+    const user = userEvent.setup()
+    await screen.findByRole('combobox', { name: 'Talia' })
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Talia' }), '1')
+    await screen.findByRole('heading', { level: 2, name: 'Niemiecki — słówka A1' })
+    const search = screen.getByRole('searchbox', { name: 'Szukaj we wskazówkach' })
+    await user.clear(search)
+    await user.click(await screen.findByRole('button', { name: 'Pokaż: 1. Dom i codzienne przedmioty' }))
+    first.unmount()
+
+    // Back from the card renders the screen again; the scroll position is restored for it.
+    renderWith(GrammarScreen, services, {})
+    expect(await screen.findByRole('heading', { level: 2, name: 'Niemiecki — słówka A1' })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Ukryj: 1. Dom i codzienne przedmioty' })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: /^Pokaż: 2\./ })).toHaveAttribute('aria-expanded', 'false')
   })
 
   it('says how to get tips when no deck has any', async () => {

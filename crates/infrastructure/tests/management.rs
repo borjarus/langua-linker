@@ -324,6 +324,23 @@ fn duplicates_warn_and_the_word_search_never_guesses() {
         .read(|tx| management::search_words(tx, TargetLanguage::De, "Tee", 0))
         .unwrap_err();
     assert_eq!(validation_reason(error), "outOfRange");
+
+    // The editor data counts word notes per deck; sentences are not words.
+    save(
+        &db,
+        &rng,
+        note_input(
+            "satz",
+            child,
+            NoteTypeKind::Sentence,
+            "Ich trinke Tee.",
+            "Piję herbatę.",
+        ),
+    )
+    .unwrap();
+    let (decks, _) = read(&db, management::editor_data);
+    let words = |id: DeckId| decks.iter().find(|(d, _)| d.id == id).unwrap().1;
+    assert_eq!((words(deck), words(child)), (3, 1));
 }
 
 /// Word links: drafts are checked against the front, a user choice is `UserOverridden`, an

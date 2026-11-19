@@ -9,6 +9,7 @@
   import { JobTracker } from '../../services/jobTracker.svelte'
   import { newOperationId } from '../../services/operationId'
   import { useQuery } from '../../services/query.svelte'
+  import { levelLabel } from '../deck/level'
   import QueryView from '../shared/QueryView.svelte'
   import Screen from '../shared/Screen.svelte'
 
@@ -151,7 +152,7 @@
                     <span class="muted">{deck.description}</span>
                     <span class="row">
                       <Chip label={i18n.t(`deck.targetLanguages.${deck.targetLanguage}`)} tone="primary" />
-                      <Chip label={deck.level} />
+                      <Chip label={levelLabel(deck.level)} />
                       <Chip label={i18n.t(`deck.types.${deck.deckType}`)} />
                       <span class="muted">{i18n.t('deck.cards', { count: deck.cardCount })}</span>
                     </span>

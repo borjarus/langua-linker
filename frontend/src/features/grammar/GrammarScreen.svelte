@@ -1,3 +1,18 @@
+<script lang="ts" module>
+  /**
+   * What the screen showed when it was left: Back from a card restores the scroll position, so
+   * the deck, the search and the open chapters have to come back too.
+   */
+  const memory = $state<{ deckId: string | null; search: string; open: Record<string, boolean> }>({ deckId: null, search: '', open: {} })
+
+  /** Starts the next visit from the first deck with everything collapsed (tests). */
+  export function forgetGrammarScreen() {
+    memory.deckId = null
+    memory.search = ''
+    memory.open = {}
+  }
+</script>
+
 <script lang="ts">
   import type { GrammarDto, GrammarEntryDto, GrammarSectionDto } from '../../api/types'
   import { useServices } from '../../app/context'
@@ -20,8 +35,14 @@
   const ids = $props.id()
   // Initial value only: the picker switches decks in place.
   // svelte-ignore state_referenced_locally
-  let deckId = $state<string | null>(initialDeckId)
-  let search = $state('')
+  let deckId = $state<string | null>(initialDeckId ?? memory.deckId)
+  // A link to a deck starts a fresh search; otherwise the last one comes back.
+  // svelte-ignore state_referenced_locally
+  let search = $state(initialDeckId === null ? memory.search : '')
+  $effect(() => {
+    memory.deckId = deckId
+    memory.search = search
+  })
 
   const grammar = useQuery(queries, () => ({
     key: ['grammar', deckId],
@@ -121,7 +142,12 @@
       {:else}
         <div class="sections">
           {#each sections as item (`${deck.deckId}:${item.section.tag ?? '-'}`)}
-            <Disclosure title={sectionTitle(item.section, item.number)} count={item.entries.length} expanded={needle !== ''}>
+            <Disclosure
+              title={sectionTitle(item.section, item.number)}
+              count={item.entries.length}
+              expanded={needle !== ''}
+              bind:open={memory.open[`${deck.deckId}:${item.section.tag ?? '-'}`]}
+            >
               <ol class="entries">
                 {#each item.entries as entry (entry.tipId)}
                   <li class="entry">

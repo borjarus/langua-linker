@@ -315,6 +315,26 @@ impl ManagementRepository for SqliteRepos<'_> {
             .map_err(map_sqlite)
     }
 
+    fn word_note_counts(&mut self) -> AppResult<Vec<(DeckId, u32)>> {
+        // Same notes as `word_notes`: kinds 1 and 2, counted in the deck of the first live card.
+        let mut statement = self
+            .tx
+            .prepare(
+                "SELECT c.deck_id, COUNT(*)
+                 FROM notes n
+                 JOIN note_types nt ON nt.id = n.note_type_id
+                 JOIN cards c ON c.id = (SELECT c2.id FROM cards c2 WHERE c2.note_id = n.id
+                                         AND c2.deleted_at IS NULL ORDER BY c2.template_ordinal LIMIT 1)
+                 WHERE n.deleted_at IS NULL AND nt.kind IN (1, 2)
+                 GROUP BY c.deck_id",
+            )
+            .map_err(map_sqlite)?;
+        statement
+            .query_map([], |row| Ok((DeckId(row.get(0)?), row.get(1)?)))
+            .and_then(Iterator::collect)
+            .map_err(map_sqlite)
+    }
+
     fn set_grammar_tip_order(
         &mut self,
         tip: GrammarTipId,

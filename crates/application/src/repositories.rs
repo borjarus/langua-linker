@@ -606,6 +606,9 @@ pub trait ManagementRepository {
     ) -> AppResult<Vec<NoteMatch>>;
     /// Live word notes (non-sentence note types) whose first live card is in one of `decks`.
     fn word_notes(&mut self, decks: &[DeckId]) -> AppResult<Vec<WordNote>>;
+    /// Number of live word notes (non-sentence note types) per deck of their first live card;
+    /// decks without word notes are left out.
+    fn word_note_counts(&mut self) -> AppResult<Vec<(DeckId, u32)>>;
     fn set_grammar_tip_order(
         &mut self,
         tip: GrammarTipId,

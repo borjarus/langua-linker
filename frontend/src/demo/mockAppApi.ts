@@ -1482,6 +1482,7 @@ export class MockAppApi implements AppApi {
         deckType: deck.deckType,
         capabilities: capabilitiesFor(deck.deckType),
         targetLanguage: deck.targetLanguage,
+        wordCount: this.#collection.notes.filter((note) => note.deckId === deck.id && !isSentenceNoteType(note.noteTypeKind)).length,
       })),
       noteTypes: NOTE_TYPES,
       tags: [...new Set(this.#collection.notes.flatMap((note) => note.tags))].sort(),

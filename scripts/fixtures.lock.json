@@ -7,7 +7,7 @@
   },
   "files": {
     "content/decks/decks.7z": {
-      "sha256": "735b40a134957726348eeaa93bbda4b5718060f95df1fd163b060fad60118981",
+      "sha256": "ead0ab3edf14c4f9014b14c19531de1470069d5cef96ea8c65387f0e702181bd",
       "bytes": 1845016
     },
     "tests/fixtures/fsrs/kmp-fsrs-spec.json": {

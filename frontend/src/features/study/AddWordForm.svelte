@@ -37,10 +37,14 @@
   /** Operation id of the pending save, kept for a retry so a lost response does not add the word twice. */
   let operationId: string | null = null
 
-  /** Preference: the last deck chosen, a word deck (no word links) of the language, the sentence's deck. */
+  /**
+   * Preference: the last deck chosen, the deck of the language holding the most words (bundled word
+   * decks are Linguistic, so "no word links" does not find them), the sentence's deck.
+   */
   function defaultDeck(options: EditorDeckOptionDto[]): Id {
     if (lastDeckId && options.some((deck) => deck.id === lastDeckId)) return lastDeckId
-    return options.find((deck) => !deck.capabilities.wordLinks)?.id ?? options.find((deck) => deck.id === sentenceDeckId)?.id ?? options[0]?.id ?? ''
+    const words = options.reduce<EditorDeckOptionDto | null>((best, deck) => (deck.wordCount > (best?.wordCount ?? 0) ? deck : best), null)
+    return words?.id ?? options.find((deck) => deck.id === sentenceDeckId)?.id ?? options[0]?.id ?? ''
   }
 
   async function load() {

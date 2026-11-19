@@ -123,6 +123,7 @@
     height: 1.25rem;
     margin-top: 0.15rem;
     flex: none;
+    accent-color: var(--color-primary);
   }
 
   .hint {

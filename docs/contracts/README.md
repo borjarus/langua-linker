@@ -73,6 +73,10 @@ Phase 7 extends the Rust side per command: the DTO deserializes its frozen input
 - `collection_changed` after a committed rating/undo (`cards`, `stats`; undo also `notes`), card action (`cards`, `decks`; a delete also `notes`, `stats`), favorite or link choice (`notes`), and ending a session (`stats`).
 - Known deviation from checklist rule 3, fixed with the next minor version: `startStudy`, `getRatingPreview` and `rateCard` can answer `VALIDATION_FAILED` (paused or finished session, card outside the session, card not studyable) or `DELETED`; `setFavoriteAssociation` and `resolveWordLink` can answer `DELETED` for a deleted note.
 
+## Changes in v1.8 (Default deck for new words, 2026-11-19)
+
+- Minor (additive). `EditorDeckOptionDto` gains `wordCount: number` — the deck's live word notes (non-sentence note types, counted in the deck of their first live card, as `searchWords` sees them). The word sheet adds a new word to the deck of the sentence's language with the most words instead of the first deck without word links: bundled word decks are Linguistic decks, so that rule fell back to the sentence deck. A 1.7 payload without the field deserializes as `0` (Rust `#[serde(default)]`).
+
 ## Changes in v1.7 (Reference decks, 2026-11-19)
 
 - Minor (additive). `DeckSummaryDto` gains `inStudy: boolean`; `false` marks a reference deck that no session (of the deck, a parent or all decks) takes cards from and that adds nothing to due counts, so its `counts` are zero. Its subdecks keep their own flag. Chosen-card sessions (`startStudy` with `cardIds`) are not affected. A 1.6 payload without the field deserializes as `true` (Rust `#[serde(default)]`).

@@ -503,13 +503,14 @@ pub async fn get_editor_data(backend: State<'_, Backend>) -> Result<EditorDataDt
     Ok(EditorDataDto {
         decks: decks
             .into_iter()
-            .map(|deck| EditorDeckOptionDto {
+            .map(|(deck, word_count)| EditorDeckOptionDto {
                 id: text_id(deck.id.0),
                 name: deck.name,
                 parent_id: deck.parent_id.map(|id| text_id(id.0)),
                 deck_type: deck_type(deck.deck_type),
                 capabilities: capabilities(deck.deck_type),
                 target_language: target_language(deck.target_language),
+                word_count,
             })
             .collect(),
         note_types: note::NoteTypeKind::ALL

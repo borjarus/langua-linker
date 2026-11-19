@@ -115,7 +115,9 @@
   .nav ul {
     display: grid;
     /* minmax(0, …): columns never grow past the screen, even when a label cannot shrink further. */
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    /* One row whatever the number of tabs: a fixed column count wrapped the sixth tab (Grammar). */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     margin: 0;
     padding: 0;
     list-style: none;
@@ -126,12 +128,15 @@
     justify-items: center;
     gap: 0.125rem;
     min-height: var(--bottom-nav-height);
-    padding: var(--space-2) var(--space-1);
+    /* Six tabs on a 384 px phone leave 64 px a tab: "Ustawienia" and "Gramatyka" fit unbroken only
+       with narrow side padding and a slightly smaller label (still rem-based, so it scales with
+       the text size setting). */
+    padding: var(--space-2) 0.125rem;
     color: var(--color-text-muted);
-    font-size: var(--text-xs);
+    font-size: calc(var(--text-xs) * 0.92);
     text-align: center;
     text-decoration: none;
-    /* At 200% text a label is wider than its fifth of a phone screen: break at a syllable with a
+    /* At 200% text a label is wider than its sixth of a phone screen: break at a syllable with a
        hyphen (dictionary of the `lang` language) before falling back to an arbitrary break.
        Needs OS hyphenation data (Android, iOS); desktop Windows engines fall back. */
     -webkit-hyphens: auto;
@@ -161,6 +166,7 @@
     }
 
     .nav ul {
+      grid-auto-flow: row;
       grid-template-columns: 1fr;
       gap: var(--space-1);
     }

@@ -4,6 +4,10 @@ All notable changes to LanguaLinker. Versions follow `X.Y.Z` / `X.Y.Z-(alpha|bet
 
 ## [Unreleased]
 
+## [0.5.1-beta.1] — 2026-11-19
+
+GitHub pre-release for testers, like 0.5.0-beta.1: no link to the published privacy policy yet, not for store upload. Installed decks are updated to content version 2026.11.19 (chapters and levels) on the first start; progress stays.
+
 ### Added
 - Optimize a preset's FSRS weights on your own answers, on the device: the screen compares the current and the proposed weights on answers held out from training, previews the daily workload, and applies the proposal only when you choose. Earlier weights can be restored; no card is rescheduled and your history never leaves the device.
 - Grammar tab: every grammar tip of your sentence decks in one place, grouped into chapters that follow the course order, with a search over tips and sentences and a link from each tip to its card. Decks link to it too.
@@ -18,6 +22,10 @@ All notable changes to LanguaLinker. Versions follow `X.Y.Z` / `X.Y.Z-(alpha|bet
 - New cards of a session come half from the front side and half from the reverse side, each from a different note.
 - The studied word or sentence uses a smaller font, and the four rating buttons fit in one row on phones.
 - "Rename or move…" on the deck screen is now "Edit deck…".
+
+### Fixed
+- Card details show the asked side with its formatting instead of raw `**` marks.
+- The descriptions of the bundled sentence decks shown during setup.
 
 ## [0.5.0-beta.1] — 2026-11-17
 

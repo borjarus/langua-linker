@@ -601,7 +601,13 @@ export type NoteContentChange = { "type": "addTip", text: string, } | { "type": 
 
 export type UpdateNoteContentInput = { operationId: string, noteId: string, change: NoteContentChange, };
 
-export type EditorDeckOptionDto = { id: string, name: string, parentId: string | null, deckType: DeckType, capabilities: DeckCapabilitiesDto, targetLanguage: TargetLanguage, };
+export type EditorDeckOptionDto = { id: string, name: string, parentId: string | null, deckType: DeckType, capabilities: DeckCapabilitiesDto, targetLanguage: TargetLanguage, 
+/**
+ * Live word notes (non-sentence note types) in the deck; a word added from a sentence
+ * defaults to the deck of its language with the most. Since 1.8; a 1.7 payload without it
+ * deserializes as 0.
+ */
+wordCount: number, };
 
 export type NoteTemplateDto = { ordinal: number, direction: CardDirection, };
 

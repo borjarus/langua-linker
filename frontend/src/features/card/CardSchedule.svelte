@@ -8,6 +8,7 @@
   import Chip from '../../components/Chip.svelte'
   import Disclosure from '../../components/Disclosure.svelte'
   import Icon from '../../components/Icon.svelte'
+  import RichText from '../../components/RichText.svelte'
 
   interface Props {
     card: CardDetailsDto
@@ -36,7 +37,7 @@
     </h3>
     {#if opened}<Chip label={i18n.t('card.opened')} tone="primary" />{/if}
   </div>
-  <p class="question"><span class="muted">{i18n.t('card.asks')}</span> <span dir="auto">{question}</span></p>
+  <p class="question"><span class="muted">{i18n.t('card.asks')}</span> <RichText text={question} /></p>
   <div class="row">
     <Chip label={i18n.t(`study.states.${card.state}`)} />
     {#if suspended}<Chip label={i18n.t('card.suspended')} tone="warning" icon="close" />{/if}

@@ -1540,6 +1540,11 @@ pub struct EditorDeckOptionDto {
     pub deck_type: DeckType,
     pub capabilities: DeckCapabilitiesDto,
     pub target_language: TargetLanguage,
+    /// Live word notes (non-sentence note types) in the deck; a word added from a sentence
+    /// defaults to the deck of its language with the most. Since 1.8; a 1.7 payload without it
+    /// deserializes as 0.
+    #[serde(default)]
+    pub word_count: u32,
 }
 
 /// Card template of a note type: which side is asked.

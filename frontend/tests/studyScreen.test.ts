@@ -321,6 +321,11 @@ describe('associations and word links', () => {
     const word = await within(sheet).findByRole('textbox', { name: 'Word' })
     // The base form of the phrase pre-fills the new word.
     expect((word as HTMLInputElement).value).not.toBe('')
+    // The deck of the language with the most words is offered, not the sentence's own deck.
+    const editor = await services.api.getEditorData()
+    const words = editor.decks.filter((deck) => deck.targetLanguage === 'de').sort((a, b) => b.wordCount - a.wordCount)[0]
+    expect(words?.wordCount).toBeGreaterThan(0)
+    expect((within(sheet).getByRole('combobox', { name: 'Deck' }) as HTMLSelectElement).value).toBe(words?.id)
     const add = within(sheet).getByRole('button', { name: 'Add and link' })
     expect(add).toBeDisabled()
     await fireEvent.input(within(sheet).getByRole('textbox', { name: 'Translation' }), { target: { value: 'zamknięty' } })
