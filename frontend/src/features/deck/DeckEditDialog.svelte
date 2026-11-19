@@ -21,6 +21,7 @@
   let name = $state('')
   let description = $state('')
   let parentId = $state('')
+  let inStudy = $state(true)
   let touched = $state(false)
   let saving = $state(false)
   let error = $state<ErrorDto | null>(null)
@@ -32,6 +33,7 @@
       name = overview.deck.name
       description = overview.description
       parentId = overview.deck.parentId ?? ''
+      inStudy = overview.deck.inStudy
       touched = false
       error = null
     })
@@ -50,6 +52,7 @@
     if (name.trim() !== overview.deck.name) patch.name = name.trim()
     if (description.trim() !== overview.description) patch.description = description.trim()
     if (moving) patch.parentId = parentId || null
+    if (inStudy !== overview.deck.inStudy) patch.inStudy = inStudy
     if (Object.keys(patch).length === 0) {
       onclose()
       return
@@ -91,6 +94,13 @@
         </p>
       {/if}
     </div>
+    <div class="check-field">
+      <label class="check">
+        <input type="checkbox" bind:checked={inStudy} aria-describedby="{ids}-in-study-hint" />
+        <span>{i18n.t('deck.edit.inStudy')}</span>
+      </label>
+      <p id="{ids}-in-study-hint" class="muted hint">{i18n.t('deck.edit.inStudyHint')}</p>
+    </div>
     {#if error}<ErrorState {error} compact />{/if}
   </form>
   {#snippet actions()}
@@ -100,6 +110,26 @@
 </Dialog>
 
 <style>
+  .check {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    min-height: var(--touch-target);
+    cursor: pointer;
+  }
+
+  .check input {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.15rem;
+    flex: none;
+  }
+
+  .hint {
+    margin: 0;
+    font-size: var(--text-sm);
+  }
+
   .field-error {
     color: var(--color-error);
     font-size: var(--text-sm);

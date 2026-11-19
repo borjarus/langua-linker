@@ -278,10 +278,12 @@ pub struct DeckPatch {
     pub parent_id: Option<Option<DeckId>>,
     pub deck_type: Option<DeckType>,
     pub preset_id: Option<DeckConfigId>,
+    pub in_study: Option<bool>,
 }
 
 /// UpdateDeck at the version the screen showed: rename, describe, move (no cycles, bounded
-/// depth), change the type (hides sections, deletes nothing) or the preset.
+/// depth), change the type (hides sections, deletes nothing) or the preset, or take the deck in
+/// or out of study sessions.
 pub fn update_deck(
     tx: &mut dyn Repositories,
     operation_id: &str,
@@ -323,6 +325,9 @@ pub fn update_deck(
             Some(config) if config.deleted_at.is_none() => deck.config_id = config.id,
             _ => return Err(ValidationError::new("presetId", "notFound").into()),
         }
+    }
+    if let Some(in_study) = patch.in_study {
+        deck.in_study = in_study;
     }
     tx.update_deck(&deck, now)?;
     learning::record(tx, operation_id, OP_UPDATE_DECK, deck.id.0.to_string(), now)?;
@@ -1276,6 +1281,7 @@ mod tests {
             usn: 0,
             version: 1,
             level: None,
+            in_study: true,
         }
     }
 

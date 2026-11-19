@@ -1,39 +1,47 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import { useServices } from '../app/context'
-  import Icon from './Icon.svelte'
+  import Icon, { type IconName } from './Icon.svelte'
 
   interface Props {
     title: string
     /** Sections start collapsed in study so the answer is not spoiled. */
     expanded?: boolean
+    /**
+     * Bind to open the section from outside (study chips above the card). Unbound, the section
+     * follows `expanded` until the user toggles it.
+     */
+    open?: boolean
     count?: number
+    icon?: IconName
+    /** Id of the section, for jumping to it. */
+    id?: string
     children: Snippet
   }
 
-  let { title, expanded = false, count, children }: Props = $props()
+  let { title, expanded = false, open = $bindable(), count, icon, id, children }: Props = $props()
   const { i18n } = useServices()
   const regionId = $props.id()
-  // Follows the `expanded` prop until the user toggles it.
-  let open = $derived(expanded)
+  const shown = $derived(open ?? expanded)
 </script>
 
-<section class="disclosure">
+<section class="disclosure" {id}>
   <h3>
     <button
       type="button"
       class="toggle"
-      aria-expanded={open}
+      aria-expanded={shown}
       aria-controls={regionId}
-      aria-label={i18n.t(open ? 'disclosure.hide' : 'disclosure.show', { section: title })}
-      onclick={() => (open = !open)}
+      aria-label={i18n.t(shown ? 'disclosure.hide' : 'disclosure.show', { section: title })}
+      onclick={() => (open = !shown)}
     >
-      <span>{title}</span>
+      {#if icon}<Icon name={icon} />{/if}
+      <span class="title">{title}</span>
       {#if count !== undefined}<span class="count" aria-hidden="true">{count}</span>{/if}
-      <Icon name={open ? 'chevronUp' : 'chevronDown'} />
+      <Icon name={shown ? 'chevronUp' : 'chevronDown'} />
     </button>
   </h3>
-  <div id={regionId} hidden={!open} class="content">
+  <div id={regionId} hidden={!shown} class="content">
     {@render children()}
   </div>
 </section>
@@ -43,6 +51,8 @@
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     background: var(--color-surface);
+    /* Jumping here from a chip leaves room for the sticky header. */
+    scroll-margin-top: var(--space-6);
   }
 
   h3 {
@@ -64,7 +74,7 @@
     cursor: pointer;
   }
 
-  .toggle > span:first-child {
+  .title {
     flex: 1;
   }
 

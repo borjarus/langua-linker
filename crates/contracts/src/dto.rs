@@ -240,6 +240,14 @@ pub struct DeckSummaryDto {
     /// `null` for decks made in the app.
     #[serde(default)]
     pub level: Option<String>,
+    /// Since 1.7: `false` for a reference deck kept out of study sessions and due counts (its
+    /// words still serve as link targets); its `counts` are then zero.
+    #[serde(default = "in_study_default")]
+    pub in_study: bool,
+}
+
+const fn in_study_default() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -1140,6 +1148,10 @@ pub struct DeckPatchDto {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub preset_id: Option<String>,
+    /// Since 1.7: takes the deck in or out of study sessions.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub in_study: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]

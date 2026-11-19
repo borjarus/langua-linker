@@ -9,10 +9,15 @@ All notable changes to LanguaLinker. Versions follow `X.Y.Z` / `X.Y.Z-(alpha|bet
 - Grammar tab: every grammar tip of your sentence decks in one place, grouped into chapters that follow the course order, with a search over tips and sentences and a link from each tip to its card. Decks link to it too.
 - Decks show their CEFR level (Spanish decks: A1–A2, the others: A1).
 - Word associations have an extended version (sound split, story, quick hook, alternative route, chain, example sentences, grammar, a culture scene, related words). It sits under the short association and starts collapsed.
+- A word of a sentence that is not in your decks yet can be added from the study card: the sheet offers matching words you already have, or a new word pre-filled with its base form, and links it to the sentence without leaving the session.
+- Decks can be kept out of study sessions ("Reference only" in the deck settings): their cards are neither studied nor counted as due, but sentences still link to their words. Progress is kept.
+- Study cards show how many associations and grammar tips a card has; after the answer, tapping the count opens that section.
 
 ### Changed
 - Sentence decks study both directions: from the target language, and from Polish into the target language. An update adds the missing reverse cards; existing progress stays.
 - New cards of a session come half from the front side and half from the reverse side, each from a different note.
+- The studied word or sentence uses a smaller font, and the four rating buttons fit in one row on phones.
+- "Rename or move…" on the deck screen is now "Edit deck…".
 
 ## [0.5.0-beta.1] — 2026-11-17
 

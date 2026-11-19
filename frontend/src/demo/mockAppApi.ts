@@ -598,6 +598,8 @@ export class MockAppApi implements AppApi {
 
   #isStudyable(card: CardRecord): boolean {
     if (this.#preparing.has(card.deckId)) return false
+    // A reference deck stays out of every session and due count (chosen-card sessions aside).
+    if (this.#collection.decks.find((deck) => deck.id === card.deckId)?.inStudy === false) return false
     if (card.deleted || card.queue === 'Suspended' || card.queue === 'UserBuried' || card.queue === 'SchedBuried') return false
     if (card.state === 'New') return true
     return (card.dueAtMs ?? 0) <= this.#studyDayStart() + DAY_MS
@@ -644,6 +646,7 @@ export class MockAppApi implements AppApi {
       contentState: this.#preparing.has(deck.id) ? 'preparing' : 'ready',
       version: deck.version,
       level: deck.level ?? null,
+      inStudy: deck.inStudy ?? true,
     }
   }
 
@@ -999,7 +1002,7 @@ export class MockAppApi implements AppApi {
     return this.#mutate('updateDeck', input.operationId, ['decks'], () => {
       const deck = this.#deck(input.deckId)
       if (deck.version !== input.expectedVersion) fail('VERSION_CONFLICT', { currentVersion: deck.version })
-      const { name, description, parentId, deckType, presetId } = input.patch
+      const { name, description, parentId, deckType, presetId, inStudy } = input.patch
       if (name !== undefined) {
         if (!name.trim()) fail('VALIDATION_FAILED', { field: 'name' })
         if (name.trim().length > 120) fail('VALIDATION_FAILED', { field: 'name', reason: 'tooLong', max: 120 })
@@ -1018,6 +1021,7 @@ export class MockAppApi implements AppApi {
       // DeckType hides sections; it never deletes associations/tips/links.
       if (deckType !== undefined) deck.deckType = deckType
       if (presetId !== undefined) deck.presetId = presetId
+      if (inStudy !== undefined) deck.inStudy = inStudy
       deck.version += 1
       return this.#deckOverview(deck.id)
     })

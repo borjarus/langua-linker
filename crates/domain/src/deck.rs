@@ -91,6 +91,9 @@ pub struct Deck {
     pub version: i64,
     /// CEFR level from the content manifest (`A1`, `A1-A2`); `None` for the learner's own decks.
     pub level: Option<String>,
+    /// `false` keeps the deck out of every study session and due count (a reference deck whose
+    /// words sentences still link to).
+    pub in_study: bool,
 }
 
 /// Validated input for a new deck.

@@ -6,14 +6,18 @@
   interface Props {
     tips: GrammarTipDto[]
     expanded?: boolean
+    /** Bindable open state of the section (see `Disclosure`). */
+    open?: boolean
+    /** Id of the section, for jumping to it. */
+    id?: string
   }
 
-  let { tips, expanded = false }: Props = $props()
+  let { tips, expanded = false, open = $bindable(), id }: Props = $props()
   const { i18n } = useServices()
   const ordered = $derived([...tips].sort((a, b) => a.order - b.order))
 </script>
 
-<Disclosure title={i18n.t('grammar.title')} {expanded} count={tips.length}>
+<Disclosure title={i18n.t('grammar.title')} {expanded} bind:open {id} icon="book" count={tips.length}>
   {#if ordered.length === 0}
     <p class="muted">{i18n.t('grammar.empty')}</p>
   {:else}

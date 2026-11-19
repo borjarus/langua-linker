@@ -37,6 +37,10 @@
   let questionEl = $state<HTMLElement | null>(null)
   let answerEl = $state<HTMLElement | null>(null)
   const pausedTitleId = $props.id()
+  const sectionIds = { associations: `${pausedTitleId}-associations`, grammar: `${pausedTitleId}-grammar` }
+  /** Open state of the sections under the answer; the chips above the card open them. */
+  let associationsOpen = $state<boolean | undefined>()
+  let grammarOpen = $state<boolean | undefined>()
 
   const card = $derived(study.card)
   const title = $derived(study.deckName ?? (deckId === 'all' ? i18n.t('study.titleAll') : i18n.t('routes.study')))
@@ -58,6 +62,28 @@
     document.addEventListener('visibilitychange', onVisibility)
     return () => document.removeEventListener('visibilitychange', onVisibility)
   })
+
+  // Every new question starts with its sections collapsed, so the answer is not spoiled.
+  const asking = $derived(study.phase === 'question')
+  $effect.pre(() => {
+    void card?.cardId
+    void asking
+    associationsOpen = undefined
+    grammarOpen = undefined
+  })
+
+  /** Opens a section under the answer and brings it into view. */
+  async function jumpTo(section: keyof typeof sectionIds) {
+    if (section === 'associations') associationsOpen = true
+    else grammarOpen = true
+    await tick()
+    const target = document.getElementById(sectionIds[section])
+    if (!target) return
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+    // Optional call: jsdom and some old WebViews have no scrollIntoView with options.
+    target.scrollIntoView?.({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+    target.querySelector('button')?.focus({ preventScroll: true })
+  }
 
   // After user input, focus follows the content: the answer after reveal, the next question after a rating.
   $effect(() => {
@@ -233,6 +259,23 @@
           <Chip label={i18n.t(`study.states.${card.state}`)} />
           {#if card.direction === 'reverse'}<Chip label={i18n.t('study.reverse')} icon="refresh" />{/if}
           {#if card.flag !== 'none'}<Chip label={i18n.t('study.flagged', { flag: i18n.t(`study.flags.${card.flag}`) })} icon="flag" tone="warning" />{/if}
+          <!-- Counts are visible with the question; the sections open only with the answer. -->
+          {#if card.capabilities.associations && card.associations.length > 0}
+            <Chip
+              label={String(card.associations.length)}
+              icon="lightbulb"
+              ariaLabel={i18n.t('study.associationCount', { count: card.associations.length })}
+              onclick={study.phase === 'question' ? undefined : () => jumpTo('associations')}
+            />
+          {/if}
+          {#if card.capabilities.grammarTips && card.grammarTips.length > 0}
+            <Chip
+              label={String(card.grammarTips.length)}
+              icon="book"
+              ariaLabel={i18n.t('study.grammarCount', { count: card.grammarTips.length })}
+              onclick={study.phase === 'question' ? undefined : () => jumpTo('grammar')}
+            />
+          {/if}
         </div>
         <div class="front" tabindex="-1" bind:this={questionEl} lang={card.direction === 'forward' ? card.targetLanguage : 'pl'}>
           {#if card.capabilities.wordLinks && targetSide === 'front'}
@@ -272,6 +315,8 @@
           {@const generationError = generator.errorFor(noteId)}
           <!-- Generation runs in the background; rating stays available. -->
           <AssociationPanel
+            id={sectionIds.associations}
+            bind:open={associationsOpen}
             associations={card.associations}
             generating={generator.isRunning(noteId)}
             ongenerate={() => generate(noteId)}
@@ -281,7 +326,7 @@
           {#if generator.isRunning(noteId)}<p class="muted" role="status">{i18n.t('association.generating')}</p>{/if}
           {#if generationError}<ErrorState error={generationError} compact onretry={() => generate(noteId)} />{/if}
         {/if}
-        {#if card.capabilities.grammarTips}<GrammarTipList tips={card.grammarTips} />{/if}
+        {#if card.capabilities.grammarTips}<GrammarTipList id={sectionIds.grammar} bind:open={grammarOpen} tips={card.grammarTips} />{/if}
       {/if}
     {/if}
   {/if}
@@ -290,6 +335,7 @@
 <WordSheet
   link={activeLink}
   deckId={card?.deckId ?? deckId}
+  targetLanguage={card?.targetLanguage ?? 'en'}
   onclose={() => (activeLink = null)}
   onresolve={resolveLink}
   onleave={() => (leaving = true)}
@@ -330,12 +376,12 @@
   }
 
   .front {
-    font-size: var(--text-2xl);
+    font-size: var(--text-xl);
     font-weight: var(--weight-bold);
   }
 
   .back {
-    font-size: var(--text-xl);
+    font-size: var(--text-lg);
   }
 
   hr {

@@ -117,7 +117,7 @@ describe('DeckCard', () => {
   const deck: DeckSummaryDto = {
     id: '1', guid: 'g', name: 'Niemiecki — słówka', parentId: null, targetLanguage: 'de', nativeLanguage: 'pl', deckType: 'Linguistic',
     capabilities: { associations: true, grammarTips: true, wordLinks: true, tts: true },
-    counts: { new: 2, learning: 0, review: 3, overdue: 1, total: 22 }, progress: 0.5, bundled: true, contentState: 'ready', version: 1, level: 'A1',
+    counts: { new: 2, learning: 0, review: 3, overdue: 1, total: 22 }, progress: 0.5, bundled: true, contentState: 'ready', version: 1, level: 'A1', inStudy: true,
   }
 
   it('shows counts with text labels and a study action', async () => {

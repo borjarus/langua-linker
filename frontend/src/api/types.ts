@@ -382,7 +382,7 @@ export type {
   ExportLossDto,
 }
 
-export const API_VERSION = '1.6'
+export const API_VERSION = '1.7'
 
 /** Equal sets of members: guards runtime lists against the Rust enums. */
 type SameMembers<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false

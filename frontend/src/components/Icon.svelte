@@ -31,6 +31,7 @@
     copy: 'M9 9h10v10H9V9ZM5 15V5h10',
     folder: 'M3 6.5V18a1 1 0 0 0 1 1h16a1 1 0 0 0 1-1V8.5a1 1 0 0 0-1-1h-8L10 5H4a1 1 0 0 0-1 1.5Z',
     sort: 'M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4',
+    lightbulb: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1.1 1.3 1.1 2.2h5c0-.9.5-1.7 1.1-2.2A6 6 0 0 0 12 3Z',
   } as const
 
   export type IconName = keyof typeof PATHS

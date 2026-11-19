@@ -41,6 +41,8 @@ export interface DeckRecord {
   version: number
   /** CEFR level of bundled content (`A1`, `A1-A2`); absent for the learner's own decks. */
   level?: string | null
+  /** `false` keeps the deck out of study sessions (reference only); absent = studied. */
+  inStudy?: boolean
   /** Chapters of bundled content: notes tagged `tag` belong to the chapter. */
   sections?: { tag: string; title: string }[]
 }

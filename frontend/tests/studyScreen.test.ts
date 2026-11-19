@@ -310,4 +310,41 @@ describe('associations and word links', () => {
     await waitFor(() => expect(sheet.querySelector('.translation')).not.toBeNull())
     stop()
   })
+
+  it('a word missing from the decks is added from the sentence and linked without leaving', async () => {
+    const { services, stop } = await openStudy('2', { scenario: 'ambiguous' })
+    const saveSpy = vi.spyOn(services.api, 'saveNote')
+    const missing = screen.getAllByRole('button', { name: /: no matching word$/ })[0]
+    if (!missing) throw new Error('expected an unresolved link')
+    await fireEvent.click(missing)
+    const sheet = await screen.findByRole('dialog')
+    const word = await within(sheet).findByRole('textbox', { name: 'Word' })
+    // The base form of the phrase pre-fills the new word.
+    expect((word as HTMLInputElement).value).not.toBe('')
+    const add = within(sheet).getByRole('button', { name: 'Add and link' })
+    expect(add).toBeDisabled()
+    await fireEvent.input(within(sheet).getByRole('textbox', { name: 'Translation' }), { target: { value: 'zamknięty' } })
+    await fireEvent.click(add)
+    await waitFor(() => expect(sheet.querySelector('.translation')).not.toBeNull())
+    expect(saveSpy).toHaveBeenCalledTimes(1)
+    expect(saveSpy.mock.calls[0]?.[0]).toMatchObject({ noteId: null, back: 'zamknięty', wordLinks: null })
+    expect(window.location.hash).toMatch(/^#\/study\//)
+    stop()
+  })
+})
+
+describe('section chips above the card', () => {
+  it('show the counts with the question and open their section after the answer', async () => {
+    const { stop } = await openStudy('1')
+    const count = screen.getByRole('img', { name: /associations?$/ })
+    expect(count).toHaveTextContent(/\d/)
+    await reveal()
+    const chip = screen.getByRole('button', { name: /associations?$/ })
+    expect(screen.getByRole('button', { name: 'Show Associations' })).toHaveAttribute('aria-expanded', 'false')
+    await fireEvent.click(chip)
+    const toggle = await screen.findByRole('button', { name: 'Hide Associations' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(document.activeElement).toBe(toggle)
+    stop()
+  })
 })

@@ -347,8 +347,8 @@ describe('deck overview', () => {
 
   it('renames and moves a deck; its own subdecks are not offered as a parent', async () => {
     const { mock, stop, user } = await open('#/deck/1')
-    await user.click(await screen.findByRole('button', { name: 'Rename or move…' }))
-    const dialog = await screen.findByRole('dialog', { name: 'Deck name and place' })
+    await user.click(await screen.findByRole('button', { name: 'Edit deck…' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Deck settings' })
     const parent = within(dialog).getByRole('combobox', { name: 'Parent deck' })
     const offered = within(parent).getAllByRole('option').map((option) => option.textContent)
     expect(offered).not.toContain('Złożenia (Komposita)')
@@ -363,6 +363,21 @@ describe('deck overview', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Save' }))
     expect(await screen.findByText('Deck moved.')).toBeInTheDocument()
     expect((await mock.getDeck('1')).deck).toMatchObject({ name: 'Niemiecki A1', parentId: '2' })
+    stop()
+  })
+
+  it('a deck taken out of study sessions stays as a reference with no cards due', async () => {
+    const { mock, stop, user } = await open('#/deck/2')
+    await user.click(await screen.findByRole('button', { name: 'Edit deck…' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Deck settings' })
+    const inStudy = within(dialog).getByRole('checkbox', { name: 'Include in study sessions' })
+    expect(inStudy).toBeChecked()
+    await user.click(inStudy)
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText('Reference only')).toBeInTheDocument()
+    const overview = await mock.getDeck('2')
+    expect(overview.deck.inStudy).toBe(false)
+    expect(overview.deck.counts).toMatchObject({ new: 0, learning: 0, review: 0 })
     stop()
   })
 

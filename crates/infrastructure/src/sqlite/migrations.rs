@@ -85,6 +85,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "deck_sections",
         sql: include_str!("../../migrations/0007_deck_sections.sql"),
     },
+    Migration {
+        version: 8,
+        name: "deck_in_study",
+        sql: include_str!("../../migrations/0008_deck_in_study.sql"),
+    },
 ];
 
 /// Highest schema version this build understands.
@@ -579,7 +584,7 @@ mod tests {
         let mut conn = memory();
         migrate(&mut conn, None, &MIGRATIONS[..6], 1).unwrap();
         insert_deck(&conn);
-        let report = migrate(&mut conn, None, MIGRATIONS, 2).unwrap();
+        let report = migrate(&mut conn, None, &MIGRATIONS[..7], 2).unwrap();
         assert_eq!((report.from_version, report.to_version), (6, 7));
         let level: Option<String> = conn
             .query_row("SELECT level FROM decks", [], |row| row.get(0))
@@ -605,6 +610,22 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM deck_sections", [], |row| row.get(0))
             .unwrap();
         assert_eq!(left, 0);
+    }
+
+    /// v7 → v8: every existing deck stays in study sessions; the flag is 0 or 1.
+    #[test]
+    fn v7_collection_upgrades_to_decks_in_study() {
+        let mut conn = memory();
+        migrate(&mut conn, None, &MIGRATIONS[..7], 1).unwrap();
+        insert_deck(&conn);
+        let report = migrate(&mut conn, None, MIGRATIONS, 2).unwrap();
+        assert_eq!((report.from_version, report.to_version), (7, 8));
+        let in_study: i64 = conn
+            .query_row("SELECT in_study FROM decks", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(in_study, 1);
+        assert!(conn.execute("UPDATE decks SET in_study = 0", []).is_ok());
+        assert!(conn.execute("UPDATE decks SET in_study = 2", []).is_err());
     }
 
     /// v3 → v4 (Phase 13): the never-written v1 outbox is rebuilt with its new columns and

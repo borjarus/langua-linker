@@ -181,6 +181,7 @@ pub fn dashboard_dto(dashboard: Dashboard) -> DashboardDto {
                 },
                 version: clamp(item.deck.version),
                 level: item.deck.level,
+                in_study: item.deck.in_study,
             })
             .collect(),
         streak_days: dashboard.streak_days,

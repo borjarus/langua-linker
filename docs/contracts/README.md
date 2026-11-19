@@ -73,6 +73,12 @@ Phase 7 extends the Rust side per command: the DTO deserializes its frozen input
 - `collection_changed` after a committed rating/undo (`cards`, `stats`; undo also `notes`), card action (`cards`, `decks`; a delete also `notes`, `stats`), favorite or link choice (`notes`), and ending a session (`stats`).
 - Known deviation from checklist rule 3, fixed with the next minor version: `startStudy`, `getRatingPreview` and `rateCard` can answer `VALIDATION_FAILED` (paused or finished session, card outside the session, card not studyable) or `DELETED`; `setFavoriteAssociation` and `resolveWordLink` can answer `DELETED` for a deleted note.
 
+## Changes in v1.7 (Reference decks, 2026-11-19)
+
+- Minor (additive). `DeckSummaryDto` gains `inStudy: boolean`; `false` marks a reference deck that no session (of the deck, a parent or all decks) takes cards from and that adds nothing to due counts, so its `counts` are zero. Its subdecks keep their own flag. Chosen-card sessions (`startStudy` with `cardIds`) are not affected. A 1.6 payload without the field deserializes as `true` (Rust `#[serde(default)]`).
+- `DeckPatchDto` gains optional `inStudy: boolean` for `updateDeck`.
+- Storage: migration 0008 adds `decks.in_study` (`1` for every existing deck).
+
 ## Changes in v1.6 (Grammar screen, 2026-11-19)
 
 - Minor (additive). New operation `getGrammar` (query, `get_grammar`, `permission: none`, `GetGrammarInput { deckId: string | null }` → `GrammarDto`): `decks` (`GrammarDeckSummaryDto`: `deckId`, `name`, `targetLanguage`, `level`, `tipCount`, `sectionCount` — chapters holding at least one tip) lists the live decks whose type shows grammar tips and that have tips, by name; `deck` (`GrammarDeckDto`: `deckId`, `name`, `targetLanguage`, `level`, `sections`) is the requested deck or the first listed one, `null` when no deck has tips. `sections` (`GrammarSectionDto`: `tag`, `title`, `entries`) follow the deck's chapter order and leave out empty chapters; tips outside every chapter close the list in a section with `tag` and `title` `null`. `GrammarEntryDto`: `tipId`, `text`, `noteId`, `cardId` (first live card of the note, for `/card/:id`), the note's `front` and `back`. Errors `NOT_FOUND` (a `deckId` that is unknown, deleted or has no tips), `DB_BUSY`.

@@ -11,6 +11,10 @@
   interface Props {
     associations: AssociationDto[]
     expanded?: boolean
+    /** Bindable open state of the section (see `Disclosure`). */
+    open?: boolean
+    /** Id of the section, for jumping to it. */
+    id?: string
     /** Generation never blocks rating; the parent decides whether it is offered. */
     ongenerate?: () => void
     generating?: boolean
@@ -19,13 +23,13 @@
     card?: ReportCard
   }
 
-  let { associations, expanded = false, ongenerate, generating = false, onfavorite, card }: Props = $props()
+  let { associations, expanded = false, open = $bindable(), id, ongenerate, generating = false, onfavorite, card }: Props = $props()
   let reporting = $state<AssociationDto | null>(null)
   const { i18n } = useServices()
   const ordered = $derived([...associations].sort((a, b) => Number(b.favorite) - Number(a.favorite)))
 </script>
 
-<Disclosure title={i18n.t('association.title')} {expanded} count={associations.length}>
+<Disclosure title={i18n.t('association.title')} {expanded} bind:open {id} icon="lightbulb" count={associations.length}>
   {#if ordered.length === 0}
     <p class="muted">{i18n.t('association.empty')}</p>
   {:else}

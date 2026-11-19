@@ -148,7 +148,7 @@ impl SqliteRepos<'_> {
 
 const DECK_COLUMNS: &str = "d.id, d.guid, d.name, d.parent_id, d.description, d.native_language,
     d.target_language, s.deck_type, d.config_id, d.content_version, d.bundled, d.created_at,
-    d.updated_at, d.deleted_at, d.usn, d.version, d.level";
+    d.updated_at, d.deleted_at, d.usn, d.version, d.level, d.in_study";
 
 fn deck_row(row: &Row<'_>) -> rusqlite::Result<Deck> {
     Ok(Deck {
@@ -169,6 +169,7 @@ fn deck_row(row: &Row<'_>) -> rusqlite::Result<Deck> {
         usn: row.get(14)?,
         version: row.get(15)?,
         level: row.get(16)?,
+        in_study: row.get(17)?,
     })
 }
 
@@ -259,7 +260,7 @@ impl DeckRepository for SqliteRepos<'_> {
             .execute(
                 "UPDATE decks SET name = ?1, parent_id = ?2, description = ?3, target_language = ?4,
                      config_id = ?5, content_version = ?6, updated_at = ?7, usn = ?8,
-                     version = version + 1
+                     in_study = ?11, version = version + 1
                  WHERE id = ?9 AND version = ?10 AND deleted_at IS NULL",
                 params![
                     name,
@@ -272,6 +273,7 @@ impl DeckRepository for SqliteRepos<'_> {
                     LOCAL_USN,
                     deck.id.0,
                     deck.version,
+                    deck.in_study,
                 ],
             )
             .map_err(map_sqlite)?;

@@ -1,16 +1,18 @@
 <script lang="ts">
-  import type { ErrorDto, Id, WordLinkDto } from '../../api/types'
+  import type { ErrorDto, Id, TargetLanguage, WordLinkDto } from '../../api/types'
   import { useServices } from '../../app/context'
   import { href } from '../../app/routes'
   import Chip from '../../components/Chip.svelte'
   import Dialog from '../../components/Dialog.svelte'
   import ErrorState from '../../components/ErrorState.svelte'
+  import AddWordForm from './AddWordForm.svelte'
   import WordDetails from './WordDetails.svelte'
 
   interface Props {
     link: WordLinkDto | null
-    /** Deck that receives a new word note ("Add this word"). */
+    /** Deck of the sentence; the full editor ("More options") opens with it. */
     deckId: Id
+    targetLanguage: TargetLanguage
     onclose: () => void
     /** Saves the user's choice for an ambiguous link; resolves to an error or `null`. */
     onresolve: (link: WordLinkDto, wordNoteId: Id) => Promise<ErrorDto | null>
@@ -18,7 +20,7 @@
     onleave: () => void
   }
 
-  let { link, deckId, onclose, onresolve, onleave }: Props = $props()
+  let { link, deckId, targetLanguage, onclose, onresolve, onleave }: Props = $props()
   const { i18n } = useServices()
   const groupName = $props.id()
 
@@ -70,7 +72,9 @@
       {:else}
         <p>{i18n.t('wordSheet.notInDecks')}</p>
         {#if link.lemma && link.lemma !== link.surface}<p class="muted">{i18n.t('wordSheet.baseForm', { lemma: link.lemma })}</p>{/if}
-        <a class="btn" href={href({ name: 'editor', query: { deckId } })} onclick={onleave}>{i18n.t('wordSheet.addWord')}</a>
+        <!-- The word is made from the sentence and linked to it without leaving the session. -->
+        <AddWordForm {link} {targetLanguage} sentenceDeckId={deckId} onlink={(wordNoteId) => onresolve(link, wordNoteId)} />
+        <a class="btn btn-ghost" href={href({ name: 'editor', query: { deckId } })} onclick={onleave}>{i18n.t('wordSheet.addWord')}</a>
       {/if}
     </div>
   {/if}

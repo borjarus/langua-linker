@@ -111,6 +111,7 @@ fn summary_dto(item: langualinker_application::dashboard::DashboardDeck) -> Deck
         },
         version: clamp(item.deck.version),
         level: item.deck.level,
+        in_study: item.deck.in_study,
     }
 }
 
@@ -359,6 +360,7 @@ pub async fn update_deck(
             .as_deref()
             .map(|value| id("presetId", value).map(DeckConfigId))
             .transpose()?,
+        in_study: input.patch.in_study,
     };
     let collection = backend.collection()?;
     let pending = pending(collection)?;

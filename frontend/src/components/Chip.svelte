@@ -10,9 +10,13 @@
     /** When set, the chip becomes a toggle button with `aria-pressed`. */
     pressed?: boolean
     ontoggle?: (pressed: boolean) => void
+    /** When set (and `ontoggle` is not), the chip becomes a plain button. */
+    onclick?: () => void
+    /** Accessible name when the visible label is short (an icon with a count). */
+    ariaLabel?: string
   }
 
-  let { label, tone = 'neutral', icon, pressed, ontoggle }: Props = $props()
+  let { label, tone = 'neutral', icon, pressed, ontoggle, onclick, ariaLabel }: Props = $props()
 </script>
 
 {#if ontoggle}
@@ -25,10 +29,15 @@
     {#if pressed}<Icon name="check" size={16} />{:else if icon}<Icon name={icon} size={16} />{/if}
     <span>{label}</span>
   </button>
-{:else}
-  <span class="chip chip-{tone}">
+{:else if onclick}
+  <button type="button" class="chip chip-{tone} toggle" aria-label={ariaLabel} {onclick}>
     {#if icon}<Icon name={icon} size={16} />{/if}
     <span>{label}</span>
+  </button>
+{:else}
+  <span class="chip chip-{tone}" aria-label={ariaLabel} role={ariaLabel ? 'img' : undefined}>
+    {#if icon}<Icon name={icon} size={16} />{/if}
+    <span aria-hidden={ariaLabel ? 'true' : undefined}>{label}</span>
   </span>
 {/if}
 

@@ -139,6 +139,7 @@
         <Chip label={i18n.t(`deck.targetLanguages.${data.deck.targetLanguage}`)} />
         {#if data.deck.level}<Chip label={i18n.t('deck.level', { level: levelLabel(data.deck.level) })} tone="info" />{/if}
         {#if data.deck.bundled}<Chip label={i18n.t('deck.bundled')} tone="info" />{/if}
+        {#if !data.deck.inStudy}<Chip label={i18n.t('deck.notInStudy')} icon="book" tone="warning" />{/if}
         <Chip label={i18n.t('deck.cards', { count: data.deck.counts.total })} />
       </div>
 
@@ -154,6 +155,8 @@
           <p class="muted" role="status">{i18n.t('deck.preparing')}</p>
         {:else if due(data.deck) > 0}
           <button type="button" class="btn btn-primary" onclick={() => study(data.deck.id)}>{i18n.t('deck.study')}</button>
+        {:else if !data.deck.inStudy}
+          <p class="muted">{i18n.t('deck.notInStudyBody')}</p>
         {:else}
           <p class="muted">{i18n.t(data.deck.counts.total === 0 ? 'deck.noCards' : 'deck.noDue')}</p>
         {/if}

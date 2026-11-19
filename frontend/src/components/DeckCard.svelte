@@ -28,6 +28,7 @@
       <Chip label={i18n.t(`deck.types.${deck.deckType}`)} />
       {#if deck.level}<Chip label={i18n.t('deck.level', { level: levelLabel(deck.level) })} tone="info" />{/if}
       {#if deck.bundled}<Chip label={i18n.t('deck.bundled')} icon="check" />{/if}
+      {#if !deck.inStudy}<Chip label={i18n.t('deck.notInStudy')} icon="book" tone="warning" />{/if}
     </div>
   </header>
 

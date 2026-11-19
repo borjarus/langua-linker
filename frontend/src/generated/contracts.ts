@@ -109,7 +109,12 @@ progress: number, bundled: boolean, contentState: ContentState, version: number,
  * Since 1.6: CEFR level of the content the deck came from (`A1`, or a range `A1-A2`);
  * `null` for decks made in the app.
  */
-level: string | null, };
+level: string | null, 
+/**
+ * Since 1.7: `false` for a reference deck kept out of study sessions and due counts (its
+ * words still serve as link targets); its `counts` are then zero.
+ */
+inStudy: boolean, };
 
 export type ResumableStatus = "active" | "paused";
 
@@ -399,7 +404,11 @@ export type DeckPatchDto = { name?: string, description?: string,
 /**
  * `null` moves the deck to the top level.
  */
-parentId?: string | null, deckType?: DeckType, presetId?: string, };
+parentId?: string | null, deckType?: DeckType, presetId?: string, 
+/**
+ * Since 1.7: takes the deck in or out of study sessions.
+ */
+inStudy?: boolean, };
 
 export type UpdateDeckInput = { operationId: string, deckId: string, expectedVersion: number, patch: DeckPatchDto, };
 

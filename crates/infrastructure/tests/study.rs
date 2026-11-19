@@ -6,6 +6,7 @@
 
 use std::sync::Arc;
 
+use langualinker_application::management::{self, DeckPatch};
 use langualinker_application::ports::Clock;
 use langualinker_application::repositories::{Repositories, SessionStatus, UnitOfWork};
 use langualinker_application::study::{self, RateCard, SessionAction, StartStudy, StudyView};
@@ -587,6 +588,39 @@ fn parent_and_child_limits_apply_to_the_tree() {
     assert_eq!(due(&db, Some(parent), NOON + 2).new, 1);
     // Tomorrow the limits start again.
     assert_eq!(due(&db, Some(child), NOON + DAY).new, 2);
+}
+
+/// A reference deck (out of study sessions) adds nothing to its own, its parent's or the
+/// all-decks queue; its subdecks are still studied. Taking it back in restores its cards.
+#[test]
+fn a_deck_out_of_study_sessions_leaves_every_queue() {
+    let db = db();
+    let parent = deck(&db, 1, None, DeckConfigId(1));
+    let child = deck(&db, 2, Some(parent), DeckConfigId(1));
+    note(&db, 10, parent, NoteTypeKind::Basic);
+    note(&db, 20, child, NoteTypeKind::Basic);
+    assert_eq!(due(&db, None, NOON).new, 2);
+
+    let set = |db: &Arc<SqliteDatabase>, operation: &'static str, in_study: bool| {
+        write(db, move |tx| {
+            let version = tx.deck(parent)?.expect("the parent deck").version;
+            let patch = DeckPatch {
+                in_study: Some(in_study),
+                ..DeckPatch::default()
+            };
+            management::update_deck(tx, operation, parent, version, &patch, TimestampMs(NOON))
+        })
+        .unwrap();
+    };
+    set(&db, "out", false);
+    assert!(!read(&db, move |tx| tx.deck(parent)).unwrap().in_study);
+    assert_eq!(due(&db, Some(parent), NOON).new, 1, "the subdeck stays in");
+    assert_eq!(due(&db, None, NOON).new, 1);
+    let view = start(&db, "start", Some(parent), None, NOON).unwrap();
+    assert_eq!(view.current.expect("the subdeck's card").deck_id, child);
+
+    set(&db, "in", true);
+    assert_eq!(due(&db, None, NOON).new, 2);
 }
 
 #[test]

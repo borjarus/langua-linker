@@ -42,7 +42,8 @@
   /* Wrapping flex, not a rem/em grid: Android WebView text zoom enlarges the drawn text but not
      CSS lengths (1em stays 16 px), so fixed column minimums kept three narrow columns at 200% and
      broke intervals mid-word ("minute/s"). The longest word (min-content) is measured from the
-     real text, so buttons move to the next line instead of splitting words. */
+     real text, so buttons move to the next line instead of splitting words. A zero basis keeps
+     all four in one row whenever their words fit (phones at normal text size). */
   .ratings {
     display: flex;
     flex-wrap: wrap;
@@ -50,11 +51,12 @@
   }
 
   .rating {
-    flex: 1 1 6.5rem;
+    flex: 1 1 0;
     /* Overrides `.btn`'s fixed touch minimum; a word plus padding is always wider than 48 px. */
     min-width: min-content;
     flex-direction: column;
     gap: 0;
+    padding-inline: var(--space-2);
     border-top-width: 4px;
     overflow-wrap: normal;
   }

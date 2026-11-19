@@ -354,6 +354,17 @@ impl DeckTree {
         order
     }
 
+    /// The decks of `order` that take part in study sessions (a reference deck is left out, its
+    /// subdecks are not).
+    fn studied(&self, mut order: Vec<DeckId>) -> Vec<DeckId> {
+        order.retain(|id| {
+            self.decks
+                .iter()
+                .any(|deck| deck.id == *id && deck.in_study)
+        });
+        order
+    }
+
     fn limit_tree(
         &self,
         tx: &mut dyn Repositories,
@@ -423,7 +434,7 @@ fn plan_for_scope(
 ) -> AppResult<(QueuePlan, LimitReached)> {
     let tree = DeckTree::load(tx)?;
     let limits = tree.limit_tree(tx, scope, moment)?;
-    let scope_decks = tree.preorder(scope);
+    let scope_decks = tree.studied(tree.preorder(scope));
     let learning = tx.learning_candidates(&scope_decks, moment.day_end)?;
     let mut reviews = Vec::new();
     for deck in &scope_decks {
@@ -1275,6 +1286,7 @@ mod tests {
             usn: 0,
             version: 1,
             level: None,
+            in_study: true,
         }
     }
 
