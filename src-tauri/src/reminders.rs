@@ -71,11 +71,15 @@ mod platform {
     use std::sync::Mutex;
 
     use langualinker_application::reminders::{self, ReminderPlan};
+    #[cfg(target_os = "android")]
     use langualinker_application::settings::UiLanguage;
     use langualinker_contracts::dto::PermissionState;
     use tauri::plugin::PermissionState as OsPermission;
     use tauri::{AppHandle, Manager, Runtime};
-    use tauri_plugin_notification::{Channel, Importance, Notification, Schedule};
+    // Channels exist only on Android; the iOS plugin does not export them.
+    #[cfg(target_os = "android")]
+    use tauri_plugin_notification::{Channel, Importance};
+    use tauri_plugin_notification::{Notification, Schedule};
 
     use super::{CHANNEL_ID, REMINDER_ID_BASE, REMINDER_URL, owned};
 
@@ -155,8 +159,6 @@ mod platform {
                 tracing::warn!(%error, "reminder channel not created");
             }
         }
-        #[cfg(not(target_os = "android"))]
-        let _ = (Channel::builder, Importance::Default);
         let mut scheduled = 0;
         for (index, slot) in plan.slots.iter().enumerate() {
             let Ok(date) =
