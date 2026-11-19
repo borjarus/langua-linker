@@ -118,8 +118,12 @@ pub struct DeckManifest {
     pub content_version: String,
     pub name: String,
     pub description: String,
-    /// CEFR level, `A1`–`C2`.
+    /// CEFR level, `A1`–`C2`, or an ascending range such as `A1-A2`.
     pub level: String,
+    /// Chapters of the deck in reading order (the Grammar screen groups tips by them); a note
+    /// belongs to the section whose `tag` it carries.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub sections: Vec<SectionRecord>,
     /// L1, `pl` in v1.
     pub native_language: String,
     /// L2, `de` or `en`.
@@ -140,6 +144,29 @@ pub struct DeckManifest {
     pub expected_cards: u32,
     pub license: License,
     pub review: Review,
+}
+
+/// A chapter of a deck: notes tagged `tag` belong to it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SectionRecord {
+    pub tag: String,
+    pub title: String,
+}
+
+/// CEFR levels in ascending order.
+pub const CEFR_LEVELS: [&str; 6] = ["A1", "A2", "B1", "B2", "C1", "C2"];
+
+/// `A1`…`C2` or an ascending range `A1-A2`; returns the (from, to) levels.
+pub fn parse_level(level: &str) -> Option<(&str, &str)> {
+    let rank = |value: &str| CEFR_LEVELS.iter().position(|known| *known == value);
+    match level.split_once('-') {
+        None => rank(level).map(|index| (CEFR_LEVELS[index], CEFR_LEVELS[index])),
+        Some((from, to)) => {
+            let (low, high) = (rank(from)?, rank(to)?);
+            (low < high).then_some((CEFR_LEVELS[low], CEFR_LEVELS[high]))
+        }
+    }
 }
 
 fn is_bundled(source: &SourceKind) -> bool {

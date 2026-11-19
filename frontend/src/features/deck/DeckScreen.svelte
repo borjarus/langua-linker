@@ -15,6 +15,7 @@
   import DeckEditDialog from './DeckEditDialog.svelte'
   import DeckTree from './DeckTree.svelte'
   import DeckTypeDialog from './DeckTypeDialog.svelte'
+  import { levelLabel } from './level'
   import PresetEditor from './PresetEditor.svelte'
   import PresetPicker from './PresetPicker.svelte'
 
@@ -136,6 +137,7 @@
       <div class="row">
         <Chip label={i18n.t(`deck.types.${data.deck.deckType}`)} />
         <Chip label={i18n.t(`deck.targetLanguages.${data.deck.targetLanguage}`)} />
+        {#if data.deck.level}<Chip label={i18n.t('deck.level', { level: levelLabel(data.deck.level) })} tone="info" />{/if}
         {#if data.deck.bundled}<Chip label={i18n.t('deck.bundled')} tone="info" />{/if}
         <Chip label={i18n.t('deck.cards', { count: data.deck.counts.total })} />
       </div>
@@ -157,6 +159,9 @@
         {/if}
         <a class="btn" href={href({ name: 'browser', query: { deck: data.deck.id } })}><Icon name="search" />{i18n.t('nav.browser')}</a>
         <a class="btn" href={href({ name: 'editor', query: { deckId: data.deck.id } })}><Icon name="plus" />{i18n.t('deck.addCards')}</a>
+        {#if data.deck.capabilities.grammarTips}
+          <a class="btn" href={href({ name: 'grammar', query: { deck: data.deck.id } })}><Icon name="book" />{i18n.t('nav.grammar')}</a>
+        {/if}
       </div>
 
       <section class="stack" aria-labelledby="{ids}-subdecks">

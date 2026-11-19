@@ -71,6 +71,7 @@ pub const IMPLEMENTED: &[&str] = &[
     "list_presets",
     "save_preset",
     "get_optimizer",
+    "get_grammar",
     "start_optimizer",
     "apply_optimizer_run",
     "revert_optimizer_run",

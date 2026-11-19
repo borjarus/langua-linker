@@ -1,5 +1,5 @@
 {
-  "apiVersion": "1.5",
+  "apiVersion": "1.6",
   "errorCodes": [
     "VALIDATION_FAILED",
     "VERSION_CONFLICT",
@@ -184,6 +184,16 @@
       "emits": [
         "collection_changed"
       ],
+      "permission": "none"
+    },
+    "getGrammar": {
+      "kind": "query",
+      "command": "get_grammar",
+      "errors": [
+        "NOT_FOUND",
+        "DB_BUSY"
+      ],
+      "emits": [],
       "permission": "none"
     },
     "startStudy": {

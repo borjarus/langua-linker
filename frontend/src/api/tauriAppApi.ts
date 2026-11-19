@@ -86,6 +86,7 @@ export function createTauriAppApi(invokeFn: InvokeFn = invoke, listenFn: ListenF
     startOptimizer: call('startOptimizer'),
     applyOptimizerRun: call('applyOptimizerRun'),
     revertOptimizerRun: call('revertOptimizerRun'),
+    getGrammar: call('getGrammar'),
     startStudy: call('startStudy'),
     resumeStudy: call('resumeStudy'),
     updateStudySession: call('updateStudySession'),

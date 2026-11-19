@@ -14,6 +14,7 @@
     { route: 'home', icon: 'home', label: 'nav.home', matches: ['home', 'deck', 'study', 'summary'] },
     { route: 'browser', icon: 'search', label: 'nav.browser', matches: ['browser', 'card'] },
     { route: 'editor', icon: 'plus', label: 'nav.add', matches: ['editor'] },
+    { route: 'grammar', icon: 'book', label: 'nav.grammar', matches: ['grammar'] },
     { route: 'stats', icon: 'chart', label: 'nav.stats', matches: ['stats'] },
     { route: 'settings', icon: 'settings', label: 'nav.settings', matches: ['settings', 'settingsAi', 'settingsPrivacy', 'settingsAbout', 'settingsTransfer', 'settingsBackup', 'settingsAttributions', 'onboarding', 'gallery', 'diagnostics'] },
   ]

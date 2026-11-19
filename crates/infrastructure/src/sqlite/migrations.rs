@@ -80,6 +80,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "optimizer_runs",
         sql: include_str!("../../migrations/0006_optimizer_runs.sql"),
     },
+    Migration {
+        version: 7,
+        name: "deck_sections",
+        sql: include_str!("../../migrations/0007_deck_sections.sql"),
+    },
 ];
 
 /// Highest schema version this build understands.
@@ -540,7 +545,7 @@ mod tests {
                 |row| row.get(0),
             )
             .unwrap();
-        let report = migrate(&mut conn, None, MIGRATIONS, 2).unwrap();
+        let report = migrate(&mut conn, None, &MIGRATIONS[..6], 2).unwrap();
         assert_eq!((report.from_version, report.to_version), (5, 6));
         let after: String = conn
             .query_row(
@@ -565,6 +570,41 @@ mod tests {
         assert!(insert(0, "{}").is_ok());
         assert!(insert(3, "{}").is_err());
         assert!(insert(0, "not json").is_err());
+    }
+
+    /// v6 → v7: decks gain an empty `level`; chapters are per deck, unique by tag and go away
+    /// with their deck.
+    #[test]
+    fn v6_collection_upgrades_to_deck_sections() {
+        let mut conn = memory();
+        migrate(&mut conn, None, &MIGRATIONS[..6], 1).unwrap();
+        insert_deck(&conn);
+        let report = migrate(&mut conn, None, MIGRATIONS, 2).unwrap();
+        assert_eq!((report.from_version, report.to_version), (6, 7));
+        let level: Option<String> = conn
+            .query_row("SELECT level FROM decks", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(level, None);
+        let deck: i64 = conn
+            .query_row("SELECT id FROM decks", [], |row| row.get(0))
+            .unwrap();
+        let insert = |tag: &str| {
+            conn.execute(
+                "INSERT INTO deck_sections (deck_id, tag, title, sort_order) VALUES (?1, ?2, 't', 0)",
+                rusqlite::params![deck, tag],
+            )
+        };
+        assert!(insert("lekcja-01").is_ok());
+        assert!(
+            insert("lekcja-01").is_err(),
+            "a tag is listed once per deck"
+        );
+        conn.execute("DELETE FROM deck_settings", []).unwrap();
+        conn.execute("DELETE FROM decks", []).unwrap();
+        let left: i64 = conn
+            .query_row("SELECT COUNT(*) FROM deck_sections", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(left, 0);
     }
 
     /// v3 → v4 (Phase 13): the never-written v1 outbox is rebuilt with its new columns and

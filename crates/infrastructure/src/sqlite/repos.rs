@@ -33,6 +33,7 @@ use rusqlite::{OptionalExtension, Row, Transaction, params, params_from_iter};
 use super::{codec, map_sqlite};
 
 mod bundled;
+mod grammar;
 mod llm;
 mod management;
 mod optimizer;
@@ -147,7 +148,7 @@ impl SqliteRepos<'_> {
 
 const DECK_COLUMNS: &str = "d.id, d.guid, d.name, d.parent_id, d.description, d.native_language,
     d.target_language, s.deck_type, d.config_id, d.content_version, d.bundled, d.created_at,
-    d.updated_at, d.deleted_at, d.usn, d.version";
+    d.updated_at, d.deleted_at, d.usn, d.version, d.level";
 
 fn deck_row(row: &Row<'_>) -> rusqlite::Result<Deck> {
     Ok(Deck {
@@ -167,6 +168,7 @@ fn deck_row(row: &Row<'_>) -> rusqlite::Result<Deck> {
         deleted_at: opt_ts(row, 13)?,
         usn: row.get(14)?,
         version: row.get(15)?,
+        level: row.get(16)?,
     })
 }
 

@@ -124,6 +124,12 @@ import type {
   OptimizerDto,
   StartOptimizerInput,
   OptimizerRunActionInput,
+  GetGrammarInput,
+  GrammarDeckSummaryDto,
+  GrammarEntryDto,
+  GrammarSectionDto,
+  GrammarDeckDto,
+  GrammarDto,
   NoteDto,
   ReviewLogDto,
   RetrievabilityDto,
@@ -292,6 +298,12 @@ export type {
   OptimizerDto,
   StartOptimizerInput,
   OptimizerRunActionInput,
+  GetGrammarInput,
+  GrammarDeckSummaryDto,
+  GrammarEntryDto,
+  GrammarSectionDto,
+  GrammarDeckDto,
+  GrammarDto,
   NoteDto,
   ReviewLogDto,
   RetrievabilityDto,
@@ -370,7 +382,7 @@ export type {
   ExportLossDto,
 }
 
-export const API_VERSION = '1.5'
+export const API_VERSION = '1.6'
 
 /** Equal sets of members: guards runtime lists against the Rust enums. */
 type SameMembers<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false

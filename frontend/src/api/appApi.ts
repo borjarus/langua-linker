@@ -43,6 +43,8 @@ import type {
   PickFileInput,
   PresetDto,
   GetOptimizerInput,
+  GetGrammarInput,
+  GrammarDto,
   OptimizerDto,
   OptimizerRunActionInput,
   StartOptimizerInput,
@@ -113,6 +115,10 @@ export interface AppApi {
   applyOptimizerRun(input: OptimizerRunActionInput): Promise<PresetDto>
   /** Restores the weights the preset had before the applied run. */
   revertOptimizerRun(input: OptimizerRunActionInput): Promise<PresetDto>
+
+  // grammar
+  /** Grammar tips grouped by deck chapter: decks with tips and the chapters of one deck (1.6). */
+  getGrammar(input: GetGrammarInput): Promise<GrammarDto>
 
   // study
   startStudy(input: StartStudyInput): Promise<StudySessionDto>

@@ -632,3 +632,23 @@ fn phase18_samples_round_trip_through_their_rust_dtos() {
     }
     assert!(seen >= 4);
 }
+
+#[test]
+fn grammar_samples_round_trip_through_their_rust_dtos() {
+    use langualinker_contracts::dto::{DashboardDto, GetGrammarInput, GrammarDto};
+    assert!(round_trips::<GrammarDto>("getGrammar") >= 1);
+    // Since 1.6 every deck summary carries `level` (a string or null).
+    assert!(round_trips::<DashboardDto>("getDashboard") >= 1);
+    let samples = samples();
+    let mut seen = 0;
+    for call in samples["calls"].as_array().expect("calls") {
+        if call["operation"] != "getGrammar" {
+            continue;
+        }
+        let input = &call["args"][0];
+        let read: GetGrammarInput = serde_json::from_value(input.clone()).unwrap();
+        assert_eq!(&serde_json::to_value(read).unwrap(), input);
+        seen += 1;
+    }
+    assert!(seen >= 2, "a deck list and an unknown deck");
+}

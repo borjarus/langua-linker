@@ -25,9 +25,9 @@
   const deck: DeckSummaryDto = {
     id: 'g1', guid: 'gallery-deck', name: 'Niemiecki — Straßenbahnhaltestelle & zażółć gęślą jaźń', parentId: null,
     targetLanguage: 'de', nativeLanguage: 'pl', deckType: 'Linguistic', capabilities,
-    counts: { new: 12, learning: 3, review: 41, overdue: 5, total: 1204 }, progress: 0.37, bundled: true, contentState: 'ready', version: 1,
+    counts: { new: 12, learning: 3, review: 41, overdue: 5, total: 1204 }, progress: 0.37, bundled: true, contentState: 'ready', version: 1, level: 'A1-A2',
   }
-  const preparingDeck: DeckSummaryDto = { ...deck, id: 'g2', name: 'English 👩‍💻 — שלום', targetLanguage: 'en', deckType: 'Simple', contentState: 'preparing', bundled: false }
+  const preparingDeck: DeckSummaryDto = { ...deck, id: 'g2', name: 'English 👩‍💻 — שלום', targetLanguage: 'en', deckType: 'Simple', contentState: 'preparing', bundled: false, level: null }
   const preview: RatingPreviewDto = {
     cardId: 'c1', cardVersion: 1, previewToken: 'gallery',
     intervals: {

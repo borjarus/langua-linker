@@ -12,8 +12,12 @@ use langualinker_domain::{Guid, validation};
 use crate::format::{
     CardStateName, Catalog, ContentKind, DeckManifest, MAX_BUNDLED_GUID_CHARS, MAX_EXTENDED_CHARS,
     MAX_SNIPPET_CHARS, NoteRecord, QueueName, ReviewStatus, SCHEMA_VERSION, SourceKind,
+    parse_level,
 };
 use crate::source::is_plain_file_name;
+
+/// Most chapters a deck may declare.
+pub const MAX_SECTIONS: usize = 200;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Severity {
@@ -277,17 +281,18 @@ pub fn check_manifest(
             );
         }
     }
-    if !matches!(
-        manifest.level.as_str(),
-        "A1" | "A2" | "B1" | "B2" | "C1" | "C2"
-    ) {
+    if parse_level(&manifest.level).is_none() {
         issues.error(
             "deck.level",
             file,
             None,
-            format!("unknown CEFR level {}", manifest.level),
+            format!(
+                "unknown CEFR level {} (A1–C2 or an ascending range such as A1-A2)",
+                manifest.level
+            ),
         );
     }
+    check_sections(manifest, file, issues);
     if parse_native_language(&manifest.native_language).is_none() {
         issues.error(
             "language.native",
@@ -425,6 +430,52 @@ pub fn check_manifest(
     }
 }
 
+/// Section tags are valid, distinct note tags; titles are short NFC text.
+fn check_sections(manifest: &DeckManifest, file: &str, issues: &mut Issues) {
+    if manifest.sections.len() > MAX_SECTIONS {
+        issues.error(
+            "sections.count",
+            file,
+            None,
+            format!("at most {MAX_SECTIONS} sections"),
+        );
+    }
+    let mut tags = HashSet::new();
+    for section in &manifest.sections {
+        if validation::tags(std::slice::from_ref(&section.tag)).is_err() {
+            issues.error(
+                "sections.tag",
+                file,
+                None,
+                format!("section tag {:?} is not a valid note tag", section.tag),
+            );
+        }
+        if !tags.insert(section.tag.as_str()) {
+            issues.error(
+                "sections.duplicate",
+                file,
+                None,
+                format!("section tag {} is used twice", section.tag),
+            );
+        }
+        let title = &section.title;
+        if title.trim().is_empty()
+            || title.chars().count() > validation::MAX_NAME_CHARS
+            || !is_nfc(title)
+        {
+            issues.error(
+                "sections.title",
+                file,
+                None,
+                format!(
+                    "title of section {} is empty, too long or not NFC",
+                    section.tag
+                ),
+            );
+        }
+    }
+}
+
 /// Text that ends up on a card: NFC, trimmed, no control characters or markup.
 fn check_text(
     field: &str,
@@ -511,6 +562,8 @@ pub struct DeckChecker<'a> {
     pub suspended: u32,
     /// Review records in an import package.
     pub reviews: u32,
+    /// Section tags carried by at least one note.
+    used_sections: HashSet<String>,
 }
 
 impl<'a> DeckChecker<'a> {
@@ -532,6 +585,7 @@ impl<'a> DeckChecker<'a> {
             scheduled: 0,
             suspended: 0,
             reviews: 0,
+            used_sections: HashSet::new(),
         }
     }
 
@@ -606,6 +660,13 @@ impl<'a> DeckChecker<'a> {
                 "tags must be non-empty, without whitespace, at most 50",
             );
         }
+        self.used_sections.extend(
+            record
+                .tags
+                .iter()
+                .filter(|tag| self.manifest.sections.iter().any(|s| &s.tag == *tag))
+                .cloned(),
+        );
 
         // Front review: an exact duplicate is an error, a homograph (same front, other meaning)
         // is allowed but reported so a reviewer looks at both.
@@ -924,6 +985,16 @@ impl<'a> DeckChecker<'a> {
     /// Checks done once the whole file was read.
     pub fn finish(self, sha256: &str, issues: &mut Issues) {
         let manifest = self.manifest;
+        for section in &manifest.sections {
+            if !self.used_sections.contains(&section.tag) {
+                issues.warning(
+                    "sections.unused",
+                    &self.file,
+                    None,
+                    format!("no note carries section tag {}", section.tag),
+                );
+            }
+        }
         if sha256 != manifest.sha256 {
             issues.error(
                 "checksum.mismatch",
@@ -998,6 +1069,66 @@ mod tests {
         assert_eq!(parse_native_language("pl"), Some(NativeLanguage::Pl));
         assert_eq!(parse_deck_type("linguistic"), None);
         assert_eq!(parse_target_language("fr"), None);
+    }
+
+    fn manifest_with(level: &str, sections: serde_json::Value) -> DeckManifest {
+        serde_json::from_value(serde_json::json!({
+            "schemaVersion": 2, "deckGuid": "d", "contentVersion": "2026.11.19", "name": "N",
+            "description": "D", "level": level, "sections": sections, "nativeLanguage": "pl",
+            "targetLanguage": "de", "deckType": "Linguistic", "noteType": "Sentence",
+            "contentKind": "sentences", "notesFile": "d.ndjson", "sha256": "0",
+            "expectedNotes": 0, "expectedCards": 0,
+            "license": { "name": "L", "attribution": null, "url": null, "rightsConfirmed": false },
+            "review": { "status": "pending", "reviewer": null, "reviewedAt": null }
+        }))
+        .unwrap()
+    }
+
+    fn codes(manifest: &DeckManifest) -> Vec<&'static str> {
+        let mut issues = Issues::default();
+        check_sections(manifest, "d.json", &mut issues);
+        if crate::format::parse_level(&manifest.level).is_none() {
+            issues.error("deck.level", "d.json", None, "");
+        }
+        issues.0.iter().map(|issue| issue.code).collect()
+    }
+
+    #[test]
+    fn levels_are_single_or_ascending_ranges() {
+        use crate::format::parse_level;
+        assert_eq!(parse_level("A1"), Some(("A1", "A1")));
+        assert_eq!(parse_level("A1-A2"), Some(("A1", "A2")));
+        assert_eq!(parse_level("B1-C2"), Some(("B1", "C2")));
+        for bad in ["", "A3", "a1", "A2-A1", "A1-A1", "A1–A2", "A1-", "A1-A2-B1"] {
+            assert_eq!(parse_level(bad), None, "{bad}");
+        }
+        assert!(codes(&manifest_with("A1-A2", serde_json::json!([]))).is_empty());
+        assert_eq!(
+            codes(&manifest_with("A0", serde_json::json!([]))),
+            ["deck.level"]
+        );
+    }
+
+    #[test]
+    fn sections_need_valid_distinct_tags_and_titles() {
+        let good = manifest_with(
+            "A1",
+            serde_json::json!([{ "tag": "lekcja-01", "title": "Zwroty" }, { "tag": "lekcja-02", "title": "Być" }]),
+        );
+        assert!(codes(&good).is_empty());
+        let bad = manifest_with(
+            "A1",
+            serde_json::json!([
+                { "tag": "lekcja 01", "title": "Spacja w tagu" },
+                { "tag": "x", "title": "Pierwszy" },
+                { "tag": "x", "title": "Drugi" },
+                { "tag": "y", "title": " " }
+            ]),
+        );
+        assert_eq!(
+            codes(&bad),
+            ["sections.tag", "sections.duplicate", "sections.title"]
+        );
     }
 
     #[test]

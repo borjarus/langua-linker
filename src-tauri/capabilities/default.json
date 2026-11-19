@@ -22,6 +22,7 @@
     "allow-start-optimizer",
     "allow-apply-optimizer-run",
     "allow-revert-optimizer-run",
+    "allow-get-grammar",
     "allow-start-study",
     "allow-resume-study",
     "allow-update-study-session",

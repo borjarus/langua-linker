@@ -2,6 +2,7 @@
   import type { DeckSummaryDto } from '../api/types'
   import { useServices } from '../app/context'
   import { href } from '../app/routes'
+  import { levelLabel } from '../features/deck/level'
   import Chip from './Chip.svelte'
   import Icon from './Icon.svelte'
 
@@ -25,6 +26,7 @@
     <div class="row">
       <Chip label={i18n.t(`deck.targetLanguages.${deck.targetLanguage}`)} tone="primary" />
       <Chip label={i18n.t(`deck.types.${deck.deckType}`)} />
+      {#if deck.level}<Chip label={i18n.t('deck.level', { level: levelLabel(deck.level) })} tone="info" />{/if}
       {#if deck.bundled}<Chip label={i18n.t('deck.bundled')} icon="check" />{/if}
     </div>
   </header>

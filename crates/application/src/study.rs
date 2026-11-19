@@ -1274,6 +1274,7 @@ mod tests {
             deleted_at: None,
             usn: 0,
             version: 1,
+            level: None,
         }
     }
 

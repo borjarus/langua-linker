@@ -1,12 +1,12 @@
 {
-  "apiVersion": "1.5",
+  "apiVersion": "1.6",
   "calls": [
     {
       "operation": "getAppInfo",
       "command": "get_app_info",
       "args": [],
       "output": {
-        "apiVersion": "1.5",
+        "apiVersion": "1.6",
         "appName": "LanguaLinker",
         "appVersion": "0.1.0",
         "mode": "demo"
@@ -55,7 +55,7 @@
       "args": [],
       "output": {
         "appVersion": "0.1.0",
-        "apiVersion": "1.5",
+        "apiVersion": "1.6",
         "schemaVersion": null,
         "fsrsVersion": "FSRS-6",
         "contentVersion": "2026.02-demo",
@@ -139,7 +139,8 @@
             "progress": 0.38,
             "bundled": true,
             "contentState": "ready",
-            "version": 1
+            "version": 1,
+            "level": "A1"
           },
           {
             "id": "5",
@@ -165,7 +166,8 @@
             "progress": 0.33,
             "bundled": true,
             "contentState": "ready",
-            "version": 1
+            "version": 1,
+            "level": "A1-A2"
           },
           {
             "id": "2",
@@ -191,7 +193,8 @@
             "progress": 0.25,
             "bundled": true,
             "contentState": "ready",
-            "version": 1
+            "version": 1,
+            "level": "A1"
           },
           {
             "id": "3",
@@ -217,7 +220,8 @@
             "progress": 0.4,
             "bundled": true,
             "contentState": "ready",
-            "version": 1
+            "version": 1,
+            "level": "A1"
           },
           {
             "id": "4",
@@ -243,7 +247,8 @@
             "progress": 0.25,
             "bundled": false,
             "contentState": "ready",
-            "version": 1
+            "version": 1,
+            "level": null
           }
         ],
         "streakDays": 6,
@@ -286,7 +291,8 @@
           "progress": 0.38,
           "bundled": true,
           "contentState": "ready",
-          "version": 1
+          "version": 1,
+          "level": "A1"
         },
         "subdecks": [
           {
@@ -313,7 +319,8 @@
             "progress": 0.33,
             "bundled": true,
             "contentState": "ready",
-            "version": 1
+            "version": 1,
+            "level": "A1-A2"
           }
         ],
         "description": "Podstawowe słownictwo z mnemotechnikami i wskazówkami gramatycznymi.",
@@ -608,7 +615,8 @@
           "progress": 0,
           "bundled": false,
           "contentState": "ready",
-          "version": 1
+          "version": 1,
+          "level": null
         },
         "subdecks": [],
         "description": "",
@@ -704,7 +712,8 @@
           "progress": 0,
           "bundled": false,
           "contentState": "ready",
-          "version": 2
+          "version": 2,
+          "level": null
         },
         "subdecks": [],
         "description": "",
@@ -2650,6 +2659,154 @@
       ],
       "output": {
         "affected": 1
+      }
+    },
+    {
+      "operation": "getGrammar",
+      "command": "get_grammar",
+      "args": [
+        {
+          "deckId": null
+        }
+      ],
+      "output": {
+        "decks": [
+          {
+            "deckId": "1",
+            "name": "Niemiecki — słówka A1",
+            "targetLanguage": "de",
+            "level": "A1",
+            "tipCount": 8,
+            "sectionCount": 4
+          },
+          {
+            "deckId": "5",
+            "name": "Złożenia (Komposita)",
+            "targetLanguage": "de",
+            "level": "A1-A2",
+            "tipCount": 2,
+            "sectionCount": 0
+          }
+        ],
+        "deck": {
+          "deckId": "1",
+          "name": "Niemiecki — słówka A1",
+          "targetLanguage": "de",
+          "level": "A1",
+          "sections": [
+            {
+              "tag": "dom",
+              "title": "Dom i codzienne przedmioty",
+              "entries": [
+                {
+                  "tipId": "5004",
+                  "text": "Rodzaj męski: der Kühlschrank, die Kühlschränke.",
+                  "noteId": "100",
+                  "cardId": "1000",
+                  "front": "der Kühlschrank",
+                  "back": "lodówka"
+                },
+                {
+                  "tipId": "5005",
+                  "text": "Złożenie: kühl (chłodny) + der Schrank (szafa).",
+                  "noteId": "100",
+                  "cardId": "1000",
+                  "front": "der Kühlschrank",
+                  "back": "lodówka"
+                }
+              ]
+            },
+            {
+              "tag": "jedzenie",
+              "title": "Przy stole",
+              "entries": [
+                {
+                  "tipId": "5008",
+                  "text": "Rodzaj nijaki: das Frühstück.",
+                  "noteId": "101",
+                  "cardId": "1001",
+                  "front": "das Frühstück",
+                  "back": "śniadanie"
+                }
+              ]
+            },
+            {
+              "tag": "miasto",
+              "title": "Po mieście",
+              "entries": [
+                {
+                  "tipId": "5022",
+                  "text": "Liczba mnoga: die Bänke.",
+                  "noteId": "104",
+                  "cardId": "1004",
+                  "front": "die Bank (Sitz)",
+                  "back": "ławka"
+                },
+                {
+                  "tipId": "5029",
+                  "text": "Liczba mnoga: die Banken.",
+                  "noteId": "105",
+                  "cardId": "1005",
+                  "front": "die Bank (Geld)",
+                  "back": "bank"
+                },
+                {
+                  "tipId": "5045",
+                  "text": "Rodzaj żeński: die Brücke.",
+                  "noteId": "109",
+                  "cardId": "1009",
+                  "front": "die Brücke",
+                  "back": "most"
+                }
+              ]
+            },
+            {
+              "tag": "czasowniki",
+              "title": "Pierwsze czasowniki",
+              "entries": [
+                {
+                  "tipId": "5036",
+                  "text": "Odmiana nieregularna: trank, getrunken.",
+                  "noteId": "106",
+                  "cardId": "1006",
+                  "front": "trinken",
+                  "back": "pić"
+                }
+              ]
+            },
+            {
+              "tag": null,
+              "title": null,
+              "entries": [
+                {
+                  "tipId": "5010",
+                  "text": "Wyrażenie wielowyrazowe — nie rozdzielaj w nauce.",
+                  "noteId": "102",
+                  "cardId": "1002",
+                  "front": "heute Abend",
+                  "back": "dziś wieczorem"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "operation": "getGrammar",
+      "command": "get_grammar",
+      "args": [
+        {
+          "deckId": "4"
+        }
+      ],
+      "error": {
+        "code": "NOT_FOUND",
+        "messageKey": "errors.NOT_FOUND",
+        "retryable": false,
+        "details": {
+          "entity": "deck"
+        }
       }
     },
     {

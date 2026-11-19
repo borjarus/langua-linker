@@ -12,6 +12,7 @@ export const ROUTE_PATTERNS = {
   editor: '/editor',
   browser: '/browser',
   stats: '/stats',
+  grammar: '/grammar',
   settings: '/settings',
   settingsAi: '/settings/ai',
   settingsPrivacy: '/settings/privacy',

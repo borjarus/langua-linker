@@ -17,6 +17,7 @@ const SCREENS: { id: string; path: string; heading: string }[] = [
   { id: 'card', path: '/card/1000', heading: t.routes.card },
   { id: 'editor', path: '/editor?deckId=1', heading: t.editor.newNote },
   { id: 'browser', path: '/browser', heading: t.routes.browser },
+  { id: 'grammar', path: '/grammar', heading: t.routes.grammar },
   { id: 'stats', path: '/stats', heading: t.routes.stats },
   { id: 'settings', path: '/settings', heading: t.routes.settings },
   { id: 'settings-ai', path: '/settings/ai', heading: t.routes.settingsAi },

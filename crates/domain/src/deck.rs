@@ -89,6 +89,8 @@ pub struct Deck {
     pub deleted_at: Option<TimestampMs>,
     pub usn: i64,
     pub version: i64,
+    /// CEFR level from the content manifest (`A1`, `A1-A2`); `None` for the learner's own decks.
+    pub level: Option<String>,
 }
 
 /// Validated input for a new deck.

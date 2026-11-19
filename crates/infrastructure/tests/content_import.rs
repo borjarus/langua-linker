@@ -731,7 +731,11 @@ fn choosing_deleted_decks_again_restores_them_with_progress_and_links() {
     let harness = Harness::new();
     let content = harness.service(Arc::new(DirSource::new(content_dir())));
     let decks = ["bundled-de-words-a1", "bundled-de-sentences-a1"];
-    harness.wait(&content.complete_onboarding(onboarding("op-1", &decks)).unwrap());
+    harness.wait(
+        &content
+            .complete_onboarding(onboarding("op-1", &decks))
+            .unwrap(),
+    );
     let live_cards = "SELECT COUNT(*) FROM cards WHERE deleted_at IS NULL";
     let live_notes = "SELECT COUNT(*) FROM notes WHERE deleted_at IS NULL";
     let resolved = "SELECT COUNT(*) FROM sentence_word_links WHERE resolution = 1";
@@ -744,9 +748,12 @@ fn choosing_deleted_decks_again_restores_them_with_progress_and_links() {
     harness
         .db
         .with_connection(|conn| {
-            conn.execute("UPDATE cards SET reps = 3 WHERE id = (SELECT MIN(id) FROM cards)", [])
-                .map(drop)
-                .map_err(|error| langualinker_application::AppError::Internal(error.to_string()))
+            conn.execute(
+                "UPDATE cards SET reps = 3 WHERE id = (SELECT MIN(id) FROM cards)",
+                [],
+            )
+            .map(drop)
+            .map_err(|error| langualinker_application::AppError::Internal(error.to_string()))
         })
         .unwrap();
     for (index, deck) in decks.iter().enumerate() {
@@ -774,7 +781,10 @@ fn choosing_deleted_decks_again_restores_them_with_progress_and_links() {
         .complete_onboarding(onboarding("op-2", &["bundled-de-sentences-a1"]))
         .unwrap();
     assert_eq!(harness.wait(&job).status, JobStatus::Succeeded);
-    assert_eq!(harness.count("SELECT COUNT(*) FROM decks WHERE deleted_at IS NULL"), 1);
+    assert_eq!(
+        harness.count("SELECT COUNT(*) FROM decks WHERE deleted_at IS NULL"),
+        1
+    );
     assert!(harness.count(live_cards) > 0);
     assert_eq!(harness.count(resolved), 0);
 
@@ -1073,4 +1083,98 @@ fn package_previews_go_stale_and_foreign_files_are_rejected() {
             .code(),
         "VALIDATION_FAILED"
     );
+}
+
+/// Schema v7: an install keeps the deck level and chapters; the Grammar read model groups every
+/// tip of the sentence deck by chapter in the book order; an update replaces the chapters.
+#[test]
+fn install_keeps_deck_level_and_chapters_for_the_grammar_screen() {
+    use langualinker_application::grammar;
+    let harness = Harness::new();
+    let content = harness.service(Arc::new(DirSource::new(content_dir())));
+    harness.wait(
+        &content
+            .complete_onboarding(onboarding(
+                "op-1",
+                &["bundled-de-words-a1", "bundled-de-sentences-a1"],
+            ))
+            .unwrap(),
+    );
+    let tips_in_content: usize =
+        std::fs::read_to_string(content_dir().join("de_sentences_a1.ndjson"))
+            .unwrap()
+            .lines()
+            .map(|line| {
+                serde_json::from_str::<Value>(line).unwrap()["grammarTips"]
+                    .as_array()
+                    .map_or(0, Vec::len)
+            })
+            .sum();
+    assert!(tips_in_content > 400);
+    assert_eq!(
+        harness.count("SELECT COUNT(*) FROM decks WHERE level = 'A1'"),
+        2
+    );
+    assert_eq!(harness.count("SELECT COUNT(*) FROM deck_sections"), 38);
+
+    let overview = harness.db.read(|tx| grammar::grammar(tx, None)).unwrap();
+    assert_eq!(overview.decks.len(), 1, "the word deck has no tips");
+    let summary = &overview.decks[0];
+    assert_eq!(summary.deck.guid.as_str(), "bundled-de-sentences-a1");
+    assert_eq!(summary.tip_count as usize, tips_in_content);
+    let deck = overview.selected.expect("the first deck is selected");
+    assert_eq!(deck.deck.level.as_deref(), Some("A1"));
+    assert!(
+        deck.sections
+            .iter()
+            .all(|section| section.section.is_some()),
+        "every tip belongs to a chapter"
+    );
+    let first = deck.sections[0].section.as_ref().unwrap();
+    assert_eq!(first.tag, "lekcja-01");
+    assert_eq!(
+        deck.sections
+            .iter()
+            .map(|section| section.tips.len())
+            .sum::<usize>(),
+        tips_in_content
+    );
+    let tags: Vec<&str> = deck
+        .sections
+        .iter()
+        .map(|section| section.section.as_ref().unwrap().tag.as_str())
+        .collect();
+    let mut sorted = tags.clone();
+    sorted.sort_unstable();
+    assert_eq!(tags, sorted, "chapters in book order");
+    let missing = harness
+        .db
+        .read(|tx| grammar::grammar(tx, Some(langualinker_domain::DeckId(999_999))));
+    assert!(missing.is_err());
+
+    // The next content version renames a chapter, drops the others and raises the level.
+    let dir = copy_content();
+    rewrite(dir.path(), "de_sentences_a1", "2026.12.01", |_| {});
+    let path = dir.path().join("de_sentences_a1.json");
+    let mut manifest: Value =
+        serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    manifest["level"] = "A1-A2".into();
+    manifest["sections"] = serde_json::json!([{ "tag": "lekcja-02", "title": "Sein" }]);
+    std::fs::write(&path, serde_json::to_string_pretty(&manifest).unwrap()).unwrap();
+    let updated = harness.service(Arc::new(DirSource::new(dir.path())));
+    harness.wait(&updated.resume().unwrap().expect("an update job"));
+    assert_eq!(harness.count("SELECT COUNT(*) FROM deck_sections"), 1);
+    assert_eq!(
+        harness.count("SELECT COUNT(*) FROM decks WHERE level = 'A1-A2'"),
+        1
+    );
+    let deck = harness
+        .db
+        .read(|tx| grammar::grammar(tx, None))
+        .unwrap()
+        .selected
+        .unwrap();
+    assert_eq!(deck.sections.len(), 2, "lekcja-02 and the untitled rest");
+    assert_eq!(deck.sections[0].section.as_ref().unwrap().title, "Sein");
+    assert!(deck.sections[1].section.is_none());
 }

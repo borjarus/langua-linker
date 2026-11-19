@@ -185,8 +185,12 @@ pub trait BundledContentRepository {
     fn deck_by_guid(&mut self, guid: &Guid) -> AppResult<Option<Deck>>;
     /// Undoes the deletion of a bundled deck: the deck, its bundled notes and their cards in the
     /// deck come back with their scheduling and history (one live card per note and template).
-    fn restore_bundled_deck(&mut self, deck: DeckId, deck_guid: &str, at: TimestampMs)
-    -> AppResult<()>;
+    fn restore_bundled_deck(
+        &mut self,
+        deck: DeckId,
+        deck_guid: &str,
+        at: TimestampMs,
+    ) -> AppResult<()>;
     fn bundled_note(&mut self, note: NoteId) -> AppResult<Option<BundledNote>>;
     fn put_bundled_note(&mut self, note: &BundledNote) -> AppResult<()>;
     /// Bundled notes of a deck whose note is not soft-deleted, with the note GUID.
@@ -880,6 +884,45 @@ pub trait OptimizerRepository {
     ) -> AppResult<()>;
 }
 
+// ------------------------------------------------------------------- grammar (deck chapters)
+
+/// A chapter of a deck, from the content manifest: notes tagged `tag` belong to it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DeckSection {
+    pub tag: String,
+    pub title: String,
+}
+
+/// A live grammar tip with the note it explains and that note's deck (the deck of its first
+/// live card).
+#[derive(Debug, Clone, PartialEq)]
+pub struct GrammarTipEntry {
+    pub deck_id: DeckId,
+    pub tip_id: GrammarTipId,
+    pub text: String,
+    pub note_id: NoteId,
+    /// First live card of the note (lowest template), for opening the card.
+    pub card_id: CardId,
+    pub front: String,
+    pub back: String,
+    pub tags: Vec<String>,
+}
+
+/// Deck level and chapters, and the tips the Grammar screen lists.
+pub trait GrammarRepository {
+    /// Replaces the level and the chapters of a deck (the content importer, on every install).
+    fn replace_deck_outline(
+        &mut self,
+        deck: DeckId,
+        level: Option<&str>,
+        sections: &[DeckSection],
+    ) -> AppResult<()>;
+    /// Chapters of a deck in reading order.
+    fn deck_sections(&mut self, deck: DeckId) -> AppResult<Vec<DeckSection>>;
+    /// Live tips of live notes in live decks, by deck, then note order, then tip order.
+    fn grammar_tip_entries(&mut self) -> AppResult<Vec<GrammarTipEntry>>;
+}
+
 /// Every repository inside one transaction.
 pub trait Repositories:
     DeckRepository
@@ -901,6 +944,7 @@ pub trait Repositories:
     + MaintenanceRepository
     + LlmRepository
     + OptimizerRepository
+    + GrammarRepository
 {
 }
 
@@ -924,6 +968,7 @@ impl<T> Repositories for T where
         + MaintenanceRepository
         + LlmRepository
         + OptimizerRepository
+        + GrammarRepository
 {
 }
 

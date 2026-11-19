@@ -31,6 +31,10 @@ All 89 associations are candidates. The generating session flagged these as weak
 
 Every word note's association carries an `extended` Markdown text generated with `association-extended-v1` (claude-opus-5-5). Like the short candidates, all of them need native review. The generating sessions flagged etymology and culture claims to verify first, among them: *trafić* ← *treffen*, *kosztować* ← *kosten*/Latin *constare*, *musieć* ← *müssen*, *sztymować* ← *stimmen*; cognates seit–since, Abend–even, wohnen–wont, Stadt–stead, wirklich–work, schön–sheen, schlecht–slight, Zeit–tide, warten–ward, lieben–love–lubić; *tschüs* ← Low German *adjüs*; plurals *Euros*/*Cents* in casual speech; Berlin from an Old Slavic word for marsh (labelled as a hypothesis); culture details (Zugspitze 2 962 m, Cologne Cathedral 157 m, Bremen cathedral-step sweeping at 30, the bottle deposit amount).
 
+## Chapters and levels (2026-11-19)
+
+The sentence decks list their chapters (`sections` in the manifests: 38 German, 36 English, 35 Spanish, tags `lekcja-01`…). The chapter order and topics follow the tables of contents of the source grammar books the lessons were built from; the titles were reworded for the app (claude-opus-5-5, 2026-11-19) so they name the same grammar topic without reusing the books' wording. Levels: `A1-A2` for both Spanish decks (the Spanish grammar book covers A1–A2), `A1` for the others. All six decks went to `contentVersion` 2026.11.19 so installed decks receive the chapters and levels. Native review should check that each title still matches its chapter's tips.
+
 ## To close the content rights item (owner)
 
 For each deck:

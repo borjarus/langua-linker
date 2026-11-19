@@ -4,7 +4,7 @@ import { layoutProblems, openWithPreferences } from './layout'
 // Diff rule 4 for every screen, not only the gallery: at 200% text on the narrowest phone width
 // no control may be clipped, overlap another control, or cause horizontal page scrolling.
 const PATHS = [
-  '/home', '/deck/1', '/study/1', '/summary/missing', '/card/1', '/editor', '/browser', '/stats', '/settings',
+  '/home', '/deck/1', '/study/1', '/summary/missing', '/card/1', '/editor', '/browser', '/grammar', '/stats', '/settings',
   '/settings/ai', '/settings/privacy', '/settings/about', '/settings/transfer', '/settings/backup', '/settings/attributions',
   '/onboarding', '/no-such-screen',
 ]

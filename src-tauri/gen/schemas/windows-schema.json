@@ -2295,6 +2295,12 @@
           "markdownDescription": "Enables the get_editor_data command without any pre-configured scope."
         },
         {
+          "description": "Enables the get_grammar command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-grammar",
+          "markdownDescription": "Enables the get_grammar command without any pre-configured scope."
+        },
+        {
           "description": "Enables the get_job_status command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-job-status",
@@ -2707,6 +2713,12 @@
           "type": "string",
           "const": "deny-get-editor-data",
           "markdownDescription": "Denies the get_editor_data command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_grammar command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-grammar",
+          "markdownDescription": "Denies the get_grammar command without any pre-configured scope."
         },
         {
           "description": "Denies the get_job_status command without any pre-configured scope.",

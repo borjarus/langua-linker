@@ -199,6 +199,10 @@ export async function recordContractSamples(raw: AppApi): Promise<ContractSample
   await api.previewBulkAction(bulk)
   await api.applyBulkAction({ operationId: operationId(), ...bulk })
 
+  // grammar
+  await api.getGrammar({ deckId: null })
+  await api.getGrammar({ deckId: '4' }).catch(() => null)
+
   // statistics / settings / onboarding
   await api.getStats({ deckId: '1', range: '1m' })
   const settings = await api.getSettings()

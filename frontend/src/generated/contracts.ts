@@ -104,7 +104,12 @@ export type DeckSummaryDto = { id: string, guid: string, name: string, parentId:
 /**
  * Share of mature cards, 0..1.
  */
-progress: number, bundled: boolean, contentState: ContentState, version: number, };
+progress: number, bundled: boolean, contentState: ContentState, version: number, 
+/**
+ * Since 1.6: CEFR level of the content the deck came from (`A1`, or a range `A1-A2`);
+ * `null` for decks made in the app.
+ */
+level: string | null, };
 
 export type ResumableStatus = "active" | "paused";
 
@@ -505,6 +510,42 @@ runningJobId: string | null,
  * Newest first.
  */
 runs: Array<OptimizerRunDto>, };
+
+export type GetGrammarInput = { deckId: string | null, };
+
+export type GrammarDeckSummaryDto = { deckId: string, name: string, targetLanguage: TargetLanguage, level: string | null, tipCount: number, 
+/**
+ * Chapters that hold at least one tip.
+ */
+sectionCount: number, };
+
+export type GrammarEntryDto = { tipId: string, text: string, noteId: string, 
+/**
+ * Opens the card (first card of the note).
+ */
+cardId: string, 
+/**
+ * The note's front (Markdown-light, as on the card) and back.
+ */
+front: string, back: string, };
+
+export type GrammarSectionDto = { tag: string | null, title: string | null, entries: Array<GrammarEntryDto>, };
+
+export type GrammarDeckDto = { deckId: string, name: string, targetLanguage: TargetLanguage, level: string | null, 
+/**
+ * Reading order of the deck's content.
+ */
+sections: Array<GrammarSectionDto>, };
+
+export type GrammarDto = { 
+/**
+ * Decks with tips, by name.
+ */
+decks: Array<GrammarDeckSummaryDto>, 
+/**
+ * The requested deck, or the first one; `null` when no deck has tips.
+ */
+deck: GrammarDeckDto | null, };
 
 export type StartOptimizerInput = { operationId: string, presetId: string, };
 

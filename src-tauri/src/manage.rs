@@ -110,6 +110,7 @@ fn summary_dto(item: langualinker_application::dashboard::DashboardDeck) -> Deck
             ContentState::Ready
         },
         version: clamp(item.deck.version),
+        level: item.deck.level,
     }
 }
 

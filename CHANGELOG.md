@@ -6,6 +6,8 @@ All notable changes to LanguaLinker. Versions follow `X.Y.Z` / `X.Y.Z-(alpha|bet
 
 ### Added
 - Optimize a preset's FSRS weights on your own answers, on the device: the screen compares the current and the proposed weights on answers held out from training, previews the daily workload, and applies the proposal only when you choose. Earlier weights can be restored; no card is rescheduled and your history never leaves the device.
+- Grammar tab: every grammar tip of your sentence decks in one place, grouped into chapters that follow the course order, with a search over tips and sentences and a link from each tip to its card. Decks link to it too.
+- Decks show their CEFR level (Spanish decks: A1–A2, the others: A1).
 - Word associations have an extended version (sound split, story, quick hook, alternative route, chain, example sentences, grammar, a culture scene, related words). It sits under the short association and starts collapsed.
 
 ### Changed

@@ -236,6 +236,10 @@ pub struct DeckSummaryDto {
     pub bundled: bool,
     pub content_state: ContentState,
     pub version: u32,
+    /// Since 1.6: CEFR level of the content the deck came from (`A1`, or a range `A1-A2`);
+    /// `null` for decks made in the app.
+    #[serde(default)]
+    pub level: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -1277,6 +1281,72 @@ pub struct OptimizerRunDto {
     pub can_revert: bool,
 }
 
+// ------------------------------------------------------------------- grammar (since 1.6)
+
+/// `getGrammar`: `deckId` picks the deck whose chapters are returned; `null` takes the first.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GetGrammarInput {
+    #[serde(default)]
+    pub deck_id: Option<String>,
+}
+
+/// A deck with grammar tips.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GrammarDeckSummaryDto {
+    pub deck_id: String,
+    pub name: String,
+    pub target_language: TargetLanguage,
+    pub level: Option<String>,
+    pub tip_count: u32,
+    /// Chapters that hold at least one tip.
+    pub section_count: u32,
+}
+
+/// A grammar tip with the sentence it explains.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GrammarEntryDto {
+    pub tip_id: String,
+    pub text: String,
+    pub note_id: String,
+    /// Opens the card (first card of the note).
+    pub card_id: String,
+    /// The note's front (Markdown-light, as on the card) and back.
+    pub front: String,
+    pub back: String,
+}
+
+/// A chapter of the deck; `tag` and `title` are `null` for tips outside every chapter.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GrammarSectionDto {
+    pub tag: Option<String>,
+    pub title: Option<String>,
+    pub entries: Vec<GrammarEntryDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GrammarDeckDto {
+    pub deck_id: String,
+    pub name: String,
+    pub target_language: TargetLanguage,
+    pub level: Option<String>,
+    /// Reading order of the deck's content.
+    pub sections: Vec<GrammarSectionDto>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GrammarDto {
+    /// Decks with tips, by name.
+    pub decks: Vec<GrammarDeckSummaryDto>,
+    /// The requested deck, or the first one; `null` when no deck has tips.
+    pub deck: Option<GrammarDeckDto>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct OptimizerDto {
@@ -1822,6 +1892,12 @@ pub fn typescript() -> String {
         OptimizerMetricsDto::decl(&cfg),
         OptimizerRunDto::decl(&cfg),
         OptimizerDto::decl(&cfg),
+        GetGrammarInput::decl(&cfg),
+        GrammarDeckSummaryDto::decl(&cfg),
+        GrammarEntryDto::decl(&cfg),
+        GrammarSectionDto::decl(&cfg),
+        GrammarDeckDto::decl(&cfg),
+        GrammarDto::decl(&cfg),
         StartOptimizerInput::decl(&cfg),
         OptimizerRunActionInput::decl(&cfg),
         SavePresetInput::decl(&cfg),

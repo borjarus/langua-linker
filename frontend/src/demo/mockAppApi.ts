@@ -69,6 +69,9 @@ import {
   type PresetConfigDto,
   type PresetDto,
   type GetOptimizerInput,
+  type GetGrammarInput,
+  type GrammarDto,
+  type GrammarSectionDto,
   type OptimizerDatasetDto,
   type OptimizerDto,
   type OptimizerMetricsDto,
@@ -640,6 +643,7 @@ export class MockAppApi implements AppApi {
       bundled: deck.bundled,
       contentState: this.#preparing.has(deck.id) ? 'preparing' : 'ready',
       version: deck.version,
+      level: deck.level ?? null,
     }
   }
 
@@ -1092,6 +1096,55 @@ export class MockAppApi implements AppApi {
     const jobId = this.#optimizerJobs.get(presetId)
     const job = jobId === undefined ? undefined : this.#jobs.get(jobId)
     return job && (job.status === 'queued' || job.status === 'running') ? job : null
+  }
+
+  getGrammar(input: GetGrammarInput) {
+    return this.#query('getGrammar', (): GrammarDto => {
+      // Mirrors Rust: decks whose type shows tips and that have tips, by name; a tip belongs to
+      // the deck of its note and to the first chapter whose tag the note carries.
+      const decks = this.#collection.decks
+        .filter((deck) => capabilitiesFor(deck.deckType).grammarTips)
+        .sort((a, b) => a.name.localeCompare(b.name, 'pl', { sensitivity: 'base' }) || Number(a.id) - Number(b.id))
+      const firstCard = (noteId: Id) =>
+        this.#collection.cards.filter((card) => card.noteId === noteId && !card.deleted).sort((a, b) => a.ordinal - b.ordinal)[0]
+      const tipsOf = (deckId: Id) =>
+        this.#collection.notes
+          .filter((note) => note.deckId === deckId && firstCard(note.id))
+          .sort((a, b) => Number(a.id) - Number(b.id))
+          .flatMap((note) => this.#tips(note.id).map((tip) => ({ note, tip })))
+      const withTips = decks.map((deck) => ({ deck, tips: tipsOf(deck.id) })).filter((item) => item.tips.length > 0)
+      const sectionsOf = (deck: DeckRecord, tips: ReturnType<typeof tipsOf>): GrammarSectionDto[] => {
+        const chapters = deck.sections ?? []
+        const grouped = chapters.map(() => [] as ReturnType<typeof tipsOf>)
+        const other: ReturnType<typeof tipsOf> = []
+        for (const item of tips) {
+          const index = chapters.findIndex((chapter) => item.note.tags.includes(chapter.tag))
+          if (index >= 0) grouped[index]!.push(item)
+          else other.push(item)
+        }
+        const entries = (items: ReturnType<typeof tipsOf>) =>
+          items.map(({ note, tip }) => ({ tipId: tip.id, text: tip.text, noteId: note.id, cardId: firstCard(note.id)!.id, front: note.front, back: note.back }))
+        const sections: GrammarSectionDto[] = chapters
+          .map((chapter, index) => ({ tag: chapter.tag, title: chapter.title, entries: entries(grouped[index]!) }))
+          .filter((section) => section.entries.length > 0)
+        if (other.length > 0) sections.push({ tag: null, title: null, entries: entries(other) })
+        return sections
+      }
+      const selected = input.deckId == null ? withTips[0] : withTips.find((item) => item.deck.id === input.deckId) ?? fail('NOT_FOUND', { entity: 'deck' })
+      return {
+        decks: withTips.map(({ deck, tips }) => ({
+          deckId: deck.id,
+          name: deck.name,
+          targetLanguage: deck.targetLanguage,
+          level: deck.level ?? null,
+          tipCount: tips.length,
+          sectionCount: (deck.sections ?? []).filter((chapter) => tips.some((item) => item.note.tags.includes(chapter.tag))).length,
+        })),
+        deck: selected
+          ? { deckId: selected.deck.id, name: selected.deck.name, targetLanguage: selected.deck.targetLanguage, level: selected.deck.level ?? null, sections: sectionsOf(selected.deck, selected.tips) }
+          : null,
+      }
+    })
   }
 
   getOptimizer(input: GetOptimizerInput) {

@@ -39,6 +39,10 @@ export interface DeckRecord {
   bundled: boolean
   presetId: string
   version: number
+  /** CEFR level of bundled content (`A1`, `A1-A2`); absent for the learner's own decks. */
+  level?: string | null
+  /** Chapters of bundled content: notes tagged `tag` belong to the chapter. */
+  sections?: { tag: string; title: string }[]
 }
 
 export interface NoteRecord {
@@ -241,22 +245,28 @@ const EN_BASICS: NoteSeed[] = [
 
 const DECK_SEEDS: { record: Omit<DeckRecord, 'version'>; notes: NoteSeed[]; noteType: NoteTypeKind }[] = [
   {
-    record: { id: '1', guid: 'deck-de-words-a1', name: 'Niemiecki — słówka A1', parentId: null, targetLanguage: 'de', deckType: 'Linguistic', description: 'Podstawowe słownictwo z mnemotechnikami i wskazówkami gramatycznymi.', bundled: true, presetId: 'preset-default' },
+    record: { id: '1', guid: 'deck-de-words-a1', name: 'Niemiecki — słówka A1', parentId: null, targetLanguage: 'de', deckType: 'Linguistic', description: 'Podstawowe słownictwo z mnemotechnikami i wskazówkami gramatycznymi.', bundled: true, presetId: 'preset-default', level: 'A1',
+      sections: [
+        { tag: 'dom', title: 'Dom i codzienne przedmioty' },
+        { tag: 'jedzenie', title: 'Przy stole' },
+        { tag: 'miasto', title: 'Po mieście' },
+        { tag: 'czasowniki', title: 'Pierwsze czasowniki' },
+      ] },
     notes: DE_WORDS,
     noteType: 'Basic',
   },
   {
-    record: { id: '5', guid: 'deck-de-compounds', name: 'Złożenia (Komposita)', parentId: '1', targetLanguage: 'de', deckType: 'Linguistic', description: 'Rzeczowniki złożone — rodzaj określa ostatni człon.', bundled: true, presetId: 'preset-default' },
+    record: { id: '5', guid: 'deck-de-compounds', name: 'Złożenia (Komposita)', parentId: '1', targetLanguage: 'de', deckType: 'Linguistic', description: 'Rzeczowniki złożone — rodzaj określa ostatni człon.', bundled: true, presetId: 'preset-default', level: 'A1-A2' },
     notes: DE_COMPOUNDS,
     noteType: 'Basic',
   },
   {
-    record: { id: '2', guid: 'deck-de-sentences-a1', name: 'Niemiecki — zdania A1', parentId: null, targetLanguage: 'de', deckType: 'Linguistic', description: 'Zdania z linkami do słówek.', bundled: true, presetId: 'preset-default' },
+    record: { id: '2', guid: 'deck-de-sentences-a1', name: 'Niemiecki — zdania A1', parentId: null, targetLanguage: 'de', deckType: 'Linguistic', description: 'Zdania z linkami do słówek.', bundled: true, presetId: 'preset-default', level: 'A1' },
     notes: DE_SENTENCES,
     noteType: 'Sentence',
   },
   {
-    record: { id: '3', guid: 'deck-en-words-a1', name: 'English — words A1', parentId: null, targetLanguage: 'en', deckType: 'TextWithAssociations', description: 'Słówka angielskie z mnemotechnikami.', bundled: true, presetId: 'preset-default' },
+    record: { id: '3', guid: 'deck-en-words-a1', name: 'English — words A1', parentId: null, targetLanguage: 'en', deckType: 'TextWithAssociations', description: 'Słówka angielskie z mnemotechnikami.', bundled: true, presetId: 'preset-default', level: 'A1' },
     notes: EN_WORDS,
     noteType: 'Basic',
   },

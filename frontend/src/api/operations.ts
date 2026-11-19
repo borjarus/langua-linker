@@ -23,6 +23,7 @@ export type ScreenId =
   | 'backup'
   | 'attributions'
   | 'optimizer'
+  | 'grammar'
 
 export interface OperationSpec {
   kind: OperationKind
@@ -61,6 +62,7 @@ export const OPERATIONS = {
   startOptimizer: op({ kind: 'job', command: 'start_optimizer', errors: ['VALIDATION_FAILED', 'NOT_FOUND', 'DB_BUSY', 'CANCELLED'], emits: ['job_progress'], permission: 'none', screens: ['optimizer'], backendPhase: 18 }),
   applyOptimizerRun: op({ kind: 'mutation', command: 'apply_optimizer_run', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['optimizer'], backendPhase: 18 }),
   revertOptimizerRun: op({ kind: 'mutation', command: 'revert_optimizer_run', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['optimizer'], backendPhase: 18 }),
+  getGrammar: op({ kind: 'query', command: 'get_grammar', errors: ['NOT_FOUND', 'DB_BUSY'], emits: [], permission: 'none', screens: ['grammar'], backendPhase: 19 }),
 
   startStudy: op({ kind: 'mutation', command: 'start_study', errors: ['NOT_FOUND', 'DB_BUSY'], emits: [], permission: 'none', screens: ['home', 'deck', 'study', 'summary'], backendPhase: 10 }),
   resumeStudy: op({ kind: 'query', command: 'resume_study', errors: ['NOT_FOUND', 'DB_BUSY'], emits: [], permission: 'none', screens: ['home', 'study'], backendPhase: 10 }),

@@ -6,6 +6,7 @@ mod commands;
 mod content;
 mod diagnostics;
 mod files;
+mod grammar;
 mod links;
 mod manage;
 mod metrics;
@@ -148,6 +149,7 @@ fn configure<R: Runtime>(
         optimizer::start_optimizer,
         optimizer::apply_optimizer_run,
         optimizer::revert_optimizer_run,
+        grammar::get_grammar,
         manage::get_note_details,
         manage::get_editor_data,
         manage::check_duplicate,
@@ -591,7 +593,7 @@ mod tests {
         let window = main_window(&app);
         let about = invoke(&window, "get_about_info", serde_json::json!({})).unwrap();
         let about: AboutDto = serde_json::from_value(about).unwrap();
-        assert_eq!(about.schema_version, Some(6));
+        assert_eq!(about.schema_version, Some(7));
         assert_eq!(about.api_version, API_VERSION);
         assert_eq!(
             (about.fsrs_version.as_str(), about.content_version.as_str()),
@@ -716,6 +718,42 @@ mod tests {
         );
         // New cards shown for today respect the preset's daily limit (Phase 10).
         assert!(dashboard.decks.iter().all(|deck| deck.counts.new <= 20));
+        // Contract 1.6: every bundled deck carries its CEFR level (Spanish spans A1–A2).
+        assert!(dashboard.decks.iter().all(|deck| {
+            let expected = if deck.guid.starts_with("bundled-es-") {
+                "A1-A2"
+            } else {
+                "A1"
+            };
+            deck.level.as_deref() == Some(expected)
+        }));
+        let grammar: langualinker_contracts::dto::GrammarDto = serde_json::from_value(
+            invoke(
+                &window,
+                "get_grammar",
+                serde_json::json!({ "input": { "deckId": null } }),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(grammar.decks.len(), 3, "the three sentence decks have tips");
+        let counts: Vec<u32> = grammar
+            .decks
+            .iter()
+            .map(|deck| deck.section_count)
+            .collect();
+        // 35–38 chapters per book; a chapter without tips (e.g. a review) is not counted.
+        assert!(counts.iter().all(|count| *count >= 30), "{counts:?}");
+        let first = grammar.deck.expect("the first deck is returned");
+        assert_eq!(first.deck_id, grammar.decks[0].deck_id);
+        assert!(first.sections.iter().all(|section| section.title.is_some()));
+        let missing = invoke(
+            &window,
+            "get_grammar",
+            serde_json::json!({ "input": { "deckId": "999999" } }),
+        )
+        .unwrap_err();
+        assert_eq!(error_code(missing), ErrorCode::NotFound);
         let state: OnboardingStateDto = serde_json::from_value(
             invoke(&window, "get_onboarding_state", serde_json::json!({})).unwrap(),
         )

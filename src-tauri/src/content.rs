@@ -180,6 +180,7 @@ pub fn dashboard_dto(dashboard: Dashboard) -> DashboardDto {
                     ContentState::Ready
                 },
                 version: clamp(item.deck.version),
+                level: item.deck.level,
             })
             .collect(),
         streak_days: dashboard.streak_days,

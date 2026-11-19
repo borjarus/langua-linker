@@ -4,6 +4,7 @@
   import DeckScreen from '../features/deck/DeckScreen.svelte'
   import OptimizerScreen from '../features/deck/OptimizerScreen.svelte'
   import EditorScreen from '../features/editor/EditorScreen.svelte'
+  import GrammarScreen from '../features/grammar/GrammarScreen.svelte'
   import HomeScreen from '../features/home/HomeScreen.svelte'
   import NotFoundScreen from '../features/NotFoundScreen.svelte'
   import OnboardingScreen from '../features/onboarding/OnboardingScreen.svelte'
@@ -48,6 +49,8 @@
     <BrowserScreen query={route.query.q ?? ''} deckId={route.query.deck ?? null} />
   {:else if route.name === 'stats'}
     <StatsScreen />
+  {:else if route.name === 'grammar'}
+    <GrammarScreen deckId={route.query.deck ?? null} />
   {:else if route.name === 'settings'}
     <SettingsScreen />
   {:else if route.name === 'settingsAi'}

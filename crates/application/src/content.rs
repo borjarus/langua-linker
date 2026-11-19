@@ -43,7 +43,7 @@ use sha2::{Digest, Sha256};
 
 use crate::jobs::{JobContext, JobId, JobKind, JobRecord, JobService, NewJob};
 use crate::ports::{Clock, CollectionScope, EventSink, Rng};
-use crate::repositories::{BundledNote, Repositories, UnitOfWork};
+use crate::repositories::{BundledNote, DeckSection, Repositories, UnitOfWork};
 use crate::{AppError, AppResult};
 
 /// Settings key of the onboarding answers.
@@ -1052,6 +1052,16 @@ impl Installer<'_> {
             }
         };
         outcome.deck_id = Some(deck.id);
+        let sections: Vec<DeckSection> = manifest
+            .sections
+            .iter()
+            .map(|section| DeckSection {
+                tag: section.tag.clone(),
+                title: section.title.clone(),
+            })
+            .collect();
+        self.tx
+            .replace_deck_outline(deck.id, Some(&manifest.level), &sections)?;
         let note_type = self.tx.note_type(kind)?;
         let mut position = self.tx.next_position()?;
         self.base_position = position;
