@@ -32,8 +32,8 @@ jobs:
   gate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
       # A tag also needs the matching version, a CHANGELOG entry and the privacy-policy URL.
@@ -66,7 +66,7 @@ jobs:
               target/universal-apple-darwin/release/bundle/dmg/*.dmg
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - if: matrix.name == 'linux'
         name: Install Tauri Linux dependencies
         run: |
@@ -77,7 +77,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: release-${{ matrix.name }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -86,7 +86,7 @@ jobs:
         working-directory: frontend
       - run: npm run variant -- release build ${{ matrix.args }}
         working-directory: frontend
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: langualinker-${{ matrix.name }}
           path: ${{ matrix.bundles }}
@@ -97,13 +97,13 @@ jobs:
     needs: gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17
       # The default package list includes the legacy `tools` package, which current cmdline-tools no longer ship.
-      - uses: android-actions/setup-android@v3
+      - uses: android-actions/setup-android@v4
         with:
           packages: platform-tools
       - name: Install NDK r27 (LTS)
@@ -113,7 +113,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: release-android
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -143,7 +143,7 @@ jobs:
           version=$(node -p "require('./src-tauri/tauri.conf.json').version")
           mkdir -p dist-android
           cp src-tauri/gen/android/app/build/outputs/apk/universal/release/*.apk "dist-android/LanguaLinker_${version}_android-universal.apk"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: langualinker-android
           path: dist-android/*.apk
@@ -151,13 +151,13 @@ jobs:
           retention-days: 14
       # Play upload: the bundle (native symbol tables inside) and the R8 mapping for deobfuscation.
       # Workflow artifacts only, not attached to the public release.
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: play-bundle
           path: src-tauri/gen/android/app/build/outputs/bundle/*Release/*.aab
           if-no-files-found: error
           retention-days: 90
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: play-mapping
           path: src-tauri/gen/android/app/build/outputs/mapping/*Release/mapping.txt
@@ -172,8 +172,9 @@ jobs:
       contents: write
       id-token: write
       attestations: write
+      artifact-metadata: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Tag must match the app version
         run: |
           version=$(node -p "require('./src-tauri/tauri.conf.json').version")
@@ -181,7 +182,7 @@ jobs:
             echo "::error::Tag $GITHUB_REF_NAME does not match tauri.conf.json version $version"
             exit 1
           fi
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: langualinker-*
           path: packages
@@ -197,10 +198,10 @@ jobs:
           version="${GITHUB_REF_NAME#v}"
           awk -v head="## [$version]" 'index($0, head) == 1 { on = 1; next } on && /^## \[/ { exit } on' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
           cat "$RUNNER_TEMP/notes.md"
-      - uses: actions/attest-build-provenance@v2
+      - uses: actions/attest-build-provenance@v4
         with:
           subject-path: packages/**/*
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           files: packages/**/*
           body_path: ${{ runner.temp }}/notes.md
