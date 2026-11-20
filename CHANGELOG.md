@@ -4,6 +4,14 @@ All notable changes to LanguaLinker. Versions follow `X.Y.Z` / `X.Y.Z-(alpha|bet
 
 ## [Unreleased]
 
+## [0.5.2-beta.2] — 2026-11-20
+
+GitHub pre-release for testers: on-device association model Bielik 1.5B (GGUF Q4_K_M) published in the catalog.
+
+### Added
+- On-device AI provider ("On this device") with `Bielik 1.5B (skojarzenia)` in the catalog: downloads over HTTPS with checksum verification from GitHub Releases, runs locally via llama.cpp without an API key or network traffic. Tested and verified on Samsung Galaxy A56 (Android 17).
+
+
 ## [0.5.2-beta.1] — 2026-11-20
 
 GitHub pre-release for testers, like 0.5.1-beta.1: not for store upload. Installed decks are updated to content version 2026.11.20 (English grammar texts) on the first start; progress stays.

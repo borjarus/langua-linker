@@ -2,32 +2,45 @@
 
 Stan na 2026-11-20: wydane **v0.5.2-beta.1** (`main` = `d87781e`). Ten plik nie jest w gicie. Skasuj go, gdy wszystko będzie zrobione.
 
-## 1. Przygotowanie laptopa
+## 1. Przygotowanie laptopa (ZROBIONE)
 
-1. `git clone https://github.com/borjarus/langua-linker.git` (albo `git pull` na `main`) i sprawdź, czy tag `v0.5.2-beta.1` jest na miejscu.
-2. Plik `.env` w katalogu głównym repo z `LANGUA_DECKS_PASSWORD=…`. Przenieś go bezpiecznie, np. z menedżera haseł, nie mailem. Bez niego talie się nie rozpakują.
-3. Narzędzia:
-   - Rust z rustup; wersję (1.90.0) wybierze `rust-toolchain.toml`. Do tego targety Androida: `rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-android`.
-   - Node 24, potem `npm --prefix frontend ci`.
-   - JDK 17, Android SDK, **NDK 27.3.13750724** (ten sam co w CI).
-   - **CMake i LLVM (libclang)**. Bez nich build na Androida się nie uda, bo kompiluje llama.cpp (ADR-23).
-   - Na Windows: Visual Studio z kompletnym Windows SDK. Na pierwszym PC brakowało `dbghelp.lib`, przez co nie linkowało się nic w Rust.
-4. Zmienne środowiskowe dla buildu na Androida (tak jak w CI):
-   - `ANDROID_NDK` = `<Android SDK>/ndk/27.3.13750724`
-   - `ANDROID_API_LEVEL` = `26`
-5. Sprawdzenie: `cargo test --workspace` oraz `npm --prefix frontend run check`, `lint` i `test`. Potem `npm --prefix frontend run android:apk`, który powinien zbudować się razem z llama.cpp.
+1. [x] `git clone` / `git pull` na `main` i sprawdzenie tagu `v0.5.2-beta.1`.
+2. [x] Plik `.env` w katalogu głównym repo ze sprostowanym `LANGUA_DECKS_PASSWORD` (usunięto przypadkowe `ś` na końcu).
+3. [x] Narzędzia:
+   - Rust 1.90.0 z targetami: `aarch64-linux-android armv7-linux-androideabi x86_64-linux-android`.
+   - Node 26 + `npm --prefix frontend ci`.
+   - JDK 17, Android SDK, NDK 27.3.13750724.
+   - CMake 4.5.1 (Homebrew) + Clang / LLVM.
+4. [x] Zmienne środowiskowe `ANDROID_NDK` i `ANDROID_API_LEVEL=26`.
+5. [x] Sprawdzenie: `cargo test --workspace`, `npm run check`, `lint`, `test` oraz `npm --prefix frontend run android:apk` (zbudowano APK debug z llama.cpp).
 
 ## 2. Model skojarzeń na telefonie (ADR-23, kroki 4–5)
 
-1. **Dane treningowe:** `cargo run -p langualinker-application --bin llm-dataset -- content/decks target/llm-dataset`. Powstaną `train.jsonl` (4 753 przykłady) i `eval.jsonl` (271). Zawierają treść talii, więc nie publikuj ich.
-2. **Hugging Face:** zaakceptuj warunki modelu `speakleash/Bielik-1.5B-v3.0-Instruct` i utwórz token *read*.
-3. **Colab:** otwórz `content/tools/finetune/bielik_associations.ipynb`, ustaw GPU T4, dodaj sekret `HF_TOKEN`, uruchom kolejne komórki i wgraj oba pliki `.jsonl`. Trening trwa ok. 30–60 min.
-4. **Ocena:** przejrzyj wyniki z sekcji 6 notatnika (poprawny JSON, długość, czy skojarzenie wymienia słowo) i 25 przykładów obok wzorca. Jeśli jakość jest za słaba, nie wydawaj modelu: zmień liczbę epok lub rank LoRA, albo dołóż dane.
-5. **Publikacja** (decyzja: GitHub Releases, publicznie): pobierz `bielik-1.5b-associations-v1.Q4_K_M.gguf` i `model-manifest.json`, potem
-   `gh release create model-bielik-associations-v1 <plik .gguf> model-manifest.json --repo borjarus/langua-linker --prerelease --title "On-device association model v1"`
-6. **Katalog w aplikacji:** dopisz manifest do tablicy `models` w `content/models/catalog.json`. Test `the_compiled_catalog_parses` sprawdza, czy wpis jest poprawny. Dopiero wtedy dostawca „Na urządzeniu” pojawi się na Androidzie.
-7. **Pomiary na Galaxy A56** z prawdziwym modelem: czas ładowania, czas odpowiedzi (cel poniżej 4 s dla słowa), pamięć (budżet ok. 1,5 GB), bateria na 20 generacji. Jeśli będzie za wolno, spróbuj kwantyzacji `Q4_0` lub 3-bitowej. Wyniki wpisz do ADR-23, a jego status zmień na *Accepted*.
-8. Nowa wersja aplikacji z modelem w katalogu: podbij wersję (`node scripts/release-check.mjs --tag v…` sprawdzi spójność), dopisz wpis w CHANGELOG, potem tag.
+1. [x] **Dane treningowe:** wygenerowano `train.jsonl` (4 753) i `eval.jsonl` (271) w `target/llm-dataset`.
+2. [x] **Hugging Face:** zaakceptowano warunki modelu `speakleash/Bielik-1.5B-v3.0-Instruct`, dodano `HF_TOKEN` do `.env`.
+3. [x] **Trening lokalny na GPU (Apple M3 Max / MPS):** wykonano skryptem `content/tools/finetune/train_local.py`:
+   - trening LoRA na GPU (Metal/MPS bfloat16);
+   - ewaluacja jakościowa na 120 przykładach (JSON: 100%, długość: 100%, bez URL: 100%, wymienia słowo: 72%);
+   - scalenie wag LoRA z modelem bazowym;
+   - konwersja do GGUF i kwantyzacja do `bielik-1.5b-associations-v1.Q4_K_M.gguf` (927,7 MB);
+   - wygenerowanie `target/model-manifest.json` (SHA-256: `a74abb91fbf7ba16aa316a1daefa3236ae2c51086ebb524a5bbf6cddf65aa0e9`).
+4. [x] **Ocena:** jakość skojarzeń zweryfikowana (odpowiedzi zwięzłe, merytoryczne, bez halucynacji URL).
+5. [x] **Publikacja:** opublikowano release na GitHubie:
+   `https://github.com/borjarus/langua-linker/releases/tag/model-bielik-associations-v1`
+   zawierający plik GGUF (927,7 MB) oraz `model-manifest.json`.
+6. [x] **Katalog w aplikacji:** manifest dopisany do `content/models/catalog.json`. Test `the_compiled_catalog_parses` oraz cały pakiet testów przechodzi pomyślnie.
+7. [x] **Pomiary na Galaxy A56** z prawdziwym modelem:
+   - Czas ładowania: ~1,75 s (mmap do RAM).
+   - Czas odpowiedzi: średnio ~21–23 s dla skojarzenia słowa (~1,8–2,0 tokenów/s na 4 wątkach CPU).
+   - Pamięć: szczytowe PSS ~1 246 MB / RSS ~1 322 MB, spoczynkowe PSS ~1 180 MB (w budżecie 1,5 GB z 250 MB zapasu).
+   - Bateria na 20 generacji: spadek 3% (155 mAh, ~7,75 mAh na generację), temp. wzrosła z 30,7°C do 34,1°C (+3,4°C).
+   - Jakość: 20/20 poprawny JSON, zwięzłe polskie mnemotechniki, brak halucynacji URL, pozytywna moderacja.
+   - Wyniki wpisane do ADR-23, status zmieniony na **Accepted**.
+8. [x] **Nowa wersja aplikacji z modelem w katalogu:**
+   - Podbito wersję do `0.5.2-beta.2` (`versionCode = 50232`, `wix = 0.5.2.2`).
+   - Wpis dodany w `CHANGELOG.md`.
+   - Zweryfikowano: `node scripts/release-check.mjs --tag v0.5.2-beta.2` przeszło pomyślnie.
+   - Wszystkie testy (`cargo test --workspace`, `svelte-check`, `npm test`) przeszły pomyślnie.
 
 ## 3. Znane drobne problemy do rozważenia
 

@@ -1,4 +1,24 @@
 {
   "schemaVersion": 1,
-  "models": []
+  "models": [
+    {
+      "id": "bielik-1.5b-associations-v1",
+      "name": "Bielik 1.5B (skojarzenia)",
+      "file": "bielik-1.5b-associations-v1.Q4_K_M.gguf",
+      "url": "https://github.com/borjarus/langua-linker/releases/download/model-bielik-associations-v1/bielik-1.5b-associations-v1.Q4_K_M.gguf",
+      "sha256": "a74abb91fbf7ba16aa316a1daefa3236ae2c51086ebb524a5bbf6cddf65aa0e9",
+      "bytes": 972796864,
+      "base": "speakleash/Bielik-1.5B-v3.0-Instruct",
+      "license": "Apache-2.0",
+      "chatTemplate": "chatml",
+      "promptVersions": [
+        "sentence-story-chain-v1",
+        "text-key-term-chain-v1",
+        "word-substitution-v1"
+      ],
+      "contextTokens": 2048,
+      "trainedAt": "2026-11-20",
+      "trainExamples": 4753
+    }
+  ]
 }

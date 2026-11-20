@@ -1959,6 +1959,174 @@
               }
             },
             {
+              "if": {
+                "properties": {
+                  "identifier": {
+                    "anyOf": [
+                      {
+                        "description": "This permission set allows opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application\nas well as reveal file in directories using default file explorer\n#### This default permission set includes:\n\n- `allow-open-url`\n- `allow-reveal-item-in-dir`\n- `allow-default-urls`",
+                        "type": "string",
+                        "const": "opener:default",
+                        "markdownDescription": "This permission set allows opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application\nas well as reveal file in directories using default file explorer\n#### This default permission set includes:\n\n- `allow-open-url`\n- `allow-reveal-item-in-dir`\n- `allow-default-urls`"
+                      },
+                      {
+                        "description": "This enables opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application.",
+                        "type": "string",
+                        "const": "opener:allow-default-urls",
+                        "markdownDescription": "This enables opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application."
+                      },
+                      {
+                        "description": "Enables the open_path command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "opener:allow-open-path",
+                        "markdownDescription": "Enables the open_path command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Enables the open_url command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "opener:allow-open-url",
+                        "markdownDescription": "Enables the open_url command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Enables the reveal_item_in_dir command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "opener:allow-reveal-item-in-dir",
+                        "markdownDescription": "Enables the reveal_item_in_dir command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Denies the open_path command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "opener:deny-open-path",
+                        "markdownDescription": "Denies the open_path command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Denies the open_url command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "opener:deny-open-url",
+                        "markdownDescription": "Denies the open_url command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Denies the reveal_item_in_dir command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "opener:deny-reveal-item-in-dir",
+                        "markdownDescription": "Denies the reveal_item_in_dir command without any pre-configured scope."
+                      }
+                    ]
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "allow": {
+                    "items": {
+                      "title": "OpenerScopeEntry",
+                      "description": "Opener scope entry.",
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "url"
+                          ],
+                          "properties": {
+                            "app": {
+                              "description": "An application to open this url with, for example: firefox.",
+                              "allOf": [
+                                {
+                                  "$ref": "#/definitions/Application"
+                                }
+                              ]
+                            },
+                            "url": {
+                              "description": "A URL that can be opened by the webview when using the Opener APIs.\n\nWildcards can be used following the UNIX glob pattern.\n\nExamples:\n\n- \"https://*\" : allows all HTTPS origin\n\n- \"https://*.github.com/tauri-apps/tauri\": allows any subdomain of \"github.com\" with the \"tauri-apps/api\" path\n\n- \"https://myapi.service.com/users/*\": allows access to any URLs that begins with \"https://myapi.service.com/users/\"",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "path"
+                          ],
+                          "properties": {
+                            "app": {
+                              "description": "An application to open this path with, for example: xdg-open.",
+                              "allOf": [
+                                {
+                                  "$ref": "#/definitions/Application"
+                                }
+                              ]
+                            },
+                            "path": {
+                              "description": "A path that can be opened by the webview when using the Opener APIs.\n\nThe pattern can start with a variable that resolves to a system base directory. The variables are: `$AUDIO`, `$CACHE`, `$CONFIG`, `$DATA`, `$LOCALDATA`, `$DESKTOP`, `$DOCUMENT`, `$DOWNLOAD`, `$EXE`, `$FONT`, `$HOME`, `$PICTURE`, `$PUBLIC`, `$RUNTIME`, `$TEMPLATE`, `$VIDEO`, `$RESOURCE`, `$APP`, `$LOG`, `$TEMP`, `$APPCONFIG`, `$APPDATA`, `$APPLOCALDATA`, `$APPCACHE`, `$APPLOG`.",
+                              "type": "string"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "deny": {
+                    "items": {
+                      "title": "OpenerScopeEntry",
+                      "description": "Opener scope entry.",
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "url"
+                          ],
+                          "properties": {
+                            "app": {
+                              "description": "An application to open this url with, for example: firefox.",
+                              "allOf": [
+                                {
+                                  "$ref": "#/definitions/Application"
+                                }
+                              ]
+                            },
+                            "url": {
+                              "description": "A URL that can be opened by the webview when using the Opener APIs.\n\nWildcards can be used following the UNIX glob pattern.\n\nExamples:\n\n- \"https://*\" : allows all HTTPS origin\n\n- \"https://*.github.com/tauri-apps/tauri\": allows any subdomain of \"github.com\" with the \"tauri-apps/api\" path\n\n- \"https://myapi.service.com/users/*\": allows access to any URLs that begins with \"https://myapi.service.com/users/\"",
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "type": "object",
+                          "required": [
+                            "path"
+                          ],
+                          "properties": {
+                            "app": {
+                              "description": "An application to open this path with, for example: xdg-open.",
+                              "allOf": [
+                                {
+                                  "$ref": "#/definitions/Application"
+                                }
+                              ]
+                            },
+                            "path": {
+                              "description": "A path that can be opened by the webview when using the Opener APIs.\n\nThe pattern can start with a variable that resolves to a system base directory. The variables are: `$AUDIO`, `$CACHE`, `$CONFIG`, `$DATA`, `$LOCALDATA`, `$DESKTOP`, `$DOCUMENT`, `$DOWNLOAD`, `$EXE`, `$FONT`, `$HOME`, `$PICTURE`, `$PUBLIC`, `$RUNTIME`, `$TEMPLATE`, `$VIDEO`, `$RESOURCE`, `$APP`, `$LOG`, `$TEMP`, `$APPCONFIG`, `$APPDATA`, `$APPLOCALDATA`, `$APPCACHE`, `$APPLOG`.",
+                              "type": "string"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              },
+              "properties": {
+                "identifier": {
+                  "description": "Identifier of the permission or permission set.",
+                  "allOf": [
+                    {
+                      "$ref": "#/definitions/Identifier"
+                    }
+                  ]
+                }
+              }
+            },
+            {
               "properties": {
                 "identifier": {
                   "description": "Identifier of the permission or permission set.",
@@ -2001,6 +2169,12 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Enables the add_word_link command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-add-word-link",
+          "markdownDescription": "Enables the add_word_link command without any pre-configured scope."
+        },
+        {
           "description": "Enables the apply_bulk_action command without any pre-configured scope.",
           "type": "string",
           "const": "allow-apply-bulk-action",
@@ -2011,6 +2185,12 @@
           "type": "string",
           "const": "allow-apply-card-action",
           "markdownDescription": "Enables the apply_card_action command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the apply_optimizer_run command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-apply-optimizer-run",
+          "markdownDescription": "Enables the apply_optimizer_run command without any pre-configured scope."
         },
         {
           "description": "Enables the cancel_job command without any pre-configured scope.",
@@ -2055,6 +2235,12 @@
           "markdownDescription": "Enables the create_deck command without any pre-configured scope."
         },
         {
+          "description": "Enables the delete_ai_model command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-delete-ai-model",
+          "markdownDescription": "Enables the delete_ai_model command without any pre-configured scope."
+        },
+        {
           "description": "Enables the delete_deck command without any pre-configured scope.",
           "type": "string",
           "const": "allow-delete-deck",
@@ -2065,6 +2251,12 @@
           "type": "string",
           "const": "allow-delete-note",
           "markdownDescription": "Enables the delete_note command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the download_ai_model command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-download-ai-model",
+          "markdownDescription": "Enables the download_ai_model command without any pre-configured scope."
         },
         {
           "description": "Enables the export_deck command without any pre-configured scope.",
@@ -2121,6 +2313,12 @@
           "markdownDescription": "Enables the get_editor_data command without any pre-configured scope."
         },
         {
+          "description": "Enables the get_grammar command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-grammar",
+          "markdownDescription": "Enables the get_grammar command without any pre-configured scope."
+        },
+        {
           "description": "Enables the get_job_status command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-job-status",
@@ -2145,6 +2343,12 @@
           "markdownDescription": "Enables the get_onboarding_state command without any pre-configured scope."
         },
         {
+          "description": "Enables the get_optimizer command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-optimizer",
+          "markdownDescription": "Enables the get_optimizer command without any pre-configured scope."
+        },
+        {
           "description": "Enables the get_rating_preview command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-rating-preview",
@@ -2167,6 +2371,12 @@
           "type": "string",
           "const": "allow-get-stats",
           "markdownDescription": "Enables the get_stats command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_usage_metrics command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-usage-metrics",
+          "markdownDescription": "Enables the get_usage_metrics command without any pre-configured scope."
         },
         {
           "description": "Enables the list_backups command without any pre-configured scope.",
@@ -2235,6 +2445,18 @@
           "markdownDescription": "Enables the rate_card command without any pre-configured scope."
         },
         {
+          "description": "Enables the report_client_error command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-report-client-error",
+          "markdownDescription": "Enables the report_client_error command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the report_startup command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-report-startup",
+          "markdownDescription": "Enables the report_startup command without any pre-configured scope."
+        },
+        {
           "description": "Enables the request_notification_permission command without any pre-configured scope.",
           "type": "string",
           "const": "allow-request-notification-permission",
@@ -2263,6 +2485,12 @@
           "type": "string",
           "const": "allow-resume-study",
           "markdownDescription": "Enables the resume_study command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the revert_optimizer_run command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-revert-optimizer-run",
+          "markdownDescription": "Enables the revert_optimizer_run command without any pre-configured scope."
         },
         {
           "description": "Enables the save_note command without any pre-configured scope.",
@@ -2319,6 +2547,12 @@
           "markdownDescription": "Enables the speech_status command without any pre-configured scope."
         },
         {
+          "description": "Enables the start_optimizer command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-start-optimizer",
+          "markdownDescription": "Enables the start_optimizer command without any pre-configured scope."
+        },
+        {
           "description": "Enables the start_study command without any pre-configured scope.",
           "type": "string",
           "const": "allow-start-study",
@@ -2373,6 +2607,12 @@
           "markdownDescription": "Enables the validate_restore command without any pre-configured scope."
         },
         {
+          "description": "Denies the add_word_link command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-add-word-link",
+          "markdownDescription": "Denies the add_word_link command without any pre-configured scope."
+        },
+        {
           "description": "Denies the apply_bulk_action command without any pre-configured scope.",
           "type": "string",
           "const": "deny-apply-bulk-action",
@@ -2383,6 +2623,12 @@
           "type": "string",
           "const": "deny-apply-card-action",
           "markdownDescription": "Denies the apply_card_action command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the apply_optimizer_run command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-apply-optimizer-run",
+          "markdownDescription": "Denies the apply_optimizer_run command without any pre-configured scope."
         },
         {
           "description": "Denies the cancel_job command without any pre-configured scope.",
@@ -2427,6 +2673,12 @@
           "markdownDescription": "Denies the create_deck command without any pre-configured scope."
         },
         {
+          "description": "Denies the delete_ai_model command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-delete-ai-model",
+          "markdownDescription": "Denies the delete_ai_model command without any pre-configured scope."
+        },
+        {
           "description": "Denies the delete_deck command without any pre-configured scope.",
           "type": "string",
           "const": "deny-delete-deck",
@@ -2437,6 +2689,12 @@
           "type": "string",
           "const": "deny-delete-note",
           "markdownDescription": "Denies the delete_note command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the download_ai_model command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-download-ai-model",
+          "markdownDescription": "Denies the download_ai_model command without any pre-configured scope."
         },
         {
           "description": "Denies the export_deck command without any pre-configured scope.",
@@ -2493,6 +2751,12 @@
           "markdownDescription": "Denies the get_editor_data command without any pre-configured scope."
         },
         {
+          "description": "Denies the get_grammar command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-grammar",
+          "markdownDescription": "Denies the get_grammar command without any pre-configured scope."
+        },
+        {
           "description": "Denies the get_job_status command without any pre-configured scope.",
           "type": "string",
           "const": "deny-get-job-status",
@@ -2517,6 +2781,12 @@
           "markdownDescription": "Denies the get_onboarding_state command without any pre-configured scope."
         },
         {
+          "description": "Denies the get_optimizer command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-optimizer",
+          "markdownDescription": "Denies the get_optimizer command without any pre-configured scope."
+        },
+        {
           "description": "Denies the get_rating_preview command without any pre-configured scope.",
           "type": "string",
           "const": "deny-get-rating-preview",
@@ -2539,6 +2809,12 @@
           "type": "string",
           "const": "deny-get-stats",
           "markdownDescription": "Denies the get_stats command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_usage_metrics command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-usage-metrics",
+          "markdownDescription": "Denies the get_usage_metrics command without any pre-configured scope."
         },
         {
           "description": "Denies the list_backups command without any pre-configured scope.",
@@ -2607,6 +2883,18 @@
           "markdownDescription": "Denies the rate_card command without any pre-configured scope."
         },
         {
+          "description": "Denies the report_client_error command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-report-client-error",
+          "markdownDescription": "Denies the report_client_error command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the report_startup command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-report-startup",
+          "markdownDescription": "Denies the report_startup command without any pre-configured scope."
+        },
+        {
           "description": "Denies the request_notification_permission command without any pre-configured scope.",
           "type": "string",
           "const": "deny-request-notification-permission",
@@ -2635,6 +2923,12 @@
           "type": "string",
           "const": "deny-resume-study",
           "markdownDescription": "Denies the resume_study command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the revert_optimizer_run command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-revert-optimizer-run",
+          "markdownDescription": "Denies the revert_optimizer_run command without any pre-configured scope."
         },
         {
           "description": "Denies the save_note command without any pre-configured scope.",
@@ -2689,6 +2983,12 @@
           "type": "string",
           "const": "deny-speech-status",
           "markdownDescription": "Denies the speech_status command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the start_optimizer command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-start-optimizer",
+          "markdownDescription": "Denies the start_optimizer command without any pre-configured scope."
         },
         {
           "description": "Denies the start_study command without any pre-configured scope.",
@@ -6811,6 +7111,54 @@
           "type": "string",
           "const": "notification:deny-show",
           "markdownDescription": "Denies the show command without any pre-configured scope."
+        },
+        {
+          "description": "This permission set allows opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application\nas well as reveal file in directories using default file explorer\n#### This default permission set includes:\n\n- `allow-open-url`\n- `allow-reveal-item-in-dir`\n- `allow-default-urls`",
+          "type": "string",
+          "const": "opener:default",
+          "markdownDescription": "This permission set allows opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application\nas well as reveal file in directories using default file explorer\n#### This default permission set includes:\n\n- `allow-open-url`\n- `allow-reveal-item-in-dir`\n- `allow-default-urls`"
+        },
+        {
+          "description": "This enables opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application.",
+          "type": "string",
+          "const": "opener:allow-default-urls",
+          "markdownDescription": "This enables opening `mailto:`, `tel:`, `https://` and `http://` urls using their default application."
+        },
+        {
+          "description": "Enables the open_path command without any pre-configured scope.",
+          "type": "string",
+          "const": "opener:allow-open-path",
+          "markdownDescription": "Enables the open_path command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the open_url command without any pre-configured scope.",
+          "type": "string",
+          "const": "opener:allow-open-url",
+          "markdownDescription": "Enables the open_url command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the reveal_item_in_dir command without any pre-configured scope.",
+          "type": "string",
+          "const": "opener:allow-reveal-item-in-dir",
+          "markdownDescription": "Enables the reveal_item_in_dir command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_path command without any pre-configured scope.",
+          "type": "string",
+          "const": "opener:deny-open-path",
+          "markdownDescription": "Denies the open_path command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the open_url command without any pre-configured scope.",
+          "type": "string",
+          "const": "opener:deny-open-url",
+          "markdownDescription": "Denies the open_url command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the reveal_item_in_dir command without any pre-configured scope.",
+          "type": "string",
+          "const": "opener:deny-reveal-item-in-dir",
+          "markdownDescription": "Denies the reveal_item_in_dir command without any pre-configured scope."
         }
       ]
     },
@@ -6905,6 +7253,23 @@
           "enum": [
             "iOS"
           ]
+        }
+      ]
+    },
+    "Application": {
+      "description": "Opener scope application.",
+      "anyOf": [
+        {
+          "description": "Open in default application.",
+          "type": "null"
+        },
+        {
+          "description": "If true, allow open with any application.",
+          "type": "boolean"
+        },
+        {
+          "description": "Allow specific application to open with.",
+          "type": "string"
         }
       ]
     }

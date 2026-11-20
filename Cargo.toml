@@ -42,3 +42,11 @@ opt-level = 3
 opt-level = 3
 [profile.dev.package.lzma-rust2]
 opt-level = 3
+# llama.cpp on phone needs compiler optimisations (NEON/dotprod); Debug (-O0) is 10x slower
+[profile.dev.package.llama-cpp-2]
+opt-level = 3
+[profile.dev.package.llama-cpp-sys-2]
+opt-level = 3
+[profile.dev.package.langualinker-infrastructure]
+opt-level = 3
+

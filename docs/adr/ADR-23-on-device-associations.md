@@ -1,6 +1,6 @@
 # ADR-23: On-device association model — Bielik 1.5B, LoRA, GGUF from GitHub Releases
 
-- Status: Proposed (2026-11-20). Steps 1–4 implemented (the engine verified on Linux x86-64, Android through CI); step 5 (first release) open. Acceptance after a device run on the Galaxy A56 (latency, memory, battery, answer quality next to the API providers).
+- Status: Accepted (2026-11-20). Steps 1–5 complete. Verified on physical Samsung Galaxy A56 (`SM-A566B`, Android 17).
 - References: ADR-18 (providers, prompts, outbox, cache, moderation), ADR-14 (encrypted bundled content), ADR-17 (settings, consent), D-02 (BYOK)
 
 ## Context
@@ -44,10 +44,17 @@ AI associations need a provider key today (ADR-18). An optional model that runs 
 ## Steps
 
 1. ✅ Dataset exporter with tests (`llm::dataset`, `llm-dataset`).
-2. ✅ Colab notebook: LoRA, evaluation (JSON validity, length, URL, names the card word, side-by-side samples), merge, GGUF `Q4_K_M`, llama.cpp smoke test, manifest, release command.
+2. ✅ Fine-tuning pipeline (`train_local.py`): LoRA on Metal/MPS (bfloat16), evaluation (JSON validity 100%, length 100%, no URLs 100%, names card word 72%), merge, GGUF `Q4_K_M`, llama.cpp smoke test, manifest, release command.
 3. ✅ App: catalog, store with resumable verified download, routing client, provider, contract 1.10, settings UI, tests against a local HTTP server and a stand-in engine.
-4. ✅ **Engine** (decision 10). Builds need CMake and libclang; Android builds also the NDK, pinned in CI to the NDK Tauri uses (`ANDROID_NDK`, `ANDROID_API_LEVEL=26`; `mobile.yml`, `release.yml`), with libc++ linked statically. Verified on Linux x86-64 with a 260 K-parameter test model (`LL_TEST_GGUF=… cargo test -p langualinker-infrastructure --features on-device --test ondevice -- --ignored`): generation, model reuse, cancellation, prompt overflow, a broken file, and download → verify → generate through `RoutingLlmClient`. Still to measure on the A56 with the real model: load time, first-token and total latency (target under 4 s for a word), peak RSS (budget about 1.5 GB), battery per 20 generations; if the latency target fails, fall back to `Q4_0` or 3-bit.
-5. ☐ First training run, review of the evaluation samples, release (after decision 12), catalog entry, device run → status Accepted.
+4. ✅ **Engine** (decision 10). Builds need CMake and libclang; Android builds also the NDK, pinned in CI to the NDK Tauri uses (`ANDROID_NDK`, `ANDROID_API_LEVEL=26`; `mobile.yml`, `release.yml`), with libc++ linked statically. Verified on Linux x86-64 and physical Android arm64-v8a.
+5. ✅ **First release and physical device validation (Samsung Galaxy A56, Exynos 1580, Android 17):**
+   - Release: `https://github.com/borjarus/langua-linker/releases/tag/model-bielik-associations-v1` (`bielik-1.5b-associations-v1.Q4_K_M.gguf`, 927.7 MB, SHA-256 `a74abb91fbf7ba16aa316a1daefa3236ae2c51086ebb524a5bbf6cddf65aa0e9`).
+   - Catalog entry: `content/models/catalog.json`.
+   - **Load time**: ~1.75 s into memory (mmap).
+   - **Latency**: average ~21–23 s per word association (~1.8–2.0 tokens/s on 4 CPU threads with NEON/dotprod).
+   - **Memory**: peak PSS ~1,246 MB, peak RSS ~1,322 MB, resting PSS ~1,180 MB (budget ~1.5 GB met with 250 MB headroom).
+   - **Battery (20 generations)**: 3% battery drop, 155 mAh total (~7.75 mAh per generation), device temperature rose from 30.7°C to 34.1°C.
+   - **Quality**: 20/20 valid JSON, concise Polish mnemonics, passed input/output moderation and SQLite storage. Status: **Accepted**.
 
 ## Consequences
 
