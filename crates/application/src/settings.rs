@@ -75,9 +75,17 @@ pub struct AiProvider {
     pub id: &'static str,
     pub name: &'static str,
     pub requires_key: bool,
+    /// Suggested models; for the on-device provider the models come from the catalog
+    /// (`llm::local::catalog`).
     pub models: &'static [&'static str],
     pub custom_endpoint: bool,
+    /// Runs a downloaded model on the device (ADR-23); offered only when the catalog lists a
+    /// model and the build has the engine.
+    pub on_device: bool,
 }
+
+/// Id of the on-device provider (ADR-23).
+pub const ON_DEVICE_PROVIDER: &str = "onDevice";
 
 pub const AI_PROVIDERS: &[AiProvider] = &[
     AiProvider {
@@ -86,6 +94,7 @@ pub const AI_PROVIDERS: &[AiProvider] = &[
         requires_key: true,
         models: &["claude-haiku-5-5", "claude-sonnet-5-5"],
         custom_endpoint: false,
+        on_device: false,
     },
     AiProvider {
         id: "gemini",
@@ -97,6 +106,7 @@ pub const AI_PROVIDERS: &[AiProvider] = &[
             "gemini-3-flash-preview",
         ],
         custom_endpoint: false,
+        on_device: false,
     },
     AiProvider {
         id: "openaiCompatible",
@@ -104,6 +114,15 @@ pub const AI_PROVIDERS: &[AiProvider] = &[
         requires_key: true,
         models: &[],
         custom_endpoint: true,
+        on_device: false,
+    },
+    AiProvider {
+        id: ON_DEVICE_PROVIDER,
+        name: "On this device",
+        requires_key: false,
+        models: &[],
+        custom_endpoint: false,
+        on_device: true,
     },
 ];
 
@@ -447,7 +466,15 @@ pub fn update(
             // Another provider starts from its first suggested model; a key belongs to one
             // provider.
             doc.ai.provider = Some(provider.id.to_owned());
-            doc.ai.model = provider.models.first().map(|model| (*model).to_owned());
+            doc.ai.model = if provider.on_device {
+                // Without a released model there is nothing to run.
+                let first = crate::llm::local::catalog()
+                    .first()
+                    .ok_or_else(|| invalid("aiProvider", "unavailable"))?;
+                Some(first.id.clone())
+            } else {
+                provider.models.first().map(|model| (*model).to_owned())
+            };
             if !provider.custom_endpoint {
                 doc.ai.endpoint = None;
             }

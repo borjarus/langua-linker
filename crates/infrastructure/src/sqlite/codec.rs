@@ -5,6 +5,7 @@ use langualinker_application::jobs::JobDetail;
 use langualinker_application::repositories::{SiblingChange, UndoChanges};
 use langualinker_application::{AppError, AppResult};
 use langualinker_domain::card::{CardFlag, CardFsrsState, CardState, QueueState};
+use langualinker_domain::content::Translations;
 use langualinker_domain::note::NoteFields;
 use langualinker_domain::review::CardSnapshot;
 use langualinker_domain::{CardId, NoteId, TimestampMs};
@@ -30,6 +31,26 @@ pub fn note_fields_from_json(text: &str) -> AppResult<NoteFields> {
     Ok(NoteFields {
         front: field("front")?,
         back: field("back")?,
+    })
+}
+
+/// `grammar_tips.translations`, `deck_sections.title_translations`: `{"en": "…"}`.
+pub fn translations_to_json(translations: &Translations) -> String {
+    serde_json::to_string(translations).unwrap_or_else(|_| "{}".to_owned())
+}
+
+/// Reads a translations column inside a row mapper.
+pub fn translations_column(
+    row: &rusqlite::Row<'_>,
+    index: usize,
+) -> rusqlite::Result<Translations> {
+    let text: String = row.get(index)?;
+    serde_json::from_str(&text).map_err(|error| {
+        rusqlite::Error::FromSqlConversionFailure(
+            index,
+            rusqlite::types::Type::Text,
+            Box::new(error),
+        )
     })
 }
 

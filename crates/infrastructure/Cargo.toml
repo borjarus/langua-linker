@@ -5,6 +5,10 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[features]
+# llama.cpp engine of the on-device association model (ADR-23); enabled by the mobile builds.
+on-device = ["dep:llama-cpp-2"]
+
 [dependencies]
 chrono.workspace = true
 getrandom = "0.3.4"
@@ -28,9 +32,15 @@ tracing.workspace = true
 tracing-appender.workspace = true
 tracing-subscriber.workspace = true
 
+# On-device association model (ADR-23): llama.cpp, built from source with CMake and bindgen
+# (needs CMake and libclang; on Android the NDK under ANDROID_HOME). Only with `on-device`.
+llama-cpp-2 = { version = "=0.1.161", default-features = false, optional = true }
+
 # Native secret stores (ADR-07); see src/secrets.rs.
 [target.'cfg(target_os = "android")'.dependencies]
 android-native-keyring-store = "=1.0.0"
+# libc++ linked statically, so the APK needs no libc++_shared.so.
+llama-cpp-2 = { version = "=0.1.161", default-features = false, features = ["android-static-stdcxx"], optional = true }
 
 [target.'cfg(target_os = "ios")'.dependencies]
 apple-native-keyring-store = { version = "=1.0.2", features = ["protected"] }

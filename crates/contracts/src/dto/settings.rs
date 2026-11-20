@@ -178,6 +178,38 @@ pub struct AiProviderOptionDto {
     pub models: Vec<String>,
     /// The user supplies an HTTPS endpoint (OpenAI-compatible servers).
     pub custom_endpoint: bool,
+    /// Runs a downloaded model on the device; `models` are the ids in `AiSettingsDto.localModels`
+    /// (contract 1.10, ADR-23).
+    #[serde(default)]
+    pub on_device: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase")]
+pub enum LocalModelState {
+    NotDownloaded,
+    Downloading,
+    /// Downloaded and verified (size and SHA-256).
+    Ready,
+    /// The last download failed; `error` says why.
+    Failed,
+}
+
+/// A model the on-device provider can run (contract 1.10, ADR-23).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct LocalModelDto {
+    pub id: String,
+    pub name: String,
+    /// Download size.
+    #[ts(type = "number")]
+    pub bytes: u64,
+    pub state: LocalModelState,
+    /// Bytes on the device: progress while downloading, the part kept for a resume otherwise.
+    #[ts(type = "number")]
+    pub downloaded_bytes: u64,
+    /// `failed` only: `network`, `http`, `refused`, `size`, `checksum`, `storage`.
+    pub error: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -200,6 +232,9 @@ pub struct AiSettingsDto {
     pub providers: Vec<AiProviderOptionDto>,
     /// `null` = the provider reports no limit.
     pub quota: Option<AiQuotaDto>,
+    /// Models of the on-device provider; empty when this build or catalog offers none.
+    #[serde(default)]
+    pub local_models: Vec<LocalModelDto>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]

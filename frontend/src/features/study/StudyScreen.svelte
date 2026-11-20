@@ -22,6 +22,8 @@
   import { speechText } from '../../services/markdown'
   import { StudyController } from './studyController.svelte'
   import WordSheet from './WordSheet.svelte'
+  import { draftLink, isDraftLink } from './draftLink'
+  import type { WordDraft } from '../../components/LinkedText.svelte'
 
   interface Props {
     deckId: string
@@ -44,8 +46,15 @@
 
   const card = $derived(study.card)
   const title = $derived(study.deckName ?? (deckId === 'all' ? i18n.t('study.titleAll') : i18n.t('routes.study')))
+  /** A word without a link opens the word sheet to link it (a sentence of the card's note). */
+  function addWord(word: WordDraft) {
+    if (card) activeLink = draftLink(card.noteId, word, card.targetLanguage)
+  }
+
   /** Word links and TTS belong to the target-language side, which is the back of a reverse card. */
   const targetSide = $derived(card ? (card.direction === 'forward' ? 'front' : 'back') : 'front')
+  /** Only a sentence can link more of its words. */
+  const linkable = $derived(card ? card.noteTypeKind === 'Sentence' || card.noteTypeKind === 'SentenceAndReversed' : false)
 
   // Loading (a read) follows the session id; ratings only happen in handlers below.
   $effect(() => {
@@ -161,6 +170,11 @@
   }
 
   async function resolveLink(link: WordLinkDto, wordNoteId: Id): Promise<ErrorDto | null> {
+    if (isDraftLink(link)) {
+      const added = await study.addWordLink(link, wordNoteId)
+      if (added.link) activeLink = added.link
+      return added.error
+    }
     const error = await study.resolveWordLink(link, wordNoteId)
     // Show the saved choice with its details in the open sheet.
     if (!error) activeLink = study.card?.wordLinks.find((item) => item.id === link.id) ?? null
@@ -255,6 +269,10 @@
       </section>
     {:else}
       <section class="card surface" aria-label={i18n.t('study.front')}>
+        <!-- Sessions over a parent deck or "all" mix decks: every card names its own. -->
+        {#if card.deckName}
+          <p class="deck-name muted" dir="auto"><Icon name="folder" /><span>{i18n.t('study.deckOfCard', { name: card.deckName })}</span></p>
+        {/if}
         <div class="row chips">
           <Chip label={i18n.t(`study.states.${card.state}`)} />
           {#if card.direction === 'reverse'}<Chip label={i18n.t('study.reverse')} icon="refresh" />{/if}
@@ -279,7 +297,7 @@
         </div>
         <div class="front" tabindex="-1" bind:this={questionEl} lang={card.direction === 'forward' ? card.targetLanguage : 'pl'}>
           {#if card.capabilities.wordLinks && targetSide === 'front'}
-            <LinkedText text={card.front} links={card.wordLinks} lang={card.targetLanguage} onselect={(link) => (activeLink = link)} />
+            <LinkedText text={card.front} links={card.wordLinks} lang={card.targetLanguage} onselect={(link) => (activeLink = link)} onaddword={linkable ? addWord : undefined} />
           {:else}
             <RichText text={card.front} />
           {/if}
@@ -289,7 +307,7 @@
           <hr />
           <div class="back" tabindex="-1" bind:this={answerEl} lang={card.direction === 'forward' ? 'pl' : card.targetLanguage}>
             {#if card.capabilities.wordLinks && targetSide === 'back'}
-              <LinkedText text={card.back} links={card.wordLinks} lang={card.targetLanguage} onselect={(link) => (activeLink = link)} />
+              <LinkedText text={card.back} links={card.wordLinks} lang={card.targetLanguage} onselect={(link) => (activeLink = link)} onaddword={linkable ? addWord : undefined} />
             {:else}
               <RichText text={card.back} />
             {/if}
@@ -373,6 +391,16 @@
 
   .chips {
     justify-content: center;
+  }
+
+  .deck-name {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    margin: 0;
+    font-size: var(--text-sm);
+    overflow-wrap: anywhere;
   }
 
   .front {

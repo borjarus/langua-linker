@@ -73,6 +73,19 @@ Phase 7 extends the Rust side per command: the DTO deserializes its frozen input
 - `collection_changed` after a committed rating/undo (`cards`, `stats`; undo also `notes`), card action (`cards`, `decks`; a delete also `notes`, `stats`), favorite or link choice (`notes`), and ending a session (`stats`).
 - Known deviation from checklist rule 3, fixed with the next minor version: `startStudy`, `getRatingPreview` and `rateCard` can answer `VALIDATION_FAILED` (paused or finished session, card outside the session, card not studyable) or `DELETED`; `setFavoriteAssociation` and `resolveWordLink` can answer `DELETED` for a deleted note.
 
+## Changes in v1.10 (On-device association model, 2026-11-20)
+
+- Minor (additive), [ADR-23](../adr/ADR-23-on-device-associations.md). `AiProviderOptionDto.onDevice` marks the provider `onDevice` (no key; `models` are the ids of `localModels`). `AiSettingsDto.localModels: LocalModelDto[]` with `id`, `name`, `bytes`, `state` (`notDownloaded` | `downloading` | `ready` | `failed`), `downloadedBytes` and `error` (`network`, `http`, `refused`, `size`, `checksum`, `storage`). Older payloads deserialize with `false` and `[]`.
+- New mutations `downloadAiModel` and `deleteAiModel` (`AiModelInput { operationId, modelId }` → `AiSettingsDto`). The download runs in the background; progress and the end are `collection_changed { settings }` (at most every 750 ms). A repeated start of a running or finished download changes nothing. Errors: `VALIDATION_FAILED { field: "modelId" }`, `PERMISSION_DENIED { reason: "aiProvider" }` when the build offers no on-device provider.
+- `generateAssociation` with the on-device provider answers `PERMISSION_DENIED { reason: "localModel" }` until the model is downloaded and verified.
+- The provider and `localModels` appear only when the build has an engine and the catalog lists a model; until the first release (ADR-23 steps 4–5) the Rust backend lists neither. The demo adapter offers both, so the screen can be tried.
+
+## Changes in v1.9 (Card deck, more word links, grammar translations, 2026-11-20)
+
+- Minor (additive). New mutation `addWordLink { operationId, sentenceNoteId, startIndex, endIndex, surface, wordNoteId }` → `WordLinkDto[]` (every link of the sentence; stored links get new ids). It links one more phrase of a sentence's front to a word note from the study word sheet; the range is UTF-16 over the NFC front (plan §14.1). Errors: `VALIDATION_FAILED` (`wordLinks` `range` for a bad or overlapping range, `sameNote`, `wordNotFound`, `notSupported` for a note that is not a sentence or a deck without word links), `NOT_FOUND`, `DELETED`. Emits `collection_changed { notes }`. The note's links become the learner's (`wordLinks` content override), so a content update no longer replaces them.
+- `StudyCardDto` gains `deckName` (the card's own deck) and `noteTypeKind` (only sentences offer unlinked words for linking). Older payloads deserialize with `""` and `Basic`.
+- `GrammarTipDto` and `GrammarEntryDto` gain `translations`, `GrammarSectionDto` gains `titleTranslations`: `{ "en": "…" }` from the bundled content (schema v9, content format `translations` on tips and sections). The UI shows the one of its language, else the text. Editing a tip drops its translations. Older payloads deserialize with `{}`.
+
 ## Changes in v1.8 (Default deck for new words, 2026-11-19)
 
 - Minor (additive). `EditorDeckOptionDto` gains `wordCount: number` — the deck's live word notes (non-sentence note types, counted in the deck of their first live card, as `searchWords` sees them). The word sheet adds a new word to the deck of the sentence's language with the most words instead of the first deck without word links: bundled word decks are Linguistic decks, so that rule fell back to the sentence deck. A 1.7 payload without the field deserializes as `0` (Rust `#[serde(default)]`).

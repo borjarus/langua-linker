@@ -376,6 +376,7 @@ export const pl: LocaleResource = {
     nextReview: 'Następna powtórka: {{date}}',
   },
   study: {
+    deckOfCard: 'Talia: {{name}}',
     showAnswer: 'Pokaż odpowiedź',
     rateGroup: 'Jak dobrze pamiętasz?',
     ratings: {
@@ -469,6 +470,7 @@ export const pl: LocaleResource = {
     noVoice: 'Brak zainstalowanego głosu: {{language}}',
   },
   wordSheet: {
+    noLinkYet: 'To słowo nie ma jeszcze linku. Połącz je ze słówkiem z talii albo dodaj nowe.',
     phrase: 'Wyrażenie',
     word: 'Słowo',
     baseForm: 'Forma podstawowa: {{lemma}}',
@@ -582,6 +584,8 @@ export const pl: LocaleResource = {
     hide: 'Ukryj: {{section}}',
   },
   wordLink: {
+    addLabel: '{{word}}: bez linku — dodaj',
+    notLinked: 'jeszcze bez linku',
     label: '{{word}}: {{state}}',
     resolution: {
       resolved: 'powiązane słowo',
@@ -1134,6 +1138,28 @@ export const pl: LocaleResource = {
     onboardingAgain: 'Ponownie wybierz języki i talie',
   },
   ai: {
+    local: {
+      private: 'Model działa na tym telefonie: karty nie opuszczają urządzenia i nie potrzeba klucza API. Po pobraniu działa bez internetu.',
+      about: 'Rozmiar pobierania {{size}} GB. Generowanie trwa kilka sekund i zużywa więcej baterii niż dostawcy online.',
+      notDownloaded: 'Jeszcze nie pobrany.',
+      wifi: 'Model jest pobierany z GitHuba tylko wtedy, gdy to wybierzesz. Zalecane połączenie Wi-Fi.',
+      download: 'Pobierz ({{size}} GB)',
+      resume: 'Wznów pobieranie',
+      discard: 'Usuń częściowo pobrany plik',
+      downloading: 'Pobieranie… {{percent}}% ({{done}} z {{size}} GB)',
+      progress: 'Postęp pobierania',
+      cancel: 'Anuluj pobieranie',
+      ready: 'Pobrany i zweryfikowany. Gotowy do użycia.',
+      delete: 'Usuń model z urządzenia',
+      errors: {
+        network: 'Pobieranie przerwane (brak połączenia). Wznów, gdy będziesz online — zacznie od miejsca przerwania.',
+        http: 'Serwer pobierania zwrócił błąd. Spróbuj później.',
+        refused: 'Adres pobierania jest niedozwolony. Zaktualizuj aplikację.',
+        size: 'Pobrany plik miał zły rozmiar i został usunięty. Spróbuj ponownie.',
+        checksum: 'Pobrany plik nie zgadza się z opublikowanym modelem i został usunięty. Spróbuj ponownie.',
+        storage: 'Za mało wolnego miejsca na model.',
+      },
+    },
     prototype: 'Prototyp — żadne zapytanie nie opuszcza urządzenia; generowanie zwraca tekst demo.',
     consent: {
       title: 'Skojarzenia AI',

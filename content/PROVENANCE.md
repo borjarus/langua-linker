@@ -7,6 +7,8 @@ Every asset that may ship in the app or is used as a test fixture is listed here
 | `content/tools/prompts/association-candidates-v1.md` | written for Phase 8 | project | project | — | tooling, not bundled |
 | `content/tools/prompts/association-extended-v1.md` | written 2026-11-18 from the owner's nine-section template | project | project | — | tooling, not bundled |
 | `content/tools/prompts/*-candidates-v2.md` | v1 prompts extended with Spanish (2026-11-09) | project | project | — | tooling, not bundled |
+| `content/tools/finetune/bielik_associations.ipynb` | written 2026-11-20 for ADR-23 (LoRA fine-tuning of `speakleash/Bielik-1.5B-v3.0-Instruct`, Apache 2.0) | project | project | — | tooling, not bundled |
+| `content/models/catalog.json` | on-device models the app may download (ADR-23); empty until the first release | project | project | — | compiled in; lists no file yet |
 | `tests/fixtures/kmp/content.7z` | KMP commit `c2fa62f` (the original v1 files, byte-identical, moved from `content/decks`; encrypted like the bundled content, ADR-14 §14) | `source: original`, no attribution | not recorded | — | **test/reference only**, never bundled |
 | `tests/fixtures/unicode/ranges.json` | written for Phase 8 (plan §14.1) | project | project | — | test only |
 | `tests/fixtures/kmp/apkg/sample_german_a1_sentences.apkg` | KMP commit `c2fa62f` (added in "implementation of phase 3") | none | a real Anki export: `collection.anki21b` (zstd, schema 18) holds 432 notes (Polish front, German back), 864 cards, 5 329 reviews with FSRS state; `collection.anki2` is only Anki's "please update" stub | — | **test-only**, never bundled; input of the converter and importer tests |
@@ -34,6 +36,10 @@ Every word note's association carries an `extended` Markdown text generated with
 ## Chapters and levels (2026-11-19)
 
 The sentence decks list their chapters (`sections` in the manifests: 38 German, 36 English, 35 Spanish, tags `lekcja-01`…). The chapter order and topics follow the tables of contents of the source grammar books the lessons were built from; the titles were reworded for the app (claude-opus-5-5, 2026-11-19) so they name the same grammar topic without reusing the books' wording. Levels: `A1-A2` for both Spanish decks (the Spanish grammar book covers A1–A2), `A1` for the others. All six decks went to `contentVersion` 2026.11.19 so installed decks receive the chapters and levels. Native review should check that each title still matches its chapter's tips.
+
+## English grammar texts (2026-11-20)
+
+Every grammar tip and chapter title of the three sentence decks carries an English version (`translations.en`) for the English app language: 455 + 38 (German), 420 + 36 (English), 405 + 35 (Spanish). Translated from the Polish originals by claude-sonnet-5-5 (2026-11-20) without new content; examples, IPA and Markdown are unchanged, and Polish words that a tip compares against stay in the text. Two German tips were shortened by hand to fit 500 characters (`des-5860ff368c62-t1`, `des-d07ba34cf342-t1`). The translators flagged tips that only make sense next to their sentence or look truncated in the source (e.g. `des-d07ba34cf342-t1` ends with "Tandem:", `ess-…` tips 323 and 332). The three sentence decks went to `contentVersion` 2026.11.20. Native review should check the English along with the Polish.
 
 ## To close the content rights item (owner)
 

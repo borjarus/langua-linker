@@ -60,6 +60,8 @@ pub enum LlmProtocol {
     OpenAiCompatible,
     /// Google Gemini API `generateContent` (`generativelanguage.googleapis.com`).
     Gemini,
+    /// A downloaded model run on the device (ADR-23); `model` is a catalog id.
+    OnDevice,
 }
 
 /// A request to the association provider (Phase 13). Prompts are built in Rust; the card text is
@@ -131,6 +133,12 @@ pub trait LlmClient: Send + Sync {
         key: Option<&ApiKey>,
         cancelled: &dyn Fn() -> bool,
     ) -> Result<LlmResponse, LlmFailure>;
+
+    /// Whether the on-device model `model` (a catalog id) is downloaded, verified and can run
+    /// here (ADR-23). Clients without an on-device engine answer `false`.
+    fn local_model_ready(&self, _model: &str) -> bool {
+        false
+    }
 }
 
 /// Local notifications (Phase 15).

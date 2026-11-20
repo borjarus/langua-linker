@@ -4,6 +4,13 @@ All notable changes to LanguaLinker. Versions follow `X.Y.Z` / `X.Y.Z-(alpha|bet
 
 ## [Unreleased]
 
+Installed decks are updated to content version 2026.11.20 (English grammar texts) on the first start; progress stays.
+
+### Added
+- The study card names the deck the card comes from, also in a session over a parent deck or all decks.
+- A word of a sentence that the deck left without a link can be tapped like a linked one: the sheet links it to a word you already have or to a new word. Pronunciations in slashes (`/ʃiː ɪz/`) are never offered.
+- Grammar tips and chapter titles of the bundled sentence decks follow the app language: with English selected they are shown in English. A tip you edit keeps your text.
+
 ## [0.5.1-beta.1] — 2026-11-19
 
 GitHub pre-release for testers, like 0.5.0-beta.1: no link to the published privacy policy yet, not for store upload. Installed decks are updated to content version 2026.11.19 (chapters and levels) on the first start; progress stays.

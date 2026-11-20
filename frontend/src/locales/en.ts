@@ -348,6 +348,7 @@ export const en = {
     nextReview: 'Next review: {{date}}',
   },
   study: {
+    deckOfCard: 'Deck: {{name}}',
     showAnswer: 'Show answer',
     rateGroup: 'How well did you remember?',
     ratings: {
@@ -433,6 +434,7 @@ export const en = {
     noVoice: 'No {{language}} voice installed',
   },
   wordSheet: {
+    noLinkYet: 'This word has no link yet. Link it to a word from your decks or add a new one.',
     phrase: 'Phrase',
     word: 'Word',
     baseForm: 'Base form: {{lemma}}',
@@ -530,6 +532,8 @@ export const en = {
     hide: 'Hide {{section}}',
   },
   wordLink: {
+    addLabel: '{{word}}: no link — add one',
+    notLinked: 'not linked yet',
     label: '{{word}}: {{state}}',
     resolution: {
       resolved: 'linked word',
@@ -1028,6 +1032,28 @@ export const en = {
     onboardingAgain: 'Set up languages and decks again',
   },
   ai: {
+    local: {
+      private: 'The model runs on this phone: cards never leave the device and no API key is needed. It works offline once downloaded.',
+      about: 'Download size {{size}} GB. Generating takes a few seconds and uses more battery than the online providers.',
+      notDownloaded: 'Not downloaded yet.',
+      wifi: 'The model is downloaded from GitHub only when you choose to. A Wi-Fi connection is recommended.',
+      download: 'Download ({{size}} GB)',
+      resume: 'Continue download',
+      discard: 'Discard partial download',
+      downloading: 'Downloading… {{percent}}% ({{done}} of {{size}} GB)',
+      progress: 'Download progress',
+      cancel: 'Cancel download',
+      ready: 'Downloaded and verified. Ready to use.',
+      delete: 'Remove model from this device',
+      errors: {
+        network: 'The download stopped (connection lost). Continue when you are online — it picks up where it stopped.',
+        http: 'The download server answered with an error. Try again later.',
+        refused: 'The download address is not allowed. Update the app.',
+        size: 'The downloaded file had the wrong size and was deleted. Try again.',
+        checksum: 'The downloaded file did not match the published model and was deleted. Try again.',
+        storage: 'Not enough free space on this device for the model.',
+      },
+    },
     prototype: 'Prototype — no request leaves the device; generation returns demo text.',
     consent: {
       title: 'AI associations',

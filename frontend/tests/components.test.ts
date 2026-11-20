@@ -7,7 +7,7 @@ import type { DeckSummaryDto, RatingPreviewDto, WordLinkDto } from '../src/api/t
 import Chip from '../src/components/Chip.svelte'
 import DeckCard from '../src/components/DeckCard.svelte'
 import ErrorState from '../src/components/ErrorState.svelte'
-import { segmentText } from '../src/components/LinkedText.svelte'
+import { richSegments, segmentText, splitWords } from '../src/components/LinkedText.svelte'
 import RatingButtonRow from '../src/components/RatingButtonRow.svelte'
 import DialogHarness from './fixtures/DialogHarness.svelte'
 import VirtualListHarness from './fixtures/VirtualListHarness.svelte'
@@ -191,5 +191,30 @@ describe('segmentText (UTF-16 half-open ranges)', () => {
     const composed = decomposed.normalize('NFC')
     const segments = segmentText(decomposed, [{ ...link(composed, composed), startIndex: 0, endIndex: composed.length }])
     expect(segments).toEqual([expect.objectContaining({ kind: 'link', text: composed })])
+  })
+})
+
+describe('splitWords (words without a link)', () => {
+  const link = (text: string, surface: string): WordLinkDto => {
+    const startIndex = text.indexOf(surface)
+    return { id: surface, sentenceNoteId: 's', surface, startIndex, endIndex: startIndex + surface.length, lemma: null, resolution: 'resolved', wordNoteId: null, translation: null, candidates: [] }
+  }
+  const words = (text: string, links: WordLinkDto[]) =>
+    splitWords(richSegments(text, links), text).flatMap((segment) => (segment.kind === 'word' ? [[segment.run.text, segment.run.start, segment.run.bold] as const] : []))
+
+  it('offers the unlinked words of the sentence at their source offsets, never the IPA', () => {
+    const text = '**She is tall and very pretty.** /ʃiː ɪz tɔl ænd ˈvɛri ˈprɪti/'
+    const links = ['She', 'is', 'tall', 'and', 'very'].map((surface) => link(text, surface))
+    expect(words(text, links)).toEqual([['pretty', text.indexOf('pretty'), true]])
+  })
+
+  it('a slash between phrases is not a transcription', () => {
+    const text = '**Yes. / No.** /jɛs | noʊ/'
+    expect(words(text, []).map(([word]) => word)).toEqual(['Yes', 'No'])
+  })
+
+  it('keeps apostrophes and hyphens inside a word', () => {
+    const text = "I don't like well-known songs."
+    expect(words(text, []).map(([word]) => word)).toEqual(['I', "don't", 'like', 'well-known', 'songs'])
   })
 })

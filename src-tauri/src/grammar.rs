@@ -38,19 +38,25 @@ fn deck_dto(deck: GrammarDeck) -> GrammarDeckDto {
             .sections
             .into_iter()
             .map(|section| {
-                let (tag, title) = match section.section {
-                    Some(section) => (Some(section.tag), Some(section.title)),
-                    None => (None, None),
+                let (tag, title, title_translations) = match section.section {
+                    Some(section) => (
+                        Some(section.tag),
+                        Some(section.title),
+                        section.title_translations,
+                    ),
+                    None => (None, None, Default::default()),
                 };
                 GrammarSectionDto {
                     tag,
                     title,
+                    title_translations,
                     entries: section
                         .tips
                         .into_iter()
                         .map(|tip| GrammarEntryDto {
                             tip_id: text_id(tip.tip_id.0),
                             text: tip.text,
+                            translations: tip.translations,
                             note_id: text_id(tip.note_id.0),
                             card_id: text_id(tip.card_id.0),
                             front: tip.front,

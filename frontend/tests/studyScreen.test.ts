@@ -338,6 +338,35 @@ describe('associations and word links', () => {
   })
 })
 
+describe('words without a link and the deck of the card', () => {
+  it('names the deck of the card above it', async () => {
+    const { session, stop } = await openStudy('2')
+    expect(screen.getByText(`Deck: ${session.current?.deckName}`)).toBeInTheDocument()
+    stop()
+  })
+
+  it('a word the content left unlinked can be linked to a new word', async () => {
+    const { services, stop } = await openStudy('2')
+    const addSpy = vi.spyOn(services.api, 'addWordLink')
+    const unlinked = screen.getAllByRole('button', { name: /: no link — add one$/ })[0]
+    if (!unlinked) throw new Error('expected a word without a link')
+    const surface = unlinked.textContent?.trim() ?? ''
+    await fireEvent.click(unlinked)
+    const sheet = await screen.findByRole('dialog', { name: surface })
+    expect(within(sheet).getByText('This word has no link yet. Link it to a word from your decks or add a new one.')).toBeInTheDocument()
+    await within(sheet).findByRole('textbox', { name: 'Word' })
+    await fireEvent.input(within(sheet).getByRole('textbox', { name: 'Translation' }), { target: { value: 'tłumaczenie' } })
+    await fireEvent.click(within(sheet).getByRole('button', { name: 'Add and link' }))
+    await waitFor(() => expect(sheet.querySelector('.translation')).not.toBeNull())
+    expect(addSpy).toHaveBeenCalledTimes(1)
+    expect(addSpy.mock.calls[0]?.[0]).toMatchObject({ surface })
+    // The word is now a link of the sentence.
+    await fireEvent.click(within(sheet).getAllByRole('button', { name: /close/i })[0] as HTMLElement)
+    expect(screen.getAllByRole('button', { name: `${surface}: your choice` }).length).toBeGreaterThan(0)
+    stop()
+  })
+})
+
 describe('section chips above the card', () => {
   it('show the counts with the question and open their section after the answer', async () => {
     const { stop } = await openStudy('1')

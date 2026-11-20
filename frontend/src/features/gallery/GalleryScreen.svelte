@@ -48,8 +48,8 @@
     association('a5', 'blocked', 'generated'),
   ]
   const tips: GrammarTipDto[] = [
-    { id: 't1', noteId: 'n1', text: 'Rodzaj męski: der Kühlschrank, die Kühlschränke.', order: 0 },
-    { id: 't2', noteId: 'n1', text: 'Złożenie: kühl + der Schrank.', order: 1 },
+    { id: 't1', noteId: 'n1', text: 'Rodzaj męski: der Kühlschrank, die Kühlschränke.', translations: { en: 'Masculine: der Kühlschrank, die Kühlschränke.' }, order: 0 },
+    { id: 't2', noteId: 'n1', text: 'Złożenie: kühl + der Schrank.', translations: {}, order: 1 },
   ]
   const sentence = 'Ich trinke heute Abend Tee 🍵 mit der Bank.'
   const link = (surface: string, resolution: WordLinkDto['resolution']): WordLinkDto => {

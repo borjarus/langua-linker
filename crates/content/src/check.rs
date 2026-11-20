@@ -473,8 +473,28 @@ fn check_sections(manifest: &DeckManifest, file: &str, issues: &mut Issues) {
                 ),
             );
         }
+        for (language, title) in &section.translations {
+            if !TRANSLATION_LANGUAGES.contains(&language.as_str())
+                || title.trim().is_empty()
+                || title.chars().count() > validation::MAX_NAME_CHARS
+                || !is_nfc(title)
+            {
+                issues.error(
+                    "sections.translation",
+                    file,
+                    None,
+                    format!(
+                        "{language:?} title of section {} is not a UI language, or empty, too long or not NFC",
+                        section.tag
+                    ),
+                );
+            }
+        }
     }
 }
+
+/// UI languages other than the content's native language that texts may be translated into.
+const TRANSLATION_LANGUAGES: [&str; 1] = ["en"];
 
 /// Text that ends up on a card: NFC, trimmed, no control characters or markup.
 fn check_text(
@@ -768,6 +788,25 @@ impl<'a> DeckChecker<'a> {
                 line,
                 issues,
             );
+            for (language, text) in &tip.translations {
+                if !TRANSLATION_LANGUAGES.contains(&language.as_str()) {
+                    issues.error(
+                        "translations.language",
+                        &file,
+                        Some(line),
+                        format!("grammar tip translation into {language:?}: not a UI language"),
+                    );
+                }
+                check_text(
+                    "grammar tip translation",
+                    text,
+                    MAX_SNIPPET_CHARS,
+                    true,
+                    &file,
+                    line,
+                    issues,
+                );
+            }
         }
 
         self.word_links(

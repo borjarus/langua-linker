@@ -7,6 +7,7 @@
   import ErrorState from '../../components/ErrorState.svelte'
   import AddWordForm from './AddWordForm.svelte'
   import WordDetails from './WordDetails.svelte'
+  import { isDraftLink } from './draftLink'
 
   interface Props {
     link: WordLinkDto | null
@@ -35,6 +36,8 @@
   })
 
   const phrase = $derived(link ? /\s/u.test(link.surface.trim()) : false)
+  /** A word the content left without a link: nothing is stored until the learner links it. */
+  const draft = $derived(link ? isDraftLink(link) : false)
 
   async function save() {
     if (!link || !choice || saving) return
@@ -49,7 +52,10 @@
     <div class="stack">
       <div class="row">
         <Chip label={i18n.t(phrase ? 'wordSheet.phrase' : 'wordSheet.word')} tone="info" />
-        <Chip label={i18n.t(`wordLink.resolution.${link.resolution}`)} tone={link.resolution === 'ambiguous' ? 'warning' : link.resolution === 'unresolved' ? 'neutral' : 'success'} />
+        <Chip
+          label={draft ? i18n.t('wordLink.notLinked') : i18n.t(`wordLink.resolution.${link.resolution}`)}
+          tone={link.resolution === 'ambiguous' ? 'warning' : link.resolution === 'unresolved' ? 'neutral' : 'success'}
+        />
       </div>
 
       {#if link.resolution === 'ambiguous'}
@@ -70,7 +76,7 @@
         {#if link.resolution === 'userOverridden'}<p class="muted" role="status">{i18n.t('wordSheet.choiceSaved')}</p>{/if}
         <WordDetails noteId={link.wordNoteId} lemma={link.lemma} />
       {:else}
-        <p>{i18n.t('wordSheet.notInDecks')}</p>
+        <p>{i18n.t(draft ? 'wordSheet.noLinkYet' : 'wordSheet.notInDecks')}</p>
         {#if link.lemma && link.lemma !== link.surface}<p class="muted">{i18n.t('wordSheet.baseForm', { lemma: link.lemma })}</p>{/if}
         <!-- The word is made from the sentence and linked to it without leaving the session. -->
         <AddWordForm {link} {targetLanguage} sentenceDeckId={deckId} onlink={(wordNoteId) => onresolve(link, wordNoteId)} />

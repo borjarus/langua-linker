@@ -7,13 +7,17 @@ use langualinker_application::repositories::{RecordedOperation, UnitOfWork};
 use langualinker_application::settings::{self as app_settings, AI_KEY_SECRET};
 use langualinker_contracts::ErrorDto;
 use langualinker_contracts::dto::{
-    AiSettingsDto, GenerateAssociationInput, JobDto, SetAiApiKeyInput,
+    AiModelInput, AiSettingsDto, GenerateAssociationInput, JobDto, SetAiApiKeyInput,
 };
 use langualinker_domain::{NoteId, ValidationError};
 use serde_json::Value;
 use tauri::State;
 
-use crate::backend::{Backend, job_dto};
+use std::sync::Arc;
+
+use langualinker_application::ports::CollectionScope;
+
+use crate::backend::{Backend, Collection, job_dto};
 use crate::commands::{blocking, operation_id, parse_input};
 use crate::settings::read_settings;
 use crate::study::{app_error, emit, id};
@@ -118,8 +122,85 @@ pub async fn set_ai_api_key(
     }
     let now = collection.clock.now();
     let secrets = collection.secrets.clone();
+    let local = collection.local.clone();
     // Only the AI part comes back, with `hasApiKey`; the key itself never does.
-    blocking(move || read_settings(&db, secrets.as_ref(), now).map(|settings| settings.ai)).await
+    blocking(move || read_settings(&db, secrets.as_ref(), &local, now).map(|settings| settings.ai))
+        .await
+}
+
+/// The AI settings after a model command.
+async fn ai_settings(collection: &Collection) -> Result<AiSettingsDto, ErrorDto> {
+    let (db, secrets) = (collection.db.clone(), collection.secrets.clone());
+    let local = collection.local.clone();
+    let now = collection.clock.now();
+    blocking(move || read_settings(&db, secrets.as_ref(), &local, now).map(|settings| settings.ai))
+        .await
+}
+
+fn offered_model<'a>(collection: &'a Collection, model_id: &str) -> Result<&'a str, ErrorDto> {
+    if !collection.local.offered {
+        return Err(app_error(AppError::PermissionDenied {
+            reason: "aiProvider",
+        }));
+    }
+    collection
+        .local
+        .store
+        .catalog()
+        .iter()
+        .find(|model| model.id == model_id)
+        .map(|model| model.id.as_str())
+        .ok_or_else(|| app_error(ValidationError::new("modelId", "unknown").into()))
+}
+
+/// Starts or resumes the download of an on-device model (ADR-23) and answers at once; progress
+/// and the end arrive as `collection_changed { settings }` (at most every 750 ms). Starting a
+/// running or finished download changes nothing, so a repeated operation is harmless.
+#[tauri::command]
+pub async fn download_ai_model(
+    backend: State<'_, Backend>,
+    input: Value,
+) -> Result<AiSettingsDto, ErrorDto> {
+    let input: AiModelInput = parse_input(input)?;
+    operation_id(&input.operation_id)?;
+    let collection = backend.collection()?;
+    let model = offered_model(collection, &input.model_id)?.to_owned();
+    let (events, clock) = (collection.events.clone(), collection.clock.clone());
+    let report: Arc<dyn Fn() + Send + Sync> = Arc::new(move || {
+        events.collection_changed(&[CollectionScope::Settings], clock.now());
+    });
+    collection
+        .local
+        .store
+        .start(&model, report)
+        .map_err(|_| app_error(ValidationError::new("modelId", "unknown").into()))?;
+    tracing::info!(model = %model, "model download started");
+    ai_settings(collection).await
+}
+
+/// Cancels a running download and removes the model's files.
+#[tauri::command]
+pub async fn delete_ai_model(
+    backend: State<'_, Backend>,
+    input: Value,
+) -> Result<AiSettingsDto, ErrorDto> {
+    let input: AiModelInput = parse_input(input)?;
+    operation_id(&input.operation_id)?;
+    let collection = backend.collection()?;
+    let model = offered_model(collection, &input.model_id)?.to_owned();
+    let store = collection.local.store.clone();
+    blocking(move || {
+        store
+            .delete(&model)
+            .map_err(|_| app_error(ValidationError::new("modelId", "unknown").into()))
+    })
+    .await?;
+    emit(
+        collection,
+        &[CollectionScope::Settings],
+        collection.clock.now(),
+    );
+    ai_settings(collection).await
 }
 
 #[cfg(test)]

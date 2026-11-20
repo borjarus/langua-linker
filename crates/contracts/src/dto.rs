@@ -6,6 +6,7 @@
 //! frontend type check — the intended guard against ids or counts beyond 2^53 crossing as numbers.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use ts_rs::TS;
 
 use crate::ErrorDto;
@@ -736,7 +737,11 @@ pub struct AssociationDto {
 pub struct GrammarTipDto {
     pub id: String,
     pub note_id: String,
+    /// As written (and as edited); `translations` hold bundled texts in other UI languages.
     pub text: String,
+    /// `{ "en": "…" }`: the UI shows the one of its language, else `text` (contract 1.9).
+    #[serde(default)]
+    pub translations: BTreeMap<String, String>,
     pub order: u32,
 }
 
@@ -787,12 +792,22 @@ pub struct NoteContentDto {
     pub grammar_tips: Vec<GrammarTipDto>,
 }
 
+fn basic_note_type() -> NoteTypeKind {
+    NoteTypeKind::Basic
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct StudyCardDto {
     pub card_id: String,
     pub note_id: String,
     pub deck_id: String,
+    /// Name of the card's own deck (a session over a parent deck or "all" mixes several).
+    #[serde(default)]
+    pub deck_name: String,
+    /// Sentences (`Sentence`, `SentenceAndReversed`) can link more of their words (contract 1.9).
+    #[serde(default = "basic_note_type")]
+    pub note_type_kind: NoteTypeKind,
     pub version: u32,
     pub deck_type: DeckType,
     pub capabilities: DeckCapabilitiesDto,
@@ -1046,11 +1061,33 @@ pub struct SetAiApiKeyInput {
     pub api_key: Option<String>,
 }
 
+/// `downloadAiModel` / `deleteAiModel` (contract 1.10, ADR-23).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AiModelInput {
+    pub operation_id: String,
+    /// An id of `AiSettingsDto.localModels`.
+    pub model_id: String,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ResolveWordLinkInput {
     pub operation_id: String,
     pub link_id: String,
+    pub word_note_id: String,
+}
+
+/// Links one more phrase of a sentence's front (UTF-16 half-open range over the NFC text, plan
+/// §14.1) to a word note. Answers every link of the sentence (contract 1.9).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct AddWordLinkInput {
+    pub operation_id: String,
+    pub sentence_note_id: String,
+    pub start_index: u32,
+    pub end_index: u32,
+    pub surface: String,
     pub word_note_id: String,
 }
 
@@ -1322,6 +1359,8 @@ pub struct GrammarDeckSummaryDto {
 pub struct GrammarEntryDto {
     pub tip_id: String,
     pub text: String,
+    #[serde(default)]
+    pub translations: BTreeMap<String, String>,
     pub note_id: String,
     /// Opens the card (first card of the note).
     pub card_id: String,
@@ -1336,6 +1375,9 @@ pub struct GrammarEntryDto {
 pub struct GrammarSectionDto {
     pub tag: Option<String>,
     pub title: Option<String>,
+    /// The title in other UI languages.
+    #[serde(default)]
+    pub title_translations: BTreeMap<String, String>,
     pub entries: Vec<GrammarEntryDto>,
 }
 
@@ -1892,7 +1934,9 @@ pub fn typescript() -> String {
         SetFavoriteAssociationInput::decl(&cfg),
         GenerateAssociationInput::decl(&cfg),
         SetAiApiKeyInput::decl(&cfg),
+        AiModelInput::decl(&cfg),
         ResolveWordLinkInput::decl(&cfg),
+        AddWordLinkInput::decl(&cfg),
         HiddenSectionCountsDto::decl(&cfg),
         DeckTypeOptionDto::decl(&cfg),
         DeckOverviewDto::decl(&cfg),
@@ -1967,6 +2011,8 @@ pub fn typescript() -> String {
         PermissionState::decl(&cfg),
         ConsentState::decl(&cfg),
         AiProviderOptionDto::decl(&cfg),
+        LocalModelState::decl(&cfg),
+        LocalModelDto::decl(&cfg),
         AiQuotaDto::decl(&cfg),
         AiSettingsDto::decl(&cfg),
         BackupLocation::decl(&cfg),

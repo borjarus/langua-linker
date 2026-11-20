@@ -1,12 +1,12 @@
 {
-  "apiVersion": "1.8",
+  "apiVersion": "1.10",
   "calls": [
     {
       "operation": "getAppInfo",
       "command": "get_app_info",
       "args": [],
       "output": {
-        "apiVersion": "1.8",
+        "apiVersion": "1.10",
         "appName": "LanguaLinker",
         "appVersion": "0.1.0",
         "mode": "demo"
@@ -55,7 +55,7 @@
       "args": [],
       "output": {
         "appVersion": "0.1.0",
-        "apiVersion": "1.8",
+        "apiVersion": "1.10",
         "schemaVersion": null,
         "fsrsVersion": "FSRS-6",
         "contentVersion": "2026.02-demo",
@@ -1216,6 +1216,8 @@
           "cardId": "1012",
           "noteId": "112",
           "deckId": "5",
+          "deckName": "Złożenia (Komposita)",
+          "noteTypeKind": "Basic",
           "version": 1,
           "deckType": "Linguistic",
           "capabilities": {
@@ -1272,6 +1274,8 @@
           "cardId": "1012",
           "noteId": "112",
           "deckId": "5",
+          "deckName": "Złożenia (Komposita)",
+          "noteTypeKind": "Basic",
           "version": 1,
           "deckType": "Linguistic",
           "capabilities": {
@@ -1374,6 +1378,8 @@
           "cardId": "1003",
           "noteId": "103",
           "deckId": "1",
+          "deckName": "Niemiecki — słówka A1",
+          "noteTypeKind": "Basic",
           "version": 1,
           "deckType": "Linguistic",
           "capabilities": {
@@ -1437,6 +1443,8 @@
           "cardId": "1012",
           "noteId": "112",
           "deckId": "5",
+          "deckName": "Złożenia (Komposita)",
+          "noteTypeKind": "Basic",
           "version": 3,
           "deckType": "Linguistic",
           "capabilities": {
@@ -1497,6 +1505,8 @@
           "cardId": "1012",
           "noteId": "112",
           "deckId": "5",
+          "deckName": "Złożenia (Komposita)",
+          "noteTypeKind": "Basic",
           "version": 3,
           "deckType": "Linguistic",
           "capabilities": {
@@ -1557,6 +1567,8 @@
           "cardId": "1012",
           "noteId": "112",
           "deckId": "5",
+          "deckName": "Złożenia (Komposita)",
+          "noteTypeKind": "Basic",
           "version": 3,
           "deckType": "Linguistic",
           "capabilities": {
@@ -1659,6 +1671,8 @@
           "cardId": "1003",
           "noteId": "103",
           "deckId": "1",
+          "deckName": "Niemiecki — słówka A1",
+          "noteTypeKind": "Basic",
           "version": 1,
           "deckType": "Linguistic",
           "capabilities": {
@@ -1961,7 +1975,7 @@
               "tts": true
             },
             "targetLanguage": "de",
-            "wordCount": 300
+            "wordCount": 10
           },
           {
             "id": "5",
@@ -1975,7 +1989,7 @@
               "tts": true
             },
             "targetLanguage": "de",
-            "wordCount": 24
+            "wordCount": 3
           },
           {
             "id": "2",
@@ -2003,7 +2017,7 @@
               "tts": true
             },
             "targetLanguage": "en",
-            "wordCount": 150
+            "wordCount": 5
           },
           {
             "id": "4",
@@ -2017,7 +2031,7 @@
               "tts": true
             },
             "targetLanguage": "en",
-            "wordCount": 12
+            "wordCount": 4
           }
         ],
         "noteTypes": [
@@ -2191,6 +2205,7 @@
             "id": "90012",
             "noteId": "90009",
             "text": "der Vertrag, die Verträge",
+            "translations": {},
             "order": 0
           }
         ],
@@ -2271,12 +2286,14 @@
             "id": "90012",
             "noteId": "90009",
             "text": "der Vertrag, die Verträge",
+            "translations": {},
             "order": 0
           },
           {
             "id": "90013",
             "noteId": "90009",
             "text": "vertragen — znosić",
+            "translations": {},
             "order": 1
           }
         ],
@@ -2518,6 +2535,64 @@
       }
     },
     {
+      "operation": "addWordLink",
+      "command": "add_word_link",
+      "args": [
+        {
+          "operationId": "contract-23",
+          "sentenceNoteId": "116",
+          "startIndex": 0,
+          "endIndex": 3,
+          "surface": "Wir",
+          "wordNoteId": "101"
+        }
+      ],
+      "output": [
+        {
+          "id": "5119",
+          "sentenceNoteId": "116",
+          "surface": "frühstücken",
+          "startIndex": 4,
+          "endIndex": 15,
+          "lemma": "frühstücken",
+          "resolution": "userOverridden",
+          "wordNoteId": "101",
+          "translation": "śniadanie",
+          "candidates": [
+            {
+              "noteId": "101",
+              "lemma": "das Frühstück",
+              "translation": "śniadanie"
+            }
+          ]
+        },
+        {
+          "id": "5120",
+          "sentenceNoteId": "116",
+          "surface": "gemütlich",
+          "startIndex": 16,
+          "endIndex": 25,
+          "lemma": "gemütlich",
+          "resolution": "resolved",
+          "wordNoteId": "107",
+          "translation": "przytulny, wygodny",
+          "candidates": []
+        },
+        {
+          "id": "90016",
+          "sentenceNoteId": "116",
+          "surface": "Wir",
+          "startIndex": 0,
+          "endIndex": 3,
+          "lemma": "das Frühstück",
+          "resolution": "userOverridden",
+          "wordNoteId": "101",
+          "translation": "śniadanie",
+          "candidates": []
+        }
+      ]
+    },
+    {
       "operation": "searchCards",
       "command": "search_cards",
       "args": [
@@ -2625,7 +2700,7 @@
         ],
         "nextCursor": "5",
         "total": 13,
-        "filterVersion": "23:[\"\",\"1\",null,[],[],\"due\",\"asc\"]"
+        "filterVersion": "24:[\"\",\"1\",null,[],[],\"due\",\"asc\"]"
       }
     },
     {
@@ -2658,7 +2733,7 @@
       "command": "apply_bulk_action",
       "args": [
         {
-          "operationId": "contract-23",
+          "operationId": "contract-24",
           "selection": {
             "kind": "ids",
             "cardIds": [
@@ -2711,10 +2786,16 @@
             {
               "tag": "dom",
               "title": "Dom i codzienne przedmioty",
+              "titleTranslations": {
+                "en": "Home and everyday things"
+              },
               "entries": [
                 {
                   "tipId": "5004",
                   "text": "Rodzaj męski: der Kühlschrank, die Kühlschränke.",
+                  "translations": {
+                    "en": "Masculine: der Kühlschrank, die Kühlschränke."
+                  },
                   "noteId": "100",
                   "cardId": "1000",
                   "front": "der Kühlschrank",
@@ -2723,6 +2804,9 @@
                 {
                   "tipId": "5005",
                   "text": "Złożenie: kühl (chłodny) + der Schrank (szafa).",
+                  "translations": {
+                    "en": "Compound: kühl (cool) + der Schrank (cupboard)."
+                  },
                   "noteId": "100",
                   "cardId": "1000",
                   "front": "der Kühlschrank",
@@ -2733,10 +2817,16 @@
             {
               "tag": "jedzenie",
               "title": "Przy stole",
+              "titleTranslations": {
+                "en": "At the table"
+              },
               "entries": [
                 {
                   "tipId": "5008",
                   "text": "Rodzaj nijaki: das Frühstück.",
+                  "translations": {
+                    "en": "Neuter: das Frühstück."
+                  },
                   "noteId": "101",
                   "cardId": "1001",
                   "front": "das Frühstück",
@@ -2747,10 +2837,16 @@
             {
               "tag": "miasto",
               "title": "Po mieście",
+              "titleTranslations": {
+                "en": "Around town"
+              },
               "entries": [
                 {
                   "tipId": "5022",
                   "text": "Liczba mnoga: die Bänke.",
+                  "translations": {
+                    "en": "Plural: die Bänke."
+                  },
                   "noteId": "104",
                   "cardId": "1004",
                   "front": "die Bank (Sitz)",
@@ -2759,6 +2855,9 @@
                 {
                   "tipId": "5029",
                   "text": "Liczba mnoga: die Banken.",
+                  "translations": {
+                    "en": "Plural: die Banken."
+                  },
                   "noteId": "105",
                   "cardId": "1005",
                   "front": "die Bank (Geld)",
@@ -2767,6 +2866,7 @@
                 {
                   "tipId": "5045",
                   "text": "Rodzaj żeński: die Brücke.",
+                  "translations": {},
                   "noteId": "109",
                   "cardId": "1009",
                   "front": "die Brücke",
@@ -2777,10 +2877,14 @@
             {
               "tag": "czasowniki",
               "title": "Pierwsze czasowniki",
+              "titleTranslations": {
+                "en": "First verbs"
+              },
               "entries": [
                 {
                   "tipId": "5036",
                   "text": "Odmiana nieregularna: trank, getrunken.",
+                  "translations": {},
                   "noteId": "106",
                   "cardId": "1006",
                   "front": "trinken",
@@ -2791,10 +2895,12 @@
             {
               "tag": null,
               "title": null,
+              "titleTranslations": {},
               "entries": [
                 {
                   "tipId": "5010",
                   "text": "Wyrażenie wielowyrazowe — nie rozdzielaj w nauce.",
+                  "translations": {},
                   "noteId": "102",
                   "cardId": "1002",
                   "front": "heute Abend",
@@ -3287,7 +3393,8 @@
               "models": [
                 "demo-mnemonic-v1"
               ],
-              "customEndpoint": false
+              "customEndpoint": false,
+              "onDevice": false
             },
             {
               "id": "anthropic",
@@ -3297,7 +3404,8 @@
                 "claude-haiku-5-5",
                 "claude-sonnet-5-5"
               ],
-              "customEndpoint": false
+              "customEndpoint": false,
+              "onDevice": false
             },
             {
               "id": "gemini",
@@ -3308,21 +3416,43 @@
                 "gemini-3.7-flash",
                 "gemini-3-flash-preview"
               ],
-              "customEndpoint": false
+              "customEndpoint": false,
+              "onDevice": false
             },
             {
               "id": "openaiCompatible",
               "name": "OpenAI-compatible",
               "requiresKey": true,
               "models": [],
-              "customEndpoint": true
+              "customEndpoint": true,
+              "onDevice": false
+            },
+            {
+              "id": "onDevice",
+              "name": "On this device",
+              "requiresKey": false,
+              "models": [
+                "bielik-1.5b-associations-v1"
+              ],
+              "customEndpoint": false,
+              "onDevice": true
             }
           ],
           "quota": {
             "used": 12,
             "limit": 50,
             "resetsAt": "2026-03-03T08:00:00.000Z"
-          }
+          },
+          "localModels": [
+            {
+              "id": "bielik-1.5b-associations-v1",
+              "name": "Bielik 1.5B (skojarzenia)",
+              "bytes": 1020000000,
+              "state": "notDownloaded",
+              "downloadedBytes": 0,
+              "error": null
+            }
+          ]
         },
         "telemetryOptIn": false,
         "backup": {
@@ -3339,7 +3469,7 @@
       "command": "update_settings",
       "args": [
         {
-          "operationId": "contract-24",
+          "operationId": "contract-25",
           "expectedVersion": 1,
           "patch": {
             "dailyGoal": 25
@@ -3373,7 +3503,8 @@
               "models": [
                 "demo-mnemonic-v1"
               ],
-              "customEndpoint": false
+              "customEndpoint": false,
+              "onDevice": false
             },
             {
               "id": "anthropic",
@@ -3383,7 +3514,8 @@
                 "claude-haiku-5-5",
                 "claude-sonnet-5-5"
               ],
-              "customEndpoint": false
+              "customEndpoint": false,
+              "onDevice": false
             },
             {
               "id": "gemini",
@@ -3394,21 +3526,43 @@
                 "gemini-3.7-flash",
                 "gemini-3-flash-preview"
               ],
-              "customEndpoint": false
+              "customEndpoint": false,
+              "onDevice": false
             },
             {
               "id": "openaiCompatible",
               "name": "OpenAI-compatible",
               "requiresKey": true,
               "models": [],
-              "customEndpoint": true
+              "customEndpoint": true,
+              "onDevice": false
+            },
+            {
+              "id": "onDevice",
+              "name": "On this device",
+              "requiresKey": false,
+              "models": [
+                "bielik-1.5b-associations-v1"
+              ],
+              "customEndpoint": false,
+              "onDevice": true
             }
           ],
           "quota": {
             "used": 12,
             "limit": 50,
             "resetsAt": "2026-03-03T08:00:00.000Z"
-          }
+          },
+          "localModels": [
+            {
+              "id": "bielik-1.5b-associations-v1",
+              "name": "Bielik 1.5B (skojarzenia)",
+              "bytes": 1020000000,
+              "state": "notDownloaded",
+              "downloadedBytes": 0,
+              "error": null
+            }
+          ]
         },
         "telemetryOptIn": false,
         "backup": {
@@ -3425,7 +3579,7 @@
       "command": "set_ai_api_key",
       "args": [
         {
-          "operationId": "contract-25",
+          "operationId": "contract-26",
           "apiKey": "contract-test-key"
         }
       ],
@@ -3443,7 +3597,8 @@
             "models": [
               "demo-mnemonic-v1"
             ],
-            "customEndpoint": false
+            "customEndpoint": false,
+            "onDevice": false
           },
           {
             "id": "anthropic",
@@ -3453,7 +3608,8 @@
               "claude-haiku-5-5",
               "claude-sonnet-5-5"
             ],
-            "customEndpoint": false
+            "customEndpoint": false,
+            "onDevice": false
           },
           {
             "id": "gemini",
@@ -3464,21 +3620,213 @@
               "gemini-3.7-flash",
               "gemini-3-flash-preview"
             ],
-            "customEndpoint": false
+            "customEndpoint": false,
+            "onDevice": false
           },
           {
             "id": "openaiCompatible",
             "name": "OpenAI-compatible",
             "requiresKey": true,
             "models": [],
-            "customEndpoint": true
+            "customEndpoint": true,
+            "onDevice": false
+          },
+          {
+            "id": "onDevice",
+            "name": "On this device",
+            "requiresKey": false,
+            "models": [
+              "bielik-1.5b-associations-v1"
+            ],
+            "customEndpoint": false,
+            "onDevice": true
           }
         ],
         "quota": {
           "used": 12,
           "limit": 50,
           "resetsAt": "2026-03-03T08:00:00.000Z"
+        },
+        "localModels": [
+          {
+            "id": "bielik-1.5b-associations-v1",
+            "name": "Bielik 1.5B (skojarzenia)",
+            "bytes": 1020000000,
+            "state": "notDownloaded",
+            "downloadedBytes": 0,
+            "error": null
+          }
+        ]
+      }
+    },
+    {
+      "operation": "downloadAiModel",
+      "command": "download_ai_model",
+      "args": [
+        {
+          "operationId": "contract-27",
+          "modelId": "bielik-1.5b-associations-v1"
         }
+      ],
+      "output": {
+        "consent": "granted",
+        "provider": "demo",
+        "model": "demo-mnemonic-v1",
+        "endpoint": null,
+        "hasApiKey": true,
+        "providers": [
+          {
+            "id": "demo",
+            "name": "Demo",
+            "requiresKey": false,
+            "models": [
+              "demo-mnemonic-v1"
+            ],
+            "customEndpoint": false,
+            "onDevice": false
+          },
+          {
+            "id": "anthropic",
+            "name": "Anthropic",
+            "requiresKey": true,
+            "models": [
+              "claude-haiku-5-5",
+              "claude-sonnet-5-5"
+            ],
+            "customEndpoint": false,
+            "onDevice": false
+          },
+          {
+            "id": "gemini",
+            "name": "Google Gemini",
+            "requiresKey": true,
+            "models": [
+              "gemini-3.8-flash",
+              "gemini-3.7-flash",
+              "gemini-3-flash-preview"
+            ],
+            "customEndpoint": false,
+            "onDevice": false
+          },
+          {
+            "id": "openaiCompatible",
+            "name": "OpenAI-compatible",
+            "requiresKey": true,
+            "models": [],
+            "customEndpoint": true,
+            "onDevice": false
+          },
+          {
+            "id": "onDevice",
+            "name": "On this device",
+            "requiresKey": false,
+            "models": [
+              "bielik-1.5b-associations-v1"
+            ],
+            "customEndpoint": false,
+            "onDevice": true
+          }
+        ],
+        "quota": {
+          "used": 12,
+          "limit": 50,
+          "resetsAt": "2026-03-03T08:00:00.000Z"
+        },
+        "localModels": [
+          {
+            "id": "bielik-1.5b-associations-v1",
+            "name": "Bielik 1.5B (skojarzenia)",
+            "bytes": 1020000000,
+            "state": "downloading",
+            "downloadedBytes": 0,
+            "error": null
+          }
+        ]
+      }
+    },
+    {
+      "operation": "deleteAiModel",
+      "command": "delete_ai_model",
+      "args": [
+        {
+          "operationId": "contract-28",
+          "modelId": "bielik-1.5b-associations-v1"
+        }
+      ],
+      "output": {
+        "consent": "granted",
+        "provider": "demo",
+        "model": "demo-mnemonic-v1",
+        "endpoint": null,
+        "hasApiKey": true,
+        "providers": [
+          {
+            "id": "demo",
+            "name": "Demo",
+            "requiresKey": false,
+            "models": [
+              "demo-mnemonic-v1"
+            ],
+            "customEndpoint": false,
+            "onDevice": false
+          },
+          {
+            "id": "anthropic",
+            "name": "Anthropic",
+            "requiresKey": true,
+            "models": [
+              "claude-haiku-5-5",
+              "claude-sonnet-5-5"
+            ],
+            "customEndpoint": false,
+            "onDevice": false
+          },
+          {
+            "id": "gemini",
+            "name": "Google Gemini",
+            "requiresKey": true,
+            "models": [
+              "gemini-3.8-flash",
+              "gemini-3.7-flash",
+              "gemini-3-flash-preview"
+            ],
+            "customEndpoint": false,
+            "onDevice": false
+          },
+          {
+            "id": "openaiCompatible",
+            "name": "OpenAI-compatible",
+            "requiresKey": true,
+            "models": [],
+            "customEndpoint": true,
+            "onDevice": false
+          },
+          {
+            "id": "onDevice",
+            "name": "On this device",
+            "requiresKey": false,
+            "models": [
+              "bielik-1.5b-associations-v1"
+            ],
+            "customEndpoint": false,
+            "onDevice": true
+          }
+        ],
+        "quota": {
+          "used": 12,
+          "limit": 50,
+          "resetsAt": "2026-03-03T08:00:00.000Z"
+        },
+        "localModels": [
+          {
+            "id": "bielik-1.5b-associations-v1",
+            "name": "Bielik 1.5B (skojarzenia)",
+            "bytes": 1020000000,
+            "state": "notDownloaded",
+            "downloadedBytes": 0,
+            "error": null
+          }
+        ]
       }
     },
     {
@@ -3486,7 +3834,7 @@
       "command": "request_notification_permission",
       "args": [
         {
-          "operationId": "contract-26"
+          "operationId": "contract-29"
         }
       ],
       "output": {
@@ -3516,7 +3864,8 @@
               "models": [
                 "demo-mnemonic-v1"
               ],
-              "customEndpoint": false
+              "customEndpoint": false,
+              "onDevice": false
             },
             {
               "id": "anthropic",
@@ -3526,7 +3875,8 @@
                 "claude-haiku-5-5",
                 "claude-sonnet-5-5"
               ],
-              "customEndpoint": false
+              "customEndpoint": false,
+              "onDevice": false
             },
             {
               "id": "gemini",
@@ -3537,21 +3887,43 @@
                 "gemini-3.7-flash",
                 "gemini-3-flash-preview"
               ],
-              "customEndpoint": false
+              "customEndpoint": false,
+              "onDevice": false
             },
             {
               "id": "openaiCompatible",
               "name": "OpenAI-compatible",
               "requiresKey": true,
               "models": [],
-              "customEndpoint": true
+              "customEndpoint": true,
+              "onDevice": false
+            },
+            {
+              "id": "onDevice",
+              "name": "On this device",
+              "requiresKey": false,
+              "models": [
+                "bielik-1.5b-associations-v1"
+              ],
+              "customEndpoint": false,
+              "onDevice": true
             }
           ],
           "quota": {
             "used": 12,
             "limit": 50,
             "resetsAt": "2026-03-03T08:00:00.000Z"
-          }
+          },
+          "localModels": [
+            {
+              "id": "bielik-1.5b-associations-v1",
+              "name": "Bielik 1.5B (skojarzenia)",
+              "bytes": 1020000000,
+              "state": "notDownloaded",
+              "downloadedBytes": 0,
+              "error": null
+            }
+          ]
         },
         "telemetryOptIn": false,
         "backup": {
@@ -3620,7 +3992,7 @@
       "command": "complete_onboarding",
       "args": [
         {
-          "operationId": "contract-27",
+          "operationId": "contract-30",
           "nativeLanguage": "pl",
           "targetLanguages": [
             "de",
@@ -3631,7 +4003,7 @@
         }
       ],
       "output": {
-        "jobId": "job-90016",
+        "jobId": "job-90017",
         "kind": "prepareContent",
         "status": "queued",
         "sequence": 0,
@@ -3649,10 +4021,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90016"
+        "job-90017"
       ],
       "output": {
-        "jobId": "job-90016",
+        "jobId": "job-90017",
         "kind": "prepareContent",
         "status": "succeeded",
         "sequence": 2,
@@ -3771,7 +4143,7 @@
         "targetDeckId": "1",
         "targetDeckName": "Niemiecki — słówka A1",
         "newDecks": [],
-        "previewToken": "import-29-1"
+        "previewToken": "import-32-1"
       }
     },
     {
@@ -3779,12 +4151,12 @@
       "command": "commit_import",
       "args": [
         {
-          "operationId": "contract-28",
-          "previewToken": "import-29-1"
+          "operationId": "contract-31",
+          "previewToken": "import-32-1"
         }
       ],
       "output": {
-        "jobId": "job-90017",
+        "jobId": "job-90018",
         "kind": "import",
         "status": "queued",
         "sequence": 0,
@@ -3802,10 +4174,10 @@
       "operation": "cancelJob",
       "command": "cancel_job",
       "args": [
-        "job-90017"
+        "job-90018"
       ],
       "output": {
-        "jobId": "job-90017",
+        "jobId": "job-90018",
         "kind": "import",
         "status": "cancelled",
         "sequence": 1,
@@ -3823,10 +4195,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90017"
+        "job-90018"
       ],
       "output": {
-        "jobId": "job-90017",
+        "jobId": "job-90018",
         "kind": "import",
         "status": "cancelled",
         "sequence": 1,
@@ -3922,7 +4294,7 @@
         "targetDeckId": "1",
         "targetDeckName": "Niemiecki — słówka A1",
         "newDecks": [],
-        "previewToken": "import-31-2"
+        "previewToken": "import-34-2"
       }
     },
     {
@@ -3930,12 +4302,12 @@
       "command": "commit_import",
       "args": [
         {
-          "operationId": "contract-29",
-          "previewToken": "import-31-2"
+          "operationId": "contract-32",
+          "previewToken": "import-34-2"
         }
       ],
       "output": {
-        "jobId": "job-90018",
+        "jobId": "job-90019",
         "kind": "import",
         "status": "queued",
         "sequence": 0,
@@ -3953,10 +4325,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90018"
+        "job-90019"
       ],
       "output": {
-        "jobId": "job-90018",
+        "jobId": "job-90019",
         "kind": "import",
         "status": "succeeded",
         "sequence": 4,
@@ -4044,7 +4416,7 @@
             "line": 4
           }
         ],
-        "previewToken": "deck-preview-33-90043"
+        "previewToken": "deck-preview-36-90044"
       }
     },
     {
@@ -4052,12 +4424,12 @@
       "command": "commit_deck_import",
       "args": [
         {
-          "operationId": "contract-30",
-          "previewToken": "deck-preview-33-90043"
+          "operationId": "contract-33",
+          "previewToken": "deck-preview-36-90044"
         }
       ],
       "output": {
-        "jobId": "job-90044",
+        "jobId": "job-90045",
         "kind": "import",
         "status": "queued",
         "sequence": 0,
@@ -4075,10 +4447,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90044"
+        "job-90045"
       ],
       "output": {
-        "jobId": "job-90044",
+        "jobId": "job-90045",
         "kind": "import",
         "status": "succeeded",
         "sequence": 3,
@@ -4091,7 +4463,7 @@
         "error": null,
         "result": {
           "type": "import",
-          "deckId": "90045",
+          "deckId": "90046",
           "create": 3,
           "update": 0,
           "skip": 0,
@@ -4106,14 +4478,14 @@
       "command": "export_deck",
       "args": [
         {
-          "operationId": "contract-31",
+          "operationId": "contract-34",
           "deckId": "1",
           "format": "csv",
           "includeScheduling": true
         }
       ],
       "output": {
-        "jobId": "job-90052",
+        "jobId": "job-90053",
         "kind": "export",
         "status": "queued",
         "sequence": 0,
@@ -4131,10 +4503,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90052"
+        "job-90053"
       ],
       "output": {
-        "jobId": "job-90052",
+        "jobId": "job-90053",
         "kind": "export",
         "status": "succeeded",
         "sequence": 4,
@@ -4164,10 +4536,10 @@
       "command": "share_file",
       "args": [
         {
-          "operationId": "contract-32",
+          "operationId": "contract-35",
           "target": {
             "kind": "export",
-            "jobId": "job-90052"
+            "jobId": "job-90053"
           }
         }
       ],
@@ -4214,11 +4586,11 @@
       "command": "create_backup",
       "args": [
         {
-          "operationId": "contract-33"
+          "operationId": "contract-36"
         }
       ],
       "output": {
-        "jobId": "job-90053",
+        "jobId": "job-90054",
         "kind": "backup",
         "status": "queued",
         "sequence": 0,
@@ -4236,10 +4608,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90053"
+        "job-90054"
       ],
       "output": {
-        "jobId": "job-90053",
+        "jobId": "job-90054",
         "kind": "backup",
         "status": "succeeded",
         "sequence": 5,
@@ -4252,7 +4624,7 @@
         "error": null,
         "result": {
           "type": "backup",
-          "backupId": "backup-90054"
+          "backupId": "backup-90055"
         }
       }
     },
@@ -4261,7 +4633,7 @@
       "command": "share_file",
       "args": [
         {
-          "operationId": "contract-34",
+          "operationId": "contract-37",
           "target": {
             "kind": "backup",
             "backupId": "backup-3"
@@ -4319,7 +4691,7 @@
         },
         "compatible": true,
         "issues": [],
-        "previewToken": "restore-41-3"
+        "previewToken": "restore-44-3"
       }
     },
     {
@@ -4327,12 +4699,12 @@
       "command": "restore_backup",
       "args": [
         {
-          "operationId": "contract-35",
-          "previewToken": "restore-41-3"
+          "operationId": "contract-38",
+          "previewToken": "restore-44-3"
         }
       ],
       "output": {
-        "jobId": "job-90056",
+        "jobId": "job-90057",
         "kind": "restore",
         "status": "queued",
         "sequence": 0,
@@ -4350,10 +4722,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90056"
+        "job-90057"
       ],
       "output": {
-        "jobId": "job-90056",
+        "jobId": "job-90057",
         "kind": "restore",
         "status": "succeeded",
         "sequence": 6,
@@ -4366,7 +4738,7 @@
         "error": null,
         "result": {
           "type": "restore",
-          "safetyBackupId": "backup-90055"
+          "safetyBackupId": "backup-90056"
         }
       }
     },
@@ -4388,7 +4760,7 @@
         },
         "confirmationPhrase": "RESETUJ POSTĘP",
         "latestBackupAt": "2026-03-02T08:02:13.300Z",
-        "previewToken": "reset-43-progress"
+        "previewToken": "reset-46-progress"
       }
     },
     {
@@ -4396,14 +4768,14 @@
       "command": "reset_collection",
       "args": [
         {
-          "operationId": "contract-36",
-          "previewToken": "reset-43-progress",
+          "operationId": "contract-39",
+          "previewToken": "reset-46-progress",
           "safetyBackupId": null,
           "confirmationPhrase": "RESETUJ POSTĘP"
         }
       ],
       "output": {
-        "jobId": "job-90057",
+        "jobId": "job-90058",
         "kind": "reset",
         "status": "queued",
         "sequence": 0,
@@ -4421,10 +4793,10 @@
       "operation": "getJobStatus",
       "command": "get_job_status",
       "args": [
-        "job-90057"
+        "job-90058"
       ],
       "output": {
-        "jobId": "job-90057",
+        "jobId": "job-90058",
         "kind": "reset",
         "status": "succeeded",
         "sequence": 4,

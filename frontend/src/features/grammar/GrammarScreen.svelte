@@ -68,7 +68,7 @@
   const normalize = (text: string) => stripInlineMarkdown(text).normalize('NFC').toLocaleLowerCase()
   const needle = $derived(normalize(search.trim()))
   const matches = (entry: GrammarEntryDto) =>
-    needle === '' || [entry.text, entry.front, entry.back].some((text) => normalize(text).includes(needle))
+    needle === '' || [i18n.content(entry.text, entry.translations), entry.text, entry.front, entry.back].some((text) => normalize(text).includes(needle))
 
   /** Chapters with the entries the search keeps; numbered by their place in the whole deck. */
   const sections = $derived.by(() => {
@@ -82,7 +82,9 @@
   const summary = $derived(shown?.deck ? shown.decks.find((item) => item.deckId === shown.deck?.deckId) ?? null : null)
 
   function sectionTitle(section: GrammarSectionDto, number: number): string {
-    return section.title === null ? i18n.t('grammarScreen.otherSection') : i18n.t('grammarScreen.sectionTitle', { number, title: section.title })
+    return section.title === null
+      ? i18n.t('grammarScreen.otherSection')
+      : i18n.t('grammarScreen.sectionTitle', { number, title: i18n.content(section.title, section.titleTranslations) })
   }
 </script>
 
@@ -151,7 +153,7 @@
               <ol class="entries">
                 {#each item.entries as entry (entry.tipId)}
                   <li class="entry">
-                    <p class="tip">{entry.text}</p>
+                    <p class="tip">{i18n.content(entry.text, entry.translations)}</p>
                     <a class="example" href={href({ name: 'card', params: { id: entry.cardId } })} aria-label={i18n.t('grammarScreen.openCard', { sentence: stripInlineMarkdown(entry.front) })}>
                       <span class="front"><RichText text={entry.front} lang={deck.targetLanguage} /></span>
                       <span class="back muted"><RichText text={entry.back} lang="pl" /></span>

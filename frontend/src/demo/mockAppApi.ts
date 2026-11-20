@@ -90,6 +90,7 @@ import {
   type Rating,
   type RatingPreviewDto,
   type ResolveWordLinkInput,
+  type AddWordLinkInput,
   type RestoreInput,
   type RestorePreviewDto,
   type ResumableSessionDto,
@@ -101,6 +102,8 @@ import {
   type SessionCardDto,
   type SessionSummaryDto,
   type SetAiApiKeyInput,
+  type AiModelInput,
+  type LocalModelDto,
   type SetFavoriteAssociationInput,
   type SettingsDto,
   type ShareFileInput,
@@ -224,12 +227,27 @@ const MATURE_DAYS = 21
 /** Fewer reviews than this give "not enough data", never a misleading percentage. */
 const MIN_RETENTION_SAMPLE = 10
 const STABILITY_BUCKETS: [number, number | null][] = [[0, 1], [1, 3], [3, 7], [7, 14], [14, 30], [30, 90], [90, null]]
+/** The demo's on-device model (ADR-23); the download is simulated in a few steps. */
+const LOCAL_MODEL_ID = 'bielik-1.5b-associations-v1'
+const LOCAL_MODEL_BYTES = 1_020_000_000
+const LOCAL_MODEL_STEPS = 4
+
 const AI_PROVIDERS: AiProviderOptionDto[] = [
-  { id: 'demo', name: 'Demo', requiresKey: false, models: ['demo-mnemonic-v1'], customEndpoint: false },
-  { id: 'anthropic', name: 'Anthropic', requiresKey: true, models: ['claude-haiku-5-5', 'claude-sonnet-5-5'], customEndpoint: false },
-  { id: 'gemini', name: 'Google Gemini', requiresKey: true, models: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3-flash-preview'], customEndpoint: false },
-  { id: 'openaiCompatible', name: 'OpenAI-compatible', requiresKey: true, models: [], customEndpoint: true },
+  { id: 'demo', name: 'Demo', requiresKey: false, models: ['demo-mnemonic-v1'], customEndpoint: false, onDevice: false },
+  { id: 'anthropic', name: 'Anthropic', requiresKey: true, models: ['claude-haiku-5-5', 'claude-sonnet-5-5'], customEndpoint: false, onDevice: false },
+  { id: 'gemini', name: 'Google Gemini', requiresKey: true, models: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3-flash-preview'], customEndpoint: false, onDevice: false },
+  { id: 'openaiCompatible', name: 'OpenAI-compatible', requiresKey: true, models: [], customEndpoint: true, onDevice: false },
+  { id: 'onDevice', name: 'On this device', requiresKey: false, models: [LOCAL_MODEL_ID], customEndpoint: false, onDevice: true },
 ]
+
+const LOCAL_MODEL = (): LocalModelDto => ({
+  id: LOCAL_MODEL_ID,
+  name: 'Bielik 1.5B (skojarzenia)',
+  bytes: LOCAL_MODEL_BYTES,
+  state: 'notDownloaded',
+  downloadedBytes: 0,
+  error: null,
+})
 
 /** Outcomes cycled by the `aiErrors` scenario: provider error, unusable output, moderation. */
 const AI_FAILURES = ['PROVIDER_ERROR', 'INVALID_PROVIDER_OUTPUT', 'MODERATION_BLOCKED'] as const
@@ -310,6 +328,7 @@ export class MockAppApi implements AppApi {
   #resetPlan: ResetPlan | null = null
   /** Held only here, like the SecretStore: no operation ever returns it. */
   #apiKey: string | null = null
+  #modelTimer: ReturnType<typeof setTimeout> | null = null
   #notificationAnswer: 'granted' | 'denied' = 'granted'
   #pickedFiles: Record<FilePurpose, string | null> = { import: 'demo-import-csv', restore: 'demo-restore-ok', backupFolder: 'demo-folder-documents' }
   #revision = 0
@@ -348,6 +367,8 @@ export class MockAppApi implements AppApi {
     this.#restorePlan = null
     this.#resetPlan = null
     this.#apiKey = null
+    if (this.#modelTimer) clearTimeout(this.#modelTimer)
+    this.#modelTimer = null
     this.#notificationAnswer = 'granted'
     this.#backupSerial = 0
     this.#previewSerial = 0
@@ -437,6 +458,7 @@ export class MockAppApi implements AppApi {
         hasApiKey: false,
         providers: AI_PROVIDERS,
         quota: { used: scenario === 'quota' ? 50 : 12, limit: 50, resetsAt: iso(this.#nowMs + DAY_MS) },
+        localModels: [LOCAL_MODEL()],
       },
       telemetryOptIn: false,
       backup: { automatic: true, retention: 5, target: 'app', externalFolder: null },
@@ -674,7 +696,10 @@ export class MockAppApi implements AppApi {
   }
 
   #tips(noteId: Id): GrammarTipDto[] {
-    return this.#collection.tips.filter((tip) => tip.noteId === noteId).sort((a, b) => a.order - b.order)
+    return this.#collection.tips
+      .filter((tip) => tip.noteId === noteId)
+      .sort((a, b) => a.order - b.order)
+      .map(({ id, noteId: note, text, order, translations }) => ({ id, noteId: note, text, translations: { ...translations }, order }))
   }
 
   #wordLinks(noteId: Id): WordLinkDto[] {
@@ -708,6 +733,8 @@ export class MockAppApi implements AppApi {
       cardId: card.id,
       noteId: note.id,
       deckId: deck.id,
+      deckName: deck.name,
+      noteTypeKind: note.noteTypeKind,
       version: card.version,
       deckType: deck.deckType,
       capabilities: capabilitiesFor(deck.deckType),
@@ -1127,11 +1154,11 @@ export class MockAppApi implements AppApi {
           else other.push(item)
         }
         const entries = (items: ReturnType<typeof tipsOf>) =>
-          items.map(({ note, tip }) => ({ tipId: tip.id, text: tip.text, noteId: note.id, cardId: firstCard(note.id)!.id, front: note.front, back: note.back }))
+          items.map(({ note, tip }) => ({ tipId: tip.id, text: tip.text, translations: tip.translations, noteId: note.id, cardId: firstCard(note.id)!.id, front: note.front, back: note.back }))
         const sections: GrammarSectionDto[] = chapters
-          .map((chapter, index) => ({ tag: chapter.tag, title: chapter.title, entries: entries(grouped[index]!) }))
+          .map((chapter, index) => ({ tag: chapter.tag, title: chapter.title, titleTranslations: { ...chapter.titleTranslations }, entries: entries(grouped[index]!) }))
           .filter((section) => section.entries.length > 0)
-        if (other.length > 0) sections.push({ tag: null, title: null, entries: entries(other) })
+        if (other.length > 0) sections.push({ tag: null, title: null, titleTranslations: {}, entries: entries(other) })
         return sections
       }
       const selected = input.deckId == null ? withTips[0] : withTips.find((item) => item.deck.id === input.deckId) ?? fail('NOT_FOUND', { entity: 'deck' })
@@ -1640,9 +1667,13 @@ export class MockAppApi implements AppApi {
         case 'addTip':
           this.#collection.tips.push({ id: this.#nextId(), noteId: note.id, text: text(change.text, MAX_TIP_LENGTH), order: this.#tips(note.id).length })
           break
-        case 'editTip':
-          tip(change.tipId).text = text(change.text, MAX_TIP_LENGTH)
+        case 'editTip': {
+          const edited = tip(change.tipId)
+          edited.text = text(change.text, MAX_TIP_LENGTH)
+          // The translations belonged to the old text.
+          delete edited.translations
           break
+        }
         case 'deleteTip':
           tip(change.tipId)
           this.#collection.tips = this.#collection.tips.filter((item) => item.id !== change.tipId)
@@ -1723,12 +1754,41 @@ export class MockAppApi implements AppApi {
     })
   }
 
+  addWordLink(input: AddWordLinkInput) {
+    return this.#mutate('addWordLink', input.operationId, ['notes'], (): WordLinkDto[] => {
+      const sentence = this.#note(input.sentenceNoteId)
+      const deck = this.#deck(sentence.deckId)
+      if (!isSentenceNoteType(sentence.noteTypeKind) || !capabilitiesFor(deck.deckType).wordLinks) fail('VALIDATION_FAILED', { field: 'wordLinks', reason: 'notSupported' })
+      if (input.wordNoteId === input.sentenceNoteId) fail('VALIDATION_FAILED', { field: 'wordLinks', reason: 'sameNote' })
+      this.#note(input.wordNoteId)
+      const existing = this.#collection.wordLinks.filter((link) => link.sentenceNoteId === sentence.id)
+      const draft = { startIndex: input.startIndex, endIndex: input.endIndex, surface: input.surface, wordNoteId: input.wordNoteId }
+      this.#validateLinks(sentence.front, [...existing.map(({ startIndex, endIndex, surface, wordNoteId }) => ({ startIndex, endIndex, surface, wordNoteId })), draft], true)
+      const word = this.#note(input.wordNoteId)
+      this.#collection.wordLinks.push({
+        id: this.#nextId(),
+        sentenceNoteId: sentence.id,
+        surface: input.surface.normalize('NFC'),
+        startIndex: input.startIndex,
+        endIndex: input.endIndex,
+        lemma: word.front,
+        resolution: 'userOverridden',
+        wordNoteId: word.id,
+        candidateNoteIds: [],
+      })
+      return this.#wordLinks(sentence.id)
+    })
+  }
+
   generateAssociation(input: GenerateAssociationInput) {
     return this.#mutate('generateAssociation', input.operationId, [], (): JobDto => {
       const note = this.#note(input.noteId)
       if (this.#settings.ai.consent !== 'granted') fail('PERMISSION_DENIED', { reason: 'aiConsent' })
       const provider = this.#settings.ai.providers.find((item) => item.id === this.#settings.ai.provider)
       if (provider?.requiresKey && this.#apiKey === null) fail('PERMISSION_DENIED', { reason: 'apiKey' })
+      if (provider?.onDevice && this.#settings.ai.localModels.find((model) => model.id === this.#settings.ai.model)?.state !== 'ready') {
+        fail('PERMISSION_DENIED', { reason: 'localModel' })
+      }
       if (this.#scenario === 'quota') fail('QUOTA_EXCEEDED', { resetsAt: iso(this.#nowMs + DAY_MS) })
       const variants = Math.max(1, Math.min(input.variants, 3))
       if (this.#scenario === 'offline') {
@@ -2101,6 +2161,44 @@ export class MockAppApi implements AppApi {
       if (key !== null && (key.length < 8 || key.length > 400 || /\s/u.test(key))) fail('VALIDATION_FAILED', { field: 'apiKey' })
       this.#apiKey = key
       this.#settings = { ...this.#settings, ai: { ...this.#settings.ai, hasApiKey: key !== null }, version: this.#settings.version + 1 }
+      return this.#settings.ai
+    })
+  }
+
+  #setLocalModel(change: Partial<LocalModelDto>): void {
+    const ai = this.#settings.ai
+    this.#settings = { ...this.#settings, ai: { ...ai, localModels: ai.localModels.map((model) => ({ ...model, ...change })) } }
+  }
+
+  #localModel(modelId: string): LocalModelDto {
+    return this.#settings.ai.localModels.find((model) => model.id === modelId) ?? fail('VALIDATION_FAILED', { field: 'modelId', reason: 'unknown' })
+  }
+
+  downloadAiModel(input: AiModelInput) {
+    return this.#mutate('downloadAiModel', input.operationId, ['settings'], (): AiSettingsDto => {
+      const model = this.#localModel(input.modelId)
+      if (model.state === 'ready' || model.state === 'downloading') return this.#settings.ai
+      this.#setLocalModel({ state: 'downloading', error: null })
+      const step = () => {
+        const current = this.#localModel(input.modelId)
+        if (current.state !== 'downloading') return
+        const done = Math.min(LOCAL_MODEL_BYTES, current.downloadedBytes + LOCAL_MODEL_BYTES / LOCAL_MODEL_STEPS)
+        const finished = done >= LOCAL_MODEL_BYTES
+        this.#setLocalModel({ downloadedBytes: done, state: finished ? 'ready' : 'downloading' })
+        this.#modelTimer = finished ? null : setTimeout(step, this.#options.jobStepMs)
+        this.#emitCollectionChanged(['settings'])
+      }
+      this.#modelTimer = setTimeout(step, this.#options.jobStepMs)
+      return this.#settings.ai
+    })
+  }
+
+  deleteAiModel(input: AiModelInput) {
+    return this.#mutate('deleteAiModel', input.operationId, ['settings'], (): AiSettingsDto => {
+      this.#localModel(input.modelId)
+      if (this.#modelTimer) clearTimeout(this.#modelTimer)
+      this.#modelTimer = null
+      this.#setLocalModel({ state: 'notDownloaded', downloadedBytes: 0, error: null })
       return this.#settings.ai
     })
   }

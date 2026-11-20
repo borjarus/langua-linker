@@ -23,6 +23,8 @@
 //!    There is no exactly-once promise: a provider without idempotency keys may charge a call
 //!    whose answer never arrived, and the attempt limit bounds that cost.
 
+pub mod dataset;
+pub mod local;
 pub mod moderation;
 pub mod prompt;
 
@@ -234,10 +236,14 @@ pub fn provider_config(tx: &mut dyn Repositories) -> AppResult<ProviderConfig> {
         .model
         .ok_or(AppError::PermissionDenied { reason: "aiModel" })?;
     let protocol = match provider.id {
+        _ if provider.on_device => LlmProtocol::OnDevice,
         "anthropic" => LlmProtocol::Anthropic,
         "gemini" => LlmProtocol::Gemini,
         _ => LlmProtocol::OpenAiCompatible,
     };
+    if provider.on_device && local::find(&model).is_none() {
+        return Err(AppError::PermissionDenied { reason: "aiModel" });
+    }
     if provider.custom_endpoint && ai.endpoint.is_none() {
         return Err(AppError::PermissionDenied {
             reason: "aiEndpoint",
@@ -513,6 +519,13 @@ impl<U: UnitOfWork + 'static> LlmService<U> {
         let config = self.db.read(provider_config)?;
         if config.requires_key && !self.has_key() {
             return Err(AppError::PermissionDenied { reason: "apiKey" });
+        }
+        // The on-device model must be downloaded and verified first (ADR-23).
+        if config.protocol == LlmProtocol::OnDevice && !self.client.local_model_ready(&config.model)
+        {
+            return Err(AppError::PermissionDenied {
+                reason: "localModel",
+            });
         }
         let now = self.clock.now();
         let operation = operation_id.to_owned();

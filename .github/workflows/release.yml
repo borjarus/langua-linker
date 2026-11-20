@@ -109,6 +109,13 @@ jobs:
       - name: Install NDK r27 (LTS)
         run: sdkmanager --install "ndk;27.3.13750724" "platforms;android-36" "build-tools;36.0.0"
       - run: echo "NDK_HOME=$ANDROID_HOME/ndk/27.3.13750724" >> "$GITHUB_ENV"
+      # llama.cpp of the on-device model (ADR-23) is built with CMake and bindgen for each ABI: the
+      # same NDK as Tauri (the runner has newer ones preinstalled) and the app's minSdk.
+      - name: Prepare the llama.cpp build
+        run: |
+          sudo apt-get install -y --no-install-recommends cmake libclang-dev
+          echo "ANDROID_NDK=$ANDROID_HOME/ndk/27.3.13750724" >> "$GITHUB_ENV"
+          echo "ANDROID_API_LEVEL=26" >> "$GITHUB_ENV"
       - run: rustup target add aarch64-linux-android armv7-linux-androideabi i686-linux-android x86_64-linux-android
       - uses: Swatinem/rust-cache@v2
         with:

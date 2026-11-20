@@ -82,6 +82,7 @@ export const OPERATIONS = {
   updateNoteContent: op({ kind: 'mutation', command: 'update_note_content', errors: ['VALIDATION_FAILED', 'NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['card'], backendPhase: 11 }),
   setFavoriteAssociation: op({ kind: 'mutation', command: 'set_favorite_association', errors: ['NOT_FOUND', 'DB_BUSY'], emits: ['collection_changed'], permission: 'none', screens: ['study', 'card'], backendPhase: 10 }),
   resolveWordLink: op({ kind: 'mutation', command: 'resolve_word_link', errors: ['VALIDATION_FAILED', 'NOT_FOUND'], emits: ['collection_changed'], permission: 'none', screens: ['study', 'card'], backendPhase: 10 }),
+  addWordLink: op({ kind: 'mutation', command: 'add_word_link', errors: ['VALIDATION_FAILED', 'NOT_FOUND', 'DELETED'], emits: ['collection_changed'], permission: 'none', screens: ['study'], backendPhase: 10 }),
   searchWords: op({ kind: 'query', command: 'search_words', errors: ['VALIDATION_FAILED'], emits: [], permission: 'none', screens: ['editor', 'card'], backendPhase: 11 }),
   generateAssociation: op({ kind: 'job', command: 'generate_association', errors: ['NETWORK_UNAVAILABLE', 'PROVIDER_ERROR', 'PROVIDER_TIMEOUT', 'INVALID_PROVIDER_OUTPUT', 'MODERATION_BLOCKED', 'QUOTA_EXCEEDED', 'PERMISSION_DENIED'], emits: ['job_progress', 'collection_changed'], permission: 'network', screens: ['study', 'card', 'editor'], backendPhase: 13 }),
 
@@ -93,6 +94,8 @@ export const OPERATIONS = {
   getSettings: op({ kind: 'query', command: 'get_settings', errors: [], emits: [], permission: 'none', screens: ['settings', 'settingsAi', 'privacy', 'backup', 'shell', 'summary', 'study', 'card'], backendPhase: 12 }),
   updateSettings: op({ kind: 'mutation', command: 'update_settings', errors: ['VALIDATION_FAILED', 'VERSION_CONFLICT'], emits: ['collection_changed'], permission: 'none', screens: ['settings', 'settingsAi', 'privacy', 'backup', 'onboarding', 'summary'], backendPhase: 12 }),
   setAiApiKey: op({ kind: 'mutation', command: 'set_ai_api_key', errors: ['VALIDATION_FAILED', 'PERMISSION_DENIED'], emits: ['collection_changed'], permission: 'secret', screens: ['settingsAi'], backendPhase: 13 }),
+  downloadAiModel: op({ kind: 'mutation', command: 'download_ai_model', errors: ['VALIDATION_FAILED', 'PERMISSION_DENIED'], emits: ['collection_changed'], permission: 'network', screens: ['settingsAi'], backendPhase: 13 }),
+  deleteAiModel: op({ kind: 'mutation', command: 'delete_ai_model', errors: ['VALIDATION_FAILED', 'PERMISSION_DENIED'], emits: ['collection_changed'], permission: 'none', screens: ['settingsAi'], backendPhase: 13 }),
   requestNotificationPermission: op({ kind: 'mutation', command: 'request_notification_permission', errors: [], emits: ['collection_changed'], permission: 'notifications', screens: ['settings'], backendPhase: 15 }),
   getOnboardingState: op({ kind: 'query', command: 'get_onboarding_state', errors: [], emits: [], permission: 'none', screens: ['onboarding', 'shell'], backendPhase: 8 }),
   completeOnboarding: op({ kind: 'job', command: 'complete_onboarding', errors: ['VALIDATION_FAILED', 'STORAGE_FULL'], emits: ['job_progress', 'collection_changed'], permission: 'none', screens: ['onboarding'], backendPhase: 8 }),

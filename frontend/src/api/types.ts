@@ -93,6 +93,7 @@ import type {
   GenerateAssociationInput,
   SetAiApiKeyInput,
   ResolveWordLinkInput,
+  AddWordLinkInput,
   AssociationProvenance,
   AssociationStatus,
   WordLinkResolution,
@@ -174,6 +175,9 @@ import type {
   AiProviderOptionDto,
   AiQuotaDto,
   AiSettingsDto,
+  AiModelInput,
+  LocalModelDto,
+  LocalModelState,
   BackupLocation,
   BackupSettingsDto,
   SettingsDto,
@@ -270,6 +274,7 @@ export type {
   GenerateAssociationInput,
   SetAiApiKeyInput,
   ResolveWordLinkInput,
+  AddWordLinkInput,
   AssociationProvenance,
   AssociationStatus,
   WordLinkResolution,
@@ -348,6 +353,9 @@ export type {
   AiProviderOptionDto,
   AiQuotaDto,
   AiSettingsDto,
+  AiModelInput,
+  LocalModelDto,
+  LocalModelState,
   BackupLocation,
   BackupSettingsDto,
   SettingsDto,
@@ -382,7 +390,7 @@ export type {
   ExportLossDto,
 }
 
-export const API_VERSION = '1.8'
+export const API_VERSION = '1.10'
 
 /** Equal sets of members: guards runtime lists against the Rust enums. */
 type SameMembers<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false

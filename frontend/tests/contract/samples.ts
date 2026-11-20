@@ -191,6 +191,21 @@ export async function recordContractSamples(raw: AppApi): Promise<ContractSample
   const wordLink = required(linked, 'sentence with a word link')
   await api.getNoteDetails(wordLink.cardId)
   await api.resolveWordLink({ operationId: operationId(), linkId: wordLink.linkId, wordNoteId: wordLink.wordNoteId })
+  // A word of the same sentence without a link, linked to that word note (found without recording).
+  const sentence = await raw.getNoteDetails(wordLink.cardId)
+  const taken = sentence.wordLinks.map((item) => [item.startIndex, item.endIndex] as const)
+  const free = Array.from(sentence.note.front.matchAll(/\p{L}+/gu)).find((match) =>
+    taken.every(([from, to]) => match.index + match[0].length <= from || match.index >= to),
+  )
+  const word = required(free, 'unlinked word')
+  await api.addWordLink({
+    operationId: operationId(),
+    sentenceNoteId: sentence.note.id,
+    startIndex: word.index,
+    endIndex: word.index + word[0].length,
+    surface: word[0],
+    wordNoteId: wordLink.wordNoteId,
+  })
 
   // browser
   const page = await api.searchCards({ query: '', deckId: '1', tag: null, states: [], flags: [], sort: 'due', direction: 'asc', cursor: null, pageSize: 5 })
@@ -208,6 +223,9 @@ export async function recordContractSamples(raw: AppApi): Promise<ContractSample
   const settings = await api.getSettings()
   await api.updateSettings({ operationId: operationId(), expectedVersion: settings.version, patch: { dailyGoal: 25 } })
   await api.setAiApiKey({ operationId: operationId(), apiKey: 'contract-test-key' })
+  const localModel = required(settings.ai.localModels[0], 'on-device model')
+  await api.downloadAiModel({ operationId: operationId(), modelId: localModel.id })
+  await api.deleteAiModel({ operationId: operationId(), modelId: localModel.id })
   await api.requestNotificationPermission({ operationId: operationId() })
   const onboarding = await api.getOnboardingState()
   await finish(await api.completeOnboarding({ operationId: operationId(), nativeLanguage: 'pl', targetLanguages: onboarding.targetLanguages, dailyGoal: 25, deckGuids: [] }))

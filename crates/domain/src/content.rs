@@ -79,12 +79,17 @@ coded_enum! {
     pub enum TipProvenance { Bundled = 1, Generated = 2, Manual = 3 }
 }
 
+/// Text in other UI languages, keyed by language code (`en`); serialized as a JSON object.
+pub type Translations = std::collections::BTreeMap<String, String>;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct GrammarTip {
     pub id: GrammarTipId,
     pub guid: Guid,
     pub note_id: NoteId,
     pub text: String,
+    /// The text in other UI languages (bundled content only); empty after the learner edits it.
+    pub translations: Translations,
     pub provenance: TipProvenance,
     pub sort_order: i64,
     pub created_at: TimestampMs,

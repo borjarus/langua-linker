@@ -217,6 +217,28 @@ export class StudyController {
     }
   }
 
+  /**
+   * Links a word of the sentence that had no link; the card gets every link of the sentence back
+   * (stored links get new ids). Resolves to the new link, or to an error.
+   */
+  async addWordLink(link: WordLinkDto, wordNoteId: Id): Promise<{ link: WordLinkDto | null; error: ErrorDto | null }> {
+    try {
+      const links = await this.#api.addWordLink({
+        operationId: this.#operationId(),
+        sentenceNoteId: link.sentenceNoteId,
+        startIndex: link.startIndex,
+        endIndex: link.endIndex,
+        surface: link.surface,
+        wordNoteId,
+      })
+      const card = this.card
+      if (card?.noteId === link.sentenceNoteId) this.card = { ...card, wordLinks: links }
+      return { link: links.find((item) => item.startIndex === link.startIndex && item.endIndex === link.endIndex) ?? null, error: null }
+    } catch (caught) {
+      return { link: null, error: toErrorDto(caught) }
+    }
+  }
+
   /** Applies fresh associations if the note is still on screen. */
   setAssociations(noteId: Id, associations: AssociationDto[]): void {
     if (this.card?.noteId === noteId) this.card = { ...this.card, associations }

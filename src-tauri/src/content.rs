@@ -205,7 +205,7 @@ pub fn dashboard_dto(dashboard: Dashboard) -> DashboardDto {
     }
 }
 
-fn note_type(kind: note::NoteTypeKind) -> NoteTypeKind {
+pub(crate) fn note_type(kind: note::NoteTypeKind) -> NoteTypeKind {
     match kind {
         note::NoteTypeKind::Basic => NoteTypeKind::Basic,
         note::NoteTypeKind::BasicAndReversed => NoteTypeKind::BasicAndReversed,

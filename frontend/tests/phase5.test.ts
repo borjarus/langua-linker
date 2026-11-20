@@ -162,6 +162,26 @@ describe('settings', () => {
     stop()
   })
 
+  it('the on-device model is downloaded only on request, shows progress and can be removed', async () => {
+    const { calls, mock, stop, user } = await open('#/settings/ai')
+    await user.selectOptions(await screen.findByRole('combobox', { name: 'AI provider' }), 'onDevice')
+    expect(await screen.findByText(/cards never leave the device/)).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Bielik 1.5B (skojarzenia)' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Paste your API key')).not.toBeInTheDocument()
+    expect(screen.getByText('Not downloaded yet.')).toBeInTheDocument()
+    // Nothing is fetched before the learner asks.
+    expect(calls.has('downloadAiModel')).toBe(false)
+    await waitFor(async () => expect((await mock.getSettings()).ai.provider).toBe('onDevice'))
+
+    await user.click(screen.getByRole('button', { name: 'Download (1.0 GB)' }))
+    expect(await screen.findByRole('button', { name: 'Cancel download' })).toBeInTheDocument()
+    expect(await screen.findByText('Downloaded and verified. Ready to use.', {}, { timeout: 4000 })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Remove model from this device' }))
+    expect(await screen.findByText('Not downloaded yet.')).toBeInTheDocument()
+    expectContract(calls, 'settingsAi')
+    stop()
+  })
+
   it('declining AI, telemetry and notifications does not block learning', async () => {
     const { mock, services, stop, user } = await open('#/settings/ai')
     await user.click(await screen.findByRole('radio', { name: 'Do not use AI' }))

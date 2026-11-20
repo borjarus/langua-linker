@@ -44,7 +44,7 @@ export interface DeckRecord {
   /** `false` keeps the deck out of study sessions (reference only); absent = studied. */
   inStudy?: boolean
   /** Chapters of bundled content: notes tagged `tag` belong to the chapter. */
-  sections?: { tag: string; title: string }[]
+  sections?: { tag: string; title: string; titleTranslations?: Record<string, string> }[]
 }
 
 export interface NoteRecord {
@@ -127,6 +127,8 @@ export interface TipRecord {
   id: string
   noteId: string
   text: string
+  /** Bundled translations into other UI languages; dropped when the learner edits the text. */
+  translations?: Record<string, string>
   order: number
 }
 
@@ -245,14 +247,23 @@ const EN_BASICS: NoteSeed[] = [
   { front: 'excuse me', back: 'przepraszam (zwracając uwagę)', reversed: true },
 ]
 
+/** English versions of bundled tips (the content ships them as `translations.en`). */
+const TIP_TRANSLATIONS: Record<string, string> = {
+  'Rodzaj męski: der Kühlschrank, die Kühlschränke.': 'Masculine: der Kühlschrank, die Kühlschränke.',
+  'Złożenie: kühl (chłodny) + der Schrank (szafa).': 'Compound: kühl (cool) + der Schrank (cupboard).',
+  'Rodzaj nijaki: das Frühstück.': 'Neuter: das Frühstück.',
+  'Liczba mnoga: die Bänke.': 'Plural: die Bänke.',
+  'Liczba mnoga: die Banken.': 'Plural: die Banken.',
+}
+
 const DECK_SEEDS: { record: Omit<DeckRecord, 'version'>; notes: NoteSeed[]; noteType: NoteTypeKind }[] = [
   {
     record: { id: '1', guid: 'deck-de-words-a1', name: 'Niemiecki — słówka A1', parentId: null, targetLanguage: 'de', deckType: 'Linguistic', description: 'Podstawowe słownictwo z mnemotechnikami i wskazówkami gramatycznymi.', bundled: true, presetId: 'preset-default', level: 'A1',
       sections: [
-        { tag: 'dom', title: 'Dom i codzienne przedmioty' },
-        { tag: 'jedzenie', title: 'Przy stole' },
-        { tag: 'miasto', title: 'Po mieście' },
-        { tag: 'czasowniki', title: 'Pierwsze czasowniki' },
+        { tag: 'dom', title: 'Dom i codzienne przedmioty', titleTranslations: { en: 'Home and everyday things' } },
+        { tag: 'jedzenie', title: 'Przy stole', titleTranslations: { en: 'At the table' } },
+        { tag: 'miasto', title: 'Po mieście', titleTranslations: { en: 'Around town' } },
+        { tag: 'czasowniki', title: 'Pierwsze czasowniki', titleTranslations: { en: 'First verbs' } },
       ] },
     notes: DE_WORDS,
     noteType: 'Basic',
@@ -375,7 +386,8 @@ export function createCollection({ seed, nowMs, ambiguousLinks }: CollectionOpti
         collection.associations.push({ id: String(extraSeq++), noteId, text: seedNote.association, provenance: 'bundled', favorite: true, status: 'ready', ...(seedNote.extended ? { extended: seedNote.extended } : {}) })
       }
       ;(seedNote.tips ?? []).forEach((text, order) => {
-        collection.tips.push({ id: String(extraSeq++), noteId, text, order })
+        const english = TIP_TRANSLATIONS[text]
+        collection.tips.push({ id: String(extraSeq++), noteId, text, order, ...(english ? { translations: { en: english } } : {}) })
       })
     }
   }

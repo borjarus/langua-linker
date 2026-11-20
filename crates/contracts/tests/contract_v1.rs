@@ -380,12 +380,13 @@ fn phase10_outputs_round_trip_through_their_rust_dtos() {
     assert!(round_trips::<NoteContentDto>("getNoteContent") >= 1);
     assert!(round_trips::<Vec<AssociationDto>>("setFavoriteAssociation") >= 1);
     assert!(round_trips::<WordLinkDto>("resolveWordLink") >= 1);
+    assert!(round_trips::<Vec<WordLinkDto>>("addWordLink") >= 1);
 }
 
 #[test]
 fn phase10_inputs_deserialize_into_their_rust_dtos() {
     use langualinker_contracts::dto::{
-        CardActionInput, PreviewInput, RateCardInput, ResolveWordLinkInput,
+        AddWordLinkInput, CardActionInput, PreviewInput, RateCardInput, ResolveWordLinkInput,
         SetFavoriteAssociationInput, StartStudyInput, UndoInput, UpdateStudySessionInput,
     };
     fn back<T: DeserializeOwned + Serialize>(input: &Value) -> Value {
@@ -404,6 +405,7 @@ fn phase10_inputs_deserialize_into_their_rust_dtos() {
             Some("applyCardAction") => back::<CardActionInput>(input),
             Some("setFavoriteAssociation") => back::<SetFavoriteAssociationInput>(input),
             Some("resolveWordLink") => back::<ResolveWordLinkInput>(input),
+            Some("addWordLink") => back::<AddWordLinkInput>(input),
             // Bare ids.
             Some("resumeStudy" | "getSessionSummary" | "getNoteContent") => {
                 let _: String = serde_json::from_value(input.clone()).expect("id string");
@@ -582,12 +584,16 @@ fn phase12_inputs_deserialize_into_their_rust_dtos() {
 
 #[test]
 fn phase13_samples_round_trip_through_their_rust_dtos() {
-    use langualinker_contracts::dto::{AiSettingsDto, GenerateAssociationInput, SetAiApiKeyInput};
+    use langualinker_contracts::dto::{
+        AiModelInput, AiSettingsDto, GenerateAssociationInput, SetAiApiKeyInput,
+    };
     fn back<T: DeserializeOwned + Serialize>(input: &Value) -> Value {
         serde_json::to_value(serde_json::from_value::<T>(input.clone()).unwrap()).unwrap()
     }
     assert!(round_trips::<JobDto>("generateAssociation") >= 1);
     assert!(round_trips::<AiSettingsDto>("setAiApiKey") >= 1);
+    assert!(round_trips::<AiSettingsDto>("downloadAiModel") >= 1);
+    assert!(round_trips::<AiSettingsDto>("deleteAiModel") >= 1);
     let samples = samples();
     let mut seen = 0;
     for call in samples["calls"].as_array().expect("calls") {
@@ -595,6 +601,7 @@ fn phase13_samples_round_trip_through_their_rust_dtos() {
         let read = match call["operation"].as_str() {
             Some("generateAssociation") => back::<GenerateAssociationInput>(input),
             Some("setAiApiKey") => back::<SetAiApiKeyInput>(input),
+            Some("downloadAiModel" | "deleteAiModel") => back::<AiModelInput>(input),
             _ => continue,
         };
         assert_eq!(&read, input, "{}", call["operation"]);

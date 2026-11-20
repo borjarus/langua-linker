@@ -1,6 +1,7 @@
 import type {
   AboutDto,
   AiSettingsDto,
+  AiModelInput,
   AppInfoDto,
   AttributionDto,
   BackupDto,
@@ -56,6 +57,7 @@ import type {
   ResetPreviewInput,
   RatingPreviewDto,
   ResolveWordLinkInput,
+  AddWordLinkInput,
   RestoreInput,
   RestorePreviewDto,
   ReviewResultDto,
@@ -142,6 +144,8 @@ export interface AppApi {
   updateNoteContent(input: UpdateNoteContentInput): Promise<NoteDetailsDto>
   setFavoriteAssociation(input: SetFavoriteAssociationInput): Promise<AssociationDto[]>
   resolveWordLink(input: ResolveWordLinkInput): Promise<WordLinkDto>
+  /** Links one more phrase of a sentence to a word note; resolves to every link of the sentence. */
+  addWordLink(input: AddWordLinkInput): Promise<WordLinkDto[]>
   /** Word notes matching a selected phrase: exact first, then normalized; empty when nothing matches. */
   searchWords(input: SearchWordsInput): Promise<WordMatchDto[]>
   generateAssociation(input: GenerateAssociationInput): Promise<JobDto>
@@ -157,6 +161,10 @@ export interface AppApi {
   updateSettings(input: UpdateSettingsInput): Promise<SettingsDto>
   /** Stores or removes the BYOK key in the SecretStore; only `hasApiKey` comes back. */
   setAiApiKey(input: SetAiApiKeyInput): Promise<AiSettingsDto>
+  /** Starts or resumes downloading an on-device model; progress arrives as settings changes. */
+  downloadAiModel(input: AiModelInput): Promise<AiSettingsDto>
+  /** Cancels a download and removes the model from the device. */
+  deleteAiModel(input: AiModelInput): Promise<AiSettingsDto>
   /** Asks the OS for notification permission; a refusal is a state, not a failure. */
   requestNotificationPermission(input: RequestPermissionInput): Promise<SettingsDto>
   getOnboardingState(): Promise<OnboardingStateDto>

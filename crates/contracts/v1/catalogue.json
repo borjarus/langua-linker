@@ -1,5 +1,5 @@
 {
-  "apiVersion": "1.8",
+  "apiVersion": "1.10",
   "errorCodes": [
     "VALIDATION_FAILED",
     "VERSION_CONFLICT",
@@ -391,6 +391,19 @@
       ],
       "permission": "none"
     },
+    "addWordLink": {
+      "kind": "mutation",
+      "command": "add_word_link",
+      "errors": [
+        "VALIDATION_FAILED",
+        "NOT_FOUND",
+        "DELETED"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
+    },
     "searchWords": {
       "kind": "query",
       "command": "search_words",
@@ -492,6 +505,30 @@
         "collection_changed"
       ],
       "permission": "secret"
+    },
+    "downloadAiModel": {
+      "kind": "mutation",
+      "command": "download_ai_model",
+      "errors": [
+        "VALIDATION_FAILED",
+        "PERMISSION_DENIED"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "network"
+    },
+    "deleteAiModel": {
+      "kind": "mutation",
+      "command": "delete_ai_model",
+      "errors": [
+        "VALIDATION_FAILED",
+        "PERMISSION_DENIED"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "none"
     },
     "requestNotificationPermission": {
       "kind": "mutation",

@@ -2169,6 +2169,12 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Enables the add_word_link command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-add-word-link",
+          "markdownDescription": "Enables the add_word_link command without any pre-configured scope."
+        },
+        {
           "description": "Enables the apply_bulk_action command without any pre-configured scope.",
           "type": "string",
           "const": "allow-apply-bulk-action",
@@ -2229,6 +2235,12 @@
           "markdownDescription": "Enables the create_deck command without any pre-configured scope."
         },
         {
+          "description": "Enables the delete_ai_model command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-delete-ai-model",
+          "markdownDescription": "Enables the delete_ai_model command without any pre-configured scope."
+        },
+        {
           "description": "Enables the delete_deck command without any pre-configured scope.",
           "type": "string",
           "const": "allow-delete-deck",
@@ -2239,6 +2251,12 @@
           "type": "string",
           "const": "allow-delete-note",
           "markdownDescription": "Enables the delete_note command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the download_ai_model command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-download-ai-model",
+          "markdownDescription": "Enables the download_ai_model command without any pre-configured scope."
         },
         {
           "description": "Enables the export_deck command without any pre-configured scope.",
@@ -2589,6 +2607,12 @@
           "markdownDescription": "Enables the validate_restore command without any pre-configured scope."
         },
         {
+          "description": "Denies the add_word_link command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-add-word-link",
+          "markdownDescription": "Denies the add_word_link command without any pre-configured scope."
+        },
+        {
           "description": "Denies the apply_bulk_action command without any pre-configured scope.",
           "type": "string",
           "const": "deny-apply-bulk-action",
@@ -2649,6 +2673,12 @@
           "markdownDescription": "Denies the create_deck command without any pre-configured scope."
         },
         {
+          "description": "Denies the delete_ai_model command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-delete-ai-model",
+          "markdownDescription": "Denies the delete_ai_model command without any pre-configured scope."
+        },
+        {
           "description": "Denies the delete_deck command without any pre-configured scope.",
           "type": "string",
           "const": "deny-delete-deck",
@@ -2659,6 +2689,12 @@
           "type": "string",
           "const": "deny-delete-note",
           "markdownDescription": "Denies the delete_note command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the download_ai_model command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-download-ai-model",
+          "markdownDescription": "Denies the download_ai_model command without any pre-configured scope."
         },
         {
           "description": "Denies the export_deck command without any pre-configured scope.",

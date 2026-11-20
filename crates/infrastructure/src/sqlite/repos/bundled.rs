@@ -5,7 +5,7 @@ use langualinker_application::repositories::{
 };
 use langualinker_application::{AppError, AppResult};
 use langualinker_domain::card::{CardState, QueueState};
-use langualinker_domain::content::{Association, GrammarTip};
+use langualinker_domain::content::{Association, GrammarTip, Translations};
 use langualinker_domain::deck::Deck;
 use langualinker_domain::{
     AssociationId, DeckId, GrammarTipId, Guid, NoteId, SessionId, TimestampMs,
@@ -250,7 +250,7 @@ impl BundledContentRepository for SqliteRepos<'_> {
         self.tx
             .query_row(
                 "SELECT id, guid, note_id, text, provenance, sort_order, created_at, updated_at,
-                     deleted_at, usn FROM grammar_tips WHERE id = ?1",
+                     deleted_at, usn, translations FROM grammar_tips WHERE id = ?1",
                 [id],
                 |row| {
                     Ok(GrammarTip {
@@ -258,6 +258,7 @@ impl BundledContentRepository for SqliteRepos<'_> {
                         guid: guid(row, 1)?,
                         note_id: NoteId(row.get(2)?),
                         text: row.get(3)?,
+                        translations: crate::sqlite::codec::translations_column(row, 10)?,
                         provenance: super::code(
                             4,
                             langualinker_domain::content::TipProvenance::from_db_code(row.get(4)?),
@@ -288,7 +289,7 @@ impl BundledContentRepository for SqliteRepos<'_> {
         let changed = self
             .tx
             .execute(
-                "UPDATE grammar_tips SET text = ?1, updated_at = ?2, usn = ?3
+                "UPDATE grammar_tips SET text = ?1, translations = '{}', updated_at = ?2, usn = ?3
                  WHERE id = ?4 AND deleted_at IS NULL",
                 params![text, at.0, LOCAL_USN, id.0],
             )
@@ -298,6 +299,23 @@ impl BundledContentRepository for SqliteRepos<'_> {
                 entity: "grammarTip",
             });
         }
+        Ok(())
+    }
+
+    fn set_grammar_tip_translations(
+        &mut self,
+        id: GrammarTipId,
+        translations: &Translations,
+    ) -> AppResult<()> {
+        self.tx
+            .execute(
+                "UPDATE grammar_tips SET translations = ?1 WHERE id = ?2",
+                params![
+                    crate::sqlite::codec::translations_to_json(translations),
+                    id.0
+                ],
+            )
+            .map_err(map_sqlite)?;
         Ok(())
     }
 

@@ -28,8 +28,8 @@ use langualinker_content::format::{
 use langualinker_content::{Bundle, ContentSource, NotAPackage, Package};
 use langualinker_domain::card::{Card, CardFlag, CardFsrsState, CardState, NewCard, QueueState};
 use langualinker_domain::content::{
-    AssociationProvenance, ModerationStatus, NewAssociation, SentenceWordLink, TipProvenance,
-    WordLinkResolution,
+    AssociationProvenance, GrammarTip, ModerationStatus, NewAssociation, SentenceWordLink,
+    TipProvenance, Translations, WordLinkResolution,
 };
 use langualinker_domain::deck::{DeckType, NativeLanguage, NewDeck, TargetLanguage};
 use langualinker_domain::note::{NewNote, NoteFields, NoteTypeKind};
@@ -1058,6 +1058,11 @@ impl Installer<'_> {
             .map(|section| DeckSection {
                 tag: section.tag.clone(),
                 title: section.title.clone(),
+                title_translations: section
+                    .translations
+                    .iter()
+                    .map(|(language, title)| (language.clone(), nfc(title.trim())))
+                    .collect(),
             })
             .collect();
         self.tx
@@ -1352,9 +1357,15 @@ impl Installer<'_> {
         for tip in &record.grammar_tips {
             let tip_guid = guid(&tip.guid)?;
             let text = nfc(tip.text.trim());
-            match self.tx.grammar_tip_by_guid(&tip_guid)? {
+            let translations: Translations = tip
+                .translations
+                .iter()
+                .map(|(language, text)| (language.clone(), nfc(text.trim())))
+                .collect();
+            // The tip whose translations follow the bundle: one that shows the bundled text.
+            let current = match self.tx.grammar_tip_by_guid(&tip_guid)? {
                 None => {
-                    self.tx.insert_grammar_tip(
+                    let inserted = self.tx.insert_grammar_tip(
                         note,
                         &tip_guid,
                         &text,
@@ -1362,18 +1373,33 @@ impl Installer<'_> {
                         self.at,
                     )?;
                     changed = true;
+                    Some(inserted)
                 }
-                Some(existing) if existing.deleted_at.is_some() || existing.text == text => {}
+                Some(existing) if existing.deleted_at.is_some() => None,
+                Some(existing) if existing.text == text => Some(existing),
                 Some(existing) => {
                     let field = format!("tip:{}", tip.guid);
                     if overrides.contains(&field) {
                         self.conflict(record, field, outcome);
+                        None
                     } else {
                         self.tx
                             .update_grammar_tip_text(existing.id, &text, self.at)?;
                         changed = true;
+                        // The text update dropped the old translations.
+                        Some(GrammarTip {
+                            translations: Translations::new(),
+                            ..existing
+                        })
                     }
                 }
+            };
+            if let Some(current) = current
+                && current.translations != translations
+            {
+                self.tx
+                    .set_grammar_tip_translations(current.id, &translations)?;
+                changed = true;
             }
         }
         Ok(changed)

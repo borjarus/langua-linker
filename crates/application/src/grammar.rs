@@ -154,6 +154,7 @@ mod tests {
         DeckSection {
             tag: tag.into(),
             title: format!("Title {tag}"),
+            title_translations: Default::default(),
         }
     }
 
@@ -162,6 +163,7 @@ mod tests {
             deck_id: DeckId(1),
             tip_id: GrammarTipId(id),
             text: format!("tip {id}"),
+            translations: Default::default(),
             note_id: NoteId(id),
             card_id: CardId(id),
             front: String::new(),

@@ -1212,7 +1212,7 @@ impl ContentRepository for SqliteRepos<'_> {
             .tx
             .prepare_cached(
                 "SELECT id, guid, note_id, text, provenance, sort_order, created_at, updated_at,
-                     deleted_at, usn
+                     deleted_at, usn, translations
                  FROM grammar_tips WHERE note_id = ?1 AND deleted_at IS NULL ORDER BY sort_order, id",
             )
             .map_err(map_sqlite)?;
@@ -1223,6 +1223,7 @@ impl ContentRepository for SqliteRepos<'_> {
                     guid: guid(row, 1)?,
                     note_id: NoteId(row.get(2)?),
                     text: row.get(3)?,
+                    translations: codec::translations_column(row, 10)?,
                     provenance: code(4, TipProvenance::from_db_code(row.get(4)?))?,
                     sort_order: row.get(5)?,
                     created_at: ts(row, 6)?,

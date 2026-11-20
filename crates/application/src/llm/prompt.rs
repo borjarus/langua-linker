@@ -95,6 +95,12 @@ impl Params {
                 max_tokens: 2_048,
                 temperature: None,
             },
+            // A small local model (ADR-23): the answer is one short JSON object; sampling as in
+            // the fine-tuning evaluation.
+            LlmProtocol::OnDevice => Self {
+                max_tokens: 256,
+                temperature: Some(0.7),
+            },
         }
     }
 

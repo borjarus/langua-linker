@@ -17,20 +17,21 @@ use langualinker_contracts::ErrorDto;
 use langualinker_contracts::dto::{
     AiProviderOptionDto, AiQuotaDto, AiSettingsDto, BackupDto, BackupInput, BackupKind,
     BackupLocation, BackupSettingsDto, CardStatesDto, CollectionCountsDto, ConsentState,
-    DifficultyStabilityPointDto, ForecastAssumptionsDto, ForecastDayDto, JobDto, MaturityDto,
-    NativeLanguage, PermissionState, RatioDto, ResetInput, ResetPreviewDto, ResetPreviewInput,
-    ResetScope, RestoreInput, RestorePreviewDto, RestoreSource, ReviewDayDto, SettingsDto,
-    ShareFileInput, ShareResultDto, ShareTarget, StabilityBucketDto, StatsDto, StatsInput,
-    StatsRange, ThemePreference, TrueRetentionDto, UiLanguage, UpdateSettingsInput,
-    ValidateRestoreInput,
+    DifficultyStabilityPointDto, ForecastAssumptionsDto, ForecastDayDto, JobDto, LocalModelDto,
+    LocalModelState, MaturityDto, NativeLanguage, PermissionState, RatioDto, ResetInput,
+    ResetPreviewDto, ResetPreviewInput, ResetScope, RestoreInput, RestorePreviewDto, RestoreSource,
+    ReviewDayDto, SettingsDto, ShareFileInput, ShareResultDto, ShareTarget, StabilityBucketDto,
+    StatsDto, StatsInput, StatsRange, ThemePreference, TrueRetentionDto, UiLanguage,
+    UpdateSettingsInput, ValidateRestoreInput,
 };
 use langualinker_domain::{DeckConfigId, DeckId, TimestampMs};
 use langualinker_infrastructure::backup::{self, BackupInfo};
+use langualinker_infrastructure::ondevice::LocalModelState as OnDeviceState;
 use serde::Deserialize;
 use serde_json::Value;
 use tauri::{AppHandle, Runtime, State};
 
-use crate::backend::{Backend, iso, job_dto};
+use crate::backend::{Backend, LocalModels, iso, job_dto};
 use crate::commands::{blocking, operation_id, parse_input};
 use crate::content::{domain_target_language, target_language};
 use crate::files::PickedFiles;
@@ -181,15 +182,59 @@ pub(crate) fn has_api_key(secrets: Option<&Arc<dyn SecretStore>>) -> bool {
 pub(crate) fn read_settings(
     db: &langualinker_infrastructure::sqlite::SqliteDatabase,
     secrets: Option<&Arc<dyn SecretStore>>,
+    local: &LocalModels,
     now: TimestampMs,
 ) -> Result<SettingsDto, ErrorDto> {
     let (settings, quota) = db
         .read(move |tx| Ok((app_settings::read(tx)?, llm::quota(tx, now)?)))
         .map_err(app_error)?;
-    Ok(settings_dto(settings, has_api_key(secrets), quota))
+    Ok(settings_dto(
+        settings,
+        has_api_key(secrets),
+        quota,
+        local_models(local),
+    ))
 }
 
-fn settings_dto(settings: Settings, has_key: bool, quota: llm::Quota) -> SettingsDto {
+/// The on-device models with their state; empty when the build offers no on-device provider.
+pub(crate) fn local_models(local: &LocalModels) -> Vec<LocalModelDto> {
+    if !local.offered {
+        return Vec::new();
+    }
+    local
+        .store
+        .catalog()
+        .iter()
+        .filter_map(|model| {
+            let state = local.store.state(&model.id).ok()?;
+            let (state, downloaded_bytes, error) = match state {
+                OnDeviceState::NotDownloaded { done } => {
+                    (LocalModelState::NotDownloaded, done, None)
+                }
+                OnDeviceState::Downloading { done } => (LocalModelState::Downloading, done, None),
+                OnDeviceState::Ready => (LocalModelState::Ready, model.bytes, None),
+                OnDeviceState::Failed { done, code } => {
+                    (LocalModelState::Failed, done, Some(code.to_owned()))
+                }
+            };
+            Some(LocalModelDto {
+                id: model.id.clone(),
+                name: model.name.clone(),
+                bytes: model.bytes,
+                state,
+                downloaded_bytes,
+                error,
+            })
+        })
+        .collect()
+}
+
+fn settings_dto(
+    settings: Settings,
+    has_key: bool,
+    quota: llm::Quota,
+    local_models: Vec<LocalModelDto>,
+) -> SettingsDto {
     let doc = settings.doc;
     SettingsDto {
         ui_language: ui_language_dto(doc.ui_language),
@@ -211,14 +256,21 @@ fn settings_dto(settings: Settings, has_key: bool, quota: llm::Quota) -> Setting
             model: doc.ai.model,
             endpoint: doc.ai.endpoint,
             has_api_key: has_key,
+            // The on-device provider only where this build can run a catalog model.
             providers: AI_PROVIDERS
                 .iter()
+                .filter(|provider| !provider.on_device || !local_models.is_empty())
                 .map(|provider| AiProviderOptionDto {
                     id: provider.id.to_owned(),
                     name: provider.name.to_owned(),
                     requires_key: provider.requires_key,
-                    models: provider.models.iter().map(|m| (*m).to_owned()).collect(),
+                    models: if provider.on_device {
+                        local_models.iter().map(|model| model.id.clone()).collect()
+                    } else {
+                        provider.models.iter().map(|m| (*m).to_owned()).collect()
+                    },
                     custom_endpoint: provider.custom_endpoint,
+                    on_device: provider.on_device,
                 })
                 .collect(),
             // The local daily call limit (cost guard, Phase 13); BYOK providers report none.
@@ -227,6 +279,7 @@ fn settings_dto(settings: Settings, has_key: bool, quota: llm::Quota) -> Setting
                 limit: quota.limit,
                 resets_at: iso(quota.resets_at),
             }),
+            local_models,
         },
         telemetry_opt_in: doc.telemetry_opt_in,
         backup: BackupSettingsDto {
@@ -308,8 +361,9 @@ pub async fn get_settings<R: Runtime>(
 ) -> Result<SettingsDto, ErrorDto> {
     let collection = backend.collection()?;
     let (db, secrets) = (collection.db.clone(), collection.secrets.clone());
+    let local = collection.local.clone();
     let now = collection.clock.now();
-    blocking(move || with_permission(&app, read_settings(&db, secrets.as_ref(), now))).await
+    blocking(move || with_permission(&app, read_settings(&db, secrets.as_ref(), &local, now))).await
 }
 
 /// The notification permission lives in the OS, not in the settings document.
@@ -353,8 +407,9 @@ pub async fn request_notification_permission<R: Runtime>(
         collection.clock.now(),
     );
     let now = collection.clock.now();
+    let local = collection.local.clone();
     blocking(move || {
-        read_settings(&db, secrets.as_ref(), now).map(|mut settings| {
+        read_settings(&db, secrets.as_ref(), &local, now).map(|mut settings| {
             settings.notifications = state;
             settings
         })
@@ -479,9 +534,15 @@ pub async fn update_settings<R: Runtime>(
     }
     let collection_db = collection.db.clone();
     let secrets = collection.secrets.clone();
+    let local = collection.local.clone();
     let now = collection.clock.now();
-    blocking(move || with_permission(&app, read_settings(&collection_db, secrets.as_ref(), now)))
-        .await
+    blocking(move || {
+        with_permission(
+            &app,
+            read_settings(&collection_db, secrets.as_ref(), &local, now),
+        )
+    })
+    .await
 }
 
 // ---------------------------------------------------------------- reset

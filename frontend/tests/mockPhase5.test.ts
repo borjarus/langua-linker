@@ -70,6 +70,23 @@ describe('settings, AI and notifications', () => {
     await expect(update('f', { dailyGoal: 30 })).rejects.toMatchObject({ dto: { code: 'VERSION_CONFLICT' } })
   })
 
+  it('the on-device provider needs a downloaded model and no key', async () => {
+    const api = new MockAppApi({ jobStepMs: 1 })
+    const settings = await api.updateSettings({ operationId: 'p', expectedVersion: 1, patch: { aiProvider: 'onDevice' } })
+    expect(settings.ai).toMatchObject({ provider: 'onDevice', model: 'bielik-1.5b-associations-v1', hasApiKey: false })
+    const noteId = (await api.searchCards({ query: 'Kühlschrank', deckId: null, tag: null, states: [], flags: [], sort: 'created', direction: 'asc', cursor: null, pageSize: 1 })).items[0]?.noteId ?? ''
+    await expect(api.generateAssociation({ operationId: 'g1', noteId, variants: 1 })).rejects.toMatchObject({ dto: { code: 'PERMISSION_DENIED', details: { reason: 'localModel' } } })
+
+    const started = await api.downloadAiModel({ operationId: 'd', modelId: 'bielik-1.5b-associations-v1' })
+    expect(started.localModels[0]).toMatchObject({ state: 'downloading', downloadedBytes: 0 })
+    await vi.waitFor(async () => expect((await api.getSettings()).ai.localModels[0]?.state).toBe('ready'))
+    await expect(api.generateAssociation({ operationId: 'g2', noteId, variants: 1 })).resolves.toMatchObject({ kind: 'llm' })
+
+    const removed = await api.deleteAiModel({ operationId: 'x', modelId: 'bielik-1.5b-associations-v1' })
+    expect(removed.localModels[0]).toMatchObject({ state: 'notDownloaded', downloadedBytes: 0 })
+    await expect(api.downloadAiModel({ operationId: 'u', modelId: 'other' })).rejects.toMatchObject({ dto: { code: 'VALIDATION_FAILED' } })
+  })
+
   it('never returns the API key, drops it on a provider change, and needs it to generate', async () => {
     const api = new MockAppApi()
     let settings = await api.updateSettings({ operationId: 'p', expectedVersion: 1, patch: { aiProvider: 'anthropic' } })

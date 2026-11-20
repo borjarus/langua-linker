@@ -6,6 +6,7 @@
 use std::sync::Arc;
 
 use langualinker_application::learning::{self, CardAction};
+use langualinker_application::management;
 use langualinker_application::ports::Clock;
 use langualinker_application::repositories::{Repositories, SessionStatus, UnitOfWork};
 use langualinker_application::study::{self, RateCard, SessionAction, StartStudy, StudyView};
@@ -520,6 +521,118 @@ fn choosing_a_word_for_a_link_keeps_the_link_id() {
     })
     .unwrap_err();
     assert!(matches!(error, AppError::Validation(ref e) if e.reason == "sameNote"));
+}
+
+#[test]
+fn a_word_without_a_link_gets_one_and_the_others_stay() {
+    let db = db();
+    let words = deck(&db, 1, DeckType::Linguistic);
+    let (very, _) = note(&db, 1, words, NoteTypeKind::Basic, "very", "bardzo");
+    let (pretty, _) = note(&db, 2, words, NoteTypeKind::Basic, "pretty", "ładny");
+    let (sentence, _) = note(
+        &db,
+        3,
+        words,
+        NoteTypeKind::Sentence,
+        "She is very pretty.",
+        "Ona jest bardzo ładna.",
+    );
+    write(&db, move |tx| {
+        tx.replace_word_links(
+            sentence,
+            &[SentenceWordLink {
+                id: WordLinkId(0),
+                sentence_note_id: sentence,
+                word_note_id: Some(very),
+                preferred_word_card_id: None,
+                surface_form: "very".into(),
+                lemma: Some("very".into()),
+                start_index: 7,
+                end_index: 11,
+                resolution: WordLinkResolution::Resolved,
+                created_at: TimestampMs(0),
+                updated_at: TimestampMs(0),
+            }],
+            TimestampMs(0),
+        )?;
+        Ok(())
+    })
+    .unwrap();
+    let draft = |start: u32, end: u32, surface: &str, word: NoteId| management::LinkDraft {
+        start,
+        end,
+        surface: surface.into(),
+        word: Some(word),
+    };
+
+    let views = write(&db, move |tx| {
+        management::add_word_link(
+            tx,
+            "add-pretty",
+            sentence,
+            draft(12, 18, "pretty", pretty),
+            TimestampMs(NOON),
+        )
+    })
+    .unwrap();
+    let links: Vec<_> = views
+        .iter()
+        .map(|view| {
+            (
+                view.link.surface_form.as_str(),
+                view.link.word_note_id,
+                view.link.resolution,
+            )
+        })
+        .collect();
+    assert_eq!(
+        links,
+        [
+            ("very", Some(very), WordLinkResolution::Resolved),
+            ("pretty", Some(pretty), WordLinkResolution::UserOverridden),
+        ]
+    );
+    assert_eq!(views[1].translation.as_deref(), Some("ładny"));
+
+    // A repeated operation answers the same links without adding another.
+    let replay = write(&db, move |tx| {
+        management::add_word_link(
+            tx,
+            "add-pretty",
+            sentence,
+            draft(12, 18, "pretty", pretty),
+            TimestampMs(NOON),
+        )
+    })
+    .unwrap();
+    assert_eq!(replay.len(), 2);
+
+    for (operation, link, reason) in [
+        ("overlap", draft(7, 11, "very", pretty), "range"),
+        ("surface", draft(0, 3, "Her", pretty), "range"),
+        ("self", draft(0, 3, "She", sentence), "sameNote"),
+    ] {
+        let error = write(&db, move |tx| {
+            management::add_word_link(tx, operation, sentence, link, TimestampMs(NOON))
+        })
+        .unwrap_err();
+        assert!(
+            matches!(error, AppError::Validation(ref e) if e.reason == reason),
+            "{operation}: {error:?}"
+        );
+    }
+    // Only sentences take new links.
+    let error = write(&db, move |tx| {
+        management::add_word_link(
+            tx,
+            "word",
+            very,
+            draft(0, 4, "very", pretty),
+            TimestampMs(NOON),
+        )
+    })
+    .unwrap_err();
+    assert!(matches!(error, AppError::Validation(ref e) if e.reason == "notSupported"));
 }
 
 // ---------------------------------------------------------------- summary and dashboard

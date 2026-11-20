@@ -21,6 +21,7 @@ use langualinker_contracts::{ErrorCode, ErrorDto};
 use langualinker_domain::TimestampMs;
 use langualinker_infrastructure::backup::{BackupDirs, BackupService};
 use langualinker_infrastructure::llm::HttpLlmClient;
+use langualinker_infrastructure::ondevice::{self, ModelStore, RoutingLlmClient};
 use langualinker_infrastructure::sqlite::{DATABASE_FILE, SqliteDatabase};
 use langualinker_infrastructure::system::{OsRng, SystemClock};
 use langualinker_infrastructure::telemetry::LocalTelemetry;
@@ -59,6 +60,31 @@ pub struct Collection {
     pub telemetry: Arc<LocalTelemetry>,
     /// Local FSRS optimizer runs (Phase 18).
     pub optimizer: OptimizerService<SqliteDatabase>,
+    /// On-device association models (ADR-23).
+    pub local: LocalModels,
+}
+
+/// The on-device models: their store, and whether this build offers the provider (an engine
+/// and a catalog model).
+#[derive(Clone)]
+pub struct LocalModels {
+    pub store: Arc<ModelStore>,
+    pub offered: bool,
+}
+
+impl LocalModels {
+    /// No on-device provider (tests).
+    #[cfg(test)]
+    pub fn none(dir: &std::path::Path) -> Self {
+        Self {
+            store: Arc::new(ModelStore::with_catalog(
+                dir.join(ondevice::MODELS_DIR),
+                Vec::new(),
+                false,
+            )),
+            offered: false,
+        }
+    }
 }
 
 impl Backend {
@@ -87,6 +113,16 @@ impl Backend {
             clock.clone(),
             Arc::new(OsRng),
         ));
+        let store = Arc::new(ModelStore::new(&data_dir));
+        let client = RoutingLlmClient::new(
+            HttpLlmClient::new(),
+            store.clone(),
+            ondevice::default_engine(),
+        );
+        let local = LocalModels {
+            offered: client.offers_on_device(),
+            store,
+        };
         let collection = SqliteDatabase::open(&data_dir.join(DATABASE_FILE), clock.as_ref())
             .and_then(|opened| {
                 tracing::info!(
@@ -104,8 +140,9 @@ impl Backend {
                     clock,
                     BackupDirs::under(&data_dir),
                     secrets,
-                    Arc::new(HttpLlmClient::new()),
+                    Arc::new(client),
                     telemetry,
+                    local,
                 )
             });
         match &collection {
@@ -192,9 +229,12 @@ impl Collection {
             None,
             Arc::new(HttpLlmClient::new()),
             telemetry,
+            LocalModels::none(&dir),
         )
     }
 
+    // The composition root: one argument per collaborator the tests swap out.
+    #[allow(clippy::too_many_arguments)]
     pub fn start_in(
         db: Arc<SqliteDatabase>,
         events: Arc<dyn EventSink>,
@@ -203,6 +243,7 @@ impl Collection {
         secrets: Option<Arc<dyn SecretStore>>,
         llm_client: Arc<dyn LlmClient>,
         telemetry: Arc<LocalTelemetry>,
+        local: LocalModels,
     ) -> Result<Self, AppError> {
         // Every service signals through the metered sink, so restores are counted.
         let events: Arc<dyn EventSink> = Arc::new(crate::metrics::MeteredEvents {
@@ -279,6 +320,7 @@ impl Collection {
             transfer,
             telemetry,
             optimizer,
+            local,
         })
     }
 }

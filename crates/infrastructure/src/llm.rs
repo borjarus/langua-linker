@@ -43,21 +43,26 @@ impl Default for HttpLlmClient {
     }
 }
 
+/// rustls with `ring` and the Mozilla roots (ADR-18); also used for model downloads (ADR-23).
+pub(crate) fn tls_config() -> Arc<rustls::ClientConfig> {
+    let roots = rustls::RootCertStore {
+        roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
+    };
+    let mut tls = rustls::ClientConfig::builder_with_provider(Arc::new(
+        rustls::crypto::ring::default_provider(),
+    ))
+    .with_safe_default_protocol_versions()
+    .expect("ring supports the default TLS versions")
+    .with_root_certificates(roots)
+    .with_no_client_auth();
+    tls.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
+    Arc::new(tls)
+}
+
 impl HttpLlmClient {
     pub fn new() -> Self {
-        let roots = rustls::RootCertStore {
-            roots: webpki_roots::TLS_SERVER_ROOTS.to_vec(),
-        };
-        let mut tls = rustls::ClientConfig::builder_with_provider(Arc::new(
-            rustls::crypto::ring::default_provider(),
-        ))
-        .with_safe_default_protocol_versions()
-        .expect("ring supports the default TLS versions")
-        .with_root_certificates(roots)
-        .with_no_client_auth();
-        tls.alpn_protocols = vec![b"h2".to_vec(), b"http/1.1".to_vec()];
         Self {
-            tls: Arc::new(tls),
+            tls: tls_config(),
             anthropic_base: ANTHROPIC_BASE.to_owned(),
             gemini_base: GEMINI_BASE.to_owned(),
             allow_loopback_http: false,
@@ -121,6 +126,8 @@ impl HttpLlmClient {
                 }
                 format!("{}/v1beta/models/{model}:generateContent", self.gemini_base)
             }
+            // Runs on the device (`ondevice::RoutingLlmClient`); never an HTTP call.
+            LlmProtocol::OnDevice => return None,
         };
         self.allowed(&url).then_some(url)
     }
@@ -142,6 +149,7 @@ impl HttpLlmClient {
 /// supports it; the system prompt asks for the same object everywhere.
 pub fn request_body(request: &LlmRequest) -> Value {
     match request.protocol {
+        LlmProtocol::OnDevice => json!({}),
         LlmProtocol::Anthropic => json!({
             "model": request.model,
             "max_tokens": request.max_tokens,
@@ -206,10 +214,15 @@ pub fn parse_response(
     body: &[u8],
     requested_model: &str,
 ) -> Result<LlmResponse, LlmFailure> {
+    if protocol == LlmProtocol::OnDevice {
+        return Err(LlmFailure::Malformed);
+    }
     let value: Value = serde_json::from_slice(body).map_err(|_| LlmFailure::Malformed)?;
     let reported = match protocol {
         LlmProtocol::Gemini => &value["modelVersion"],
-        LlmProtocol::Anthropic | LlmProtocol::OpenAiCompatible => &value["model"],
+        LlmProtocol::Anthropic | LlmProtocol::OpenAiCompatible | LlmProtocol::OnDevice => {
+            &value["model"]
+        }
     };
     let model = reported
         .as_str()
@@ -217,6 +230,7 @@ pub fn parse_response(
         .unwrap_or(requested_model)
         .to_owned();
     let text = match protocol {
+        LlmProtocol::OnDevice => return Err(LlmFailure::Malformed),
         LlmProtocol::Anthropic => {
             match value["stop_reason"].as_str() {
                 Some("refusal") => return Err(LlmFailure::Refused),
@@ -312,6 +326,7 @@ async fn call(
         // The key goes in a header, never in the URL (`?key=` would end up in logs and proxies).
         (LlmProtocol::Gemini, Some(key)) => builder.header("x-goog-api-key", &key.0),
         (LlmProtocol::Gemini, None) => builder,
+        (LlmProtocol::OnDevice, _) => builder,
     };
     let mut response = builder.send().await.map_err(|error| send_failure(&error))?;
     let status = response.status().as_u16();

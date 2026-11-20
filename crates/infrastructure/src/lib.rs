@@ -5,6 +5,7 @@ pub mod backup;
 pub mod diagnostics;
 pub mod llm;
 pub mod logging;
+pub mod ondevice;
 pub mod secrets;
 pub mod sqlite;
 pub mod system;

@@ -23,7 +23,7 @@
   {:else}
     <ol class="tips">
       {#each ordered as tip (tip.id)}
-        <li>{tip.text}</li>
+        <li>{i18n.content(tip.text, tip.translations)}</li>
       {/each}
     </ol>
   {/if}

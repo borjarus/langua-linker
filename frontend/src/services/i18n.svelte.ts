@@ -51,6 +51,12 @@ export class I18n {
     return this.#instance.exists(key, { lng: this.language }) ? this.#instance.t(key, { lng: this.language, ...values }) : this.t(fallback, values)
   }
 
+  /**
+   * Content text (grammar tips, chapter titles) in the UI language when the content ships a
+   * translation into it; otherwise as written (the learner's native language).
+   */
+  content = (text: string, translations?: Readonly<Record<string, string>> | null): string => translations?.[this.language] ?? text
+
   async setLanguage(language: UiLanguage): Promise<void> {
     await this.#instance.changeLanguage(language)
     this.language = language

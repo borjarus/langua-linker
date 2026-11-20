@@ -139,6 +139,9 @@ fn configure<R: Runtime>(
         study::get_note_content,
         study::set_favorite_association,
         study::resolve_word_link,
+        study::add_word_link,
+        ai::download_ai_model,
+        ai::delete_ai_model,
         manage::get_deck,
         manage::create_deck,
         manage::update_deck,
@@ -593,7 +596,7 @@ mod tests {
         let window = main_window(&app);
         let about = invoke(&window, "get_about_info", serde_json::json!({})).unwrap();
         let about: AboutDto = serde_json::from_value(about).unwrap();
-        assert_eq!(about.schema_version, Some(8));
+        assert_eq!(about.schema_version, Some(9));
         assert_eq!(about.api_version, API_VERSION);
         assert_eq!(
             (about.fsrs_version.as_str(), about.content_version.as_str()),
@@ -1873,6 +1876,7 @@ mod tests {
                         Arc::new(langualinker_infrastructure::system::OsRng),
                     ),
                 ),
+                backend::LocalModels::none(&dir),
             ),
             log_dir: None,
         }

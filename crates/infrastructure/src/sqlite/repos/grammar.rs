@@ -2,6 +2,7 @@
 
 use langualinker_application::AppResult;
 use langualinker_application::repositories::{DeckSection, GrammarRepository, GrammarTipEntry};
+use langualinker_domain::content::Translations;
 use langualinker_domain::{CardId, DeckId, GrammarTipId, NoteId};
 use rusqlite::params;
 
@@ -15,6 +16,7 @@ struct EntryRow {
     deck_id: i64,
     tip_id: i64,
     text: String,
+    translations: Translations,
     note_id: i64,
     card_id: i64,
     fields: String,
@@ -41,12 +43,19 @@ impl GrammarRepository for SqliteRepos<'_> {
         let mut insert = self
             .tx
             .prepare_cached(
-                "INSERT INTO deck_sections (deck_id, tag, title, sort_order) VALUES (?1, ?2, ?3, ?4)",
+                "INSERT INTO deck_sections (deck_id, tag, title, sort_order, title_translations)
+                 VALUES (?1, ?2, ?3, ?4, ?5)",
             )
             .map_err(map_sqlite)?;
         for (order, section) in sections.iter().enumerate() {
             insert
-                .execute(params![deck.0, section.tag, section.title, order as i64])
+                .execute(params![
+                    deck.0,
+                    section.tag,
+                    section.title,
+                    order as i64,
+                    codec::translations_to_json(&section.title_translations)
+                ])
                 .map_err(map_sqlite)?;
         }
         Ok(())
@@ -56,7 +65,8 @@ impl GrammarRepository for SqliteRepos<'_> {
         let mut statement = self
             .tx
             .prepare_cached(
-                "SELECT tag, title FROM deck_sections WHERE deck_id = ?1 ORDER BY sort_order, tag",
+                "SELECT tag, title, title_translations FROM deck_sections WHERE deck_id = ?1
+                 ORDER BY sort_order, tag",
             )
             .map_err(map_sqlite)?;
         statement
@@ -64,6 +74,7 @@ impl GrammarRepository for SqliteRepos<'_> {
                 Ok(DeckSection {
                     tag: row.get(0)?,
                     title: row.get(1)?,
+                    title_translations: codec::translations_column(row, 2)?,
                 })
             })
             .and_then(Iterator::collect)
@@ -80,7 +91,7 @@ impl GrammarRepository for SqliteRepos<'_> {
                  WHERE c.deleted_at IS NULL
                    AND c.note_id IN (SELECT note_id FROM grammar_tips WHERE deleted_at IS NULL)
              )
-             SELECT fc.deck_id, g.id, g.text, n.id, fc.id, n.fields,
+             SELECT fc.deck_id, g.id, g.text, n.id, fc.id, n.fields, g.translations,
                     (SELECT group_concat(t.name, char({sep}))
                      FROM note_tags nt JOIN tags t ON t.id = nt.tag_id
                      WHERE nt.note_id = n.id)
@@ -102,7 +113,8 @@ impl GrammarRepository for SqliteRepos<'_> {
                     note_id: row.get(3)?,
                     card_id: row.get(4)?,
                     fields: row.get(5)?,
-                    tags: row.get(6)?,
+                    translations: codec::translations_column(row, 6)?,
+                    tags: row.get(7)?,
                 })
             })
             .and_then(Iterator::collect)
@@ -114,6 +126,7 @@ impl GrammarRepository for SqliteRepos<'_> {
                     deck_id: DeckId(row.deck_id),
                     tip_id: GrammarTipId(row.tip_id),
                     text: row.text,
+                    translations: row.translations,
                     note_id: NoteId(row.note_id),
                     card_id: CardId(row.card_id),
                     front: fields.front,

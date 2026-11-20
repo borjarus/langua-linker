@@ -7,7 +7,7 @@
 use langualinker_domain::card::{Card, CardFlag, QueueState};
 use langualinker_domain::content::{Association, GrammarTip, SentenceWordLink, WordLinkResolution};
 use langualinker_domain::deck::Deck;
-use langualinker_domain::note::{CardDirection, Note};
+use langualinker_domain::note::{CardDirection, Note, NoteTypeKind};
 use langualinker_domain::review::Rating;
 use langualinker_domain::scheduling;
 use langualinker_domain::{
@@ -47,6 +47,8 @@ pub struct StudyCard {
     pub card: Card,
     pub note: Note,
     pub deck: Deck,
+    /// Kind of the note's type; only sentences take new word links.
+    pub note_kind: NoteTypeKind,
     pub direction: CardDirection,
     /// Question side (the note's back for a reverse card).
     pub front: String,
@@ -160,6 +162,9 @@ pub fn study_card(tx: &mut dyn Repositories, card: Card) -> AppResult<StudyCard>
     let note = live_note(tx, card.note_id)?;
     let deck = live_deck(tx, card.deck_id)?;
     let direction = direction_of(tx, &note, &card)?;
+    let note_kind = tx
+        .note_type_by_id(note.note_type_id)?
+        .map_or(NoteTypeKind::Basic, |note_type| note_type.kind);
     let (front, back) = sides(&note, direction);
     let capabilities = deck.deck_type.capabilities();
     let (associations, generations) = if capabilities.associations {
@@ -182,6 +187,7 @@ pub fn study_card(tx: &mut dyn Repositories, card: Card) -> AppResult<StudyCard>
         card,
         note,
         deck,
+        note_kind,
         direction,
         front,
         back,

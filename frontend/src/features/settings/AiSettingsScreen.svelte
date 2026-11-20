@@ -7,6 +7,7 @@
   import Skeleton from '../../components/Skeleton.svelte'
   import { newOperationId } from '../../services/operationId'
   import Screen from '../shared/Screen.svelte'
+  import LocalModelPanel from './LocalModelPanel.svelte'
   import SaveStatus from './SaveStatus.svelte'
   import { SettingsController } from './settingsController.svelte'
 
@@ -23,6 +24,17 @@
 
   const ai = $derived(controller.settings?.ai ?? null)
   const provider = $derived(ai?.providers.find((item) => item.id === ai.provider) ?? null)
+  /** The chosen on-device model with its download state (ADR-23). */
+  const localModel = $derived(provider?.onDevice ? (ai?.localModels.find((item) => item.id === ai.model) ?? null) : null)
+  const modelLabel = (id: string) => ai?.localModels.find((item) => item.id === id)?.name ?? id
+
+  // A download reports progress as settings changes; reload while the on-device provider is shown.
+  $effect(() =>
+    api.onCollectionChanged((event) => {
+      if (event.scopes.includes('settings') && provider?.onDevice) void controller.load()
+    }),
+  )
+
   const endpointValid = $derived(endpoint.trim() === '' || /^https:\/\/[^\s/]+/iu.test(endpoint.trim()))
 
   // The free-text fields start from the stored values whenever the provider changes.
@@ -104,7 +116,7 @@
             {#if provider.models.length > 0}
               <select id="{ids}-model" class="input" value={ai.model ?? ''} onchange={(event) => controller.update('model', { aiModel: event.currentTarget.value })}>
                 {#each provider.models as option (option)}
-                  <option value={option}>{option}</option>
+                  <option value={option}>{provider.onDevice ? modelLabel(option) : option}</option>
                 {/each}
               </select>
             {:else}
@@ -115,6 +127,11 @@
             {/if}
             <SaveStatus {controller} field="model" />
           </div>
+
+          {#if provider.onDevice}
+            <p class="note"><Icon name="info" />{i18n.t('ai.local.private')}</p>
+            {#if localModel}<LocalModelPanel model={localModel} onchange={() => void controller.load()} />{/if}
+          {/if}
 
           {#if provider.customEndpoint}
             <div class="field">

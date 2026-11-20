@@ -10,6 +10,7 @@
 //! (`reviews`); bundled content always starts new.
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 /// The only schema version this build reads.
 pub const SCHEMA_VERSION: u32 = 2;
@@ -152,6 +153,9 @@ pub struct DeckManifest {
 pub struct SectionRecord {
     pub tag: String,
     pub title: String,
+    /// The title in other UI languages (`{"en": "…"}`); the app shows the one of its language.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub translations: BTreeMap<String, String>,
 }
 
 /// CEFR levels in ascending order.
@@ -304,6 +308,9 @@ pub struct AssociationRecord {
 pub struct TipRecord {
     pub guid: String,
     pub text: String,
+    /// The tip in other UI languages (`{"en": "…"}`); the app shows the one of its language.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub translations: BTreeMap<String, String>,
 }
 
 /// A phrase of the sentence front linked to a word note of a dependency deck.

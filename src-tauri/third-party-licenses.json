@@ -504,6 +504,20 @@
   "source": "cargo"
  },
  {
+  "name": "enumflags2",
+  "version": "0.7.12",
+  "license": "MIT OR Apache-2.0",
+  "url": "https://github.com/meithecatte/enumflags2",
+  "source": "cargo"
+ },
+ {
+  "name": "enumflags2_derive",
+  "version": "0.7.12",
+  "license": "MIT OR Apache-2.0",
+  "url": "https://github.com/meithecatte/enumflags2",
+  "source": "cargo"
+ },
+ {
   "name": "equivalent",
   "version": "1.0.2",
   "license": "Apache-2.0 OR MIT",
@@ -998,6 +1012,20 @@
   "version": "0.8.3",
   "license": "Unicode-3.0",
   "url": "https://github.com/unicode-org/icu4x",
+  "source": "cargo"
+ },
+ {
+  "name": "llama-cpp-2",
+  "version": "0.1.161",
+  "license": "MIT OR Apache-2.0",
+  "url": "https://github.com/utilityai/llama-cpp-rs",
+  "source": "cargo"
+ },
+ {
+  "name": "llama-cpp-sys-2",
+  "version": "0.1.161",
+  "license": "MIT OR Apache-2.0",
+  "url": "https://github.com/utilityai/llama-cpp-rs",
   "source": "cargo"
  },
  {

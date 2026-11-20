@@ -53,6 +53,7 @@ const OP_SAVE_PRESET: &str = "savePreset";
 const OP_SAVE_NOTE: &str = "saveNote";
 const OP_DELETE_NOTE: &str = "deleteNote";
 const OP_NOTE_CONTENT: &str = "updateNoteContent";
+const OP_ADD_WORD_LINK: &str = "addWordLink";
 
 const DAY_MS: i64 = 86_400_000;
 
@@ -735,6 +736,88 @@ fn link_key(link: &SentenceWordLink) -> (u32, u32, Option<NoteId>, String) {
         link.word_note_id,
         link.surface_form.clone(),
     )
+}
+
+/// AddWordLink: links one more phrase of a sentence to a word note (the study word sheet, for a
+/// word the bundle left unlinked). The other links stay; the note's links become the learner's
+/// (a content update no longer replaces them). Returns every link of the sentence.
+pub fn add_word_link(
+    tx: &mut dyn Repositories,
+    operation_id: &str,
+    sentence: NoteId,
+    draft: LinkDraft,
+    now: TimestampMs,
+) -> AppResult<Vec<LinkView>> {
+    let views = |tx: &mut dyn Repositories| -> AppResult<Vec<LinkView>> {
+        tx.word_links(sentence)?
+            .into_iter()
+            .map(|link| learning::link_view(tx, link))
+            .collect()
+    };
+    if learning::replayed(tx, operation_id, OP_ADD_WORD_LINK)? {
+        return views(tx);
+    }
+    let note = learning::live_note(tx, sentence)?;
+    let sentence_type = tx
+        .note_type_by_id(note.note_type_id)?
+        .is_some_and(|note_type| note_type.kind.is_sentence());
+    let cards = tx.cards_of_note(sentence)?;
+    let links_shown = match primary_card(&cards) {
+        Some(card) => {
+            learning::live_deck(tx, card.deck_id)?
+                .deck_type
+                .capabilities()
+                .word_links
+        }
+        None => false,
+    };
+    if !sentence_type || !links_shown {
+        return Err(ValidationError::new("wordLinks", "notSupported").into());
+    }
+    let word = draft
+        .word
+        .ok_or(ValidationError::new("wordNoteId", "required"))?;
+    let stored = tx.word_links(sentence)?;
+    let mut drafts: Vec<LinkDraft> = stored
+        .iter()
+        .map(|link| LinkDraft {
+            start: link.start_index,
+            end: link.end_index,
+            surface: link.surface_form.clone(),
+            word: link.word_note_id,
+        })
+        .collect();
+    drafts.push(draft.clone());
+    // Ranges, overlaps, surface, live word and "not the sentence itself" for the new link.
+    check_links(tx, &note.fields.front, &drafts, Some(sentence))?;
+
+    let surface = nfc(&draft.surface);
+    let lemma = tx.note(word)?.map(|word| word.fields.front);
+    let mut desired = stored;
+    desired.push(SentenceWordLink {
+        id: WordLinkId(0),
+        sentence_note_id: sentence,
+        word_note_id: Some(word),
+        preferred_word_card_id: None,
+        surface_form: surface,
+        lemma,
+        start_index: draft.start,
+        end_index: draft.end,
+        resolution: WordLinkResolution::UserOverridden,
+        created_at: now,
+        updated_at: now,
+    });
+    desired.sort_by_key(|link| link.start_index);
+    tx.replace_word_links(sentence, &desired, now)?;
+    mark_override(tx, sentence, "wordLinks", now)?;
+    learning::record(
+        tx,
+        operation_id,
+        OP_ADD_WORD_LINK,
+        sentence.0.to_string(),
+        now,
+    )?;
+    views(tx)
 }
 
 /// SaveNote: creates or updates a note with its cards. Returns the note id.

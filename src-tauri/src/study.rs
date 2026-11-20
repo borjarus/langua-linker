@@ -9,6 +9,7 @@ use langualinker_application::learning::{
     self, CardAction, LinkView, NoteContent, SessionSummary, StudyCard, StudyScreen,
 };
 use langualinker_application::llm::{self, Generation, GenerationState};
+use langualinker_application::management;
 use langualinker_application::ports::CollectionScope;
 use langualinker_application::ports::Telemetry;
 use langualinker_application::repositories::{SessionStatus, UnitOfWork};
@@ -18,11 +19,11 @@ use langualinker_application::study::{
 use langualinker_application::telemetry::MetricEvent;
 use langualinker_contracts::ErrorDto;
 use langualinker_contracts::dto::{
-    AssociationDto, AssociationProvenance, AssociationStatus, CardActionInput, CardActionKind,
-    CardActionResultDto, CardDirection, CardFlag, CardState, DeckCountsDto, GrammarTipDto,
-    IntervalPreviewDto, NextDeckDto, NoteContentDto, PreviewInput, QueueState, RateCardInput,
-    Rating, RatingCountsDto, RatingIntervalsDto, RatingPreviewDto, ResolveWordLinkInput,
-    ReviewResultDto, ReviewedCardDto, SessionCardDto, SessionSummaryDto,
+    AddWordLinkInput, AssociationDto, AssociationProvenance, AssociationStatus, CardActionInput,
+    CardActionKind, CardActionResultDto, CardDirection, CardFlag, CardState, DeckCountsDto,
+    GrammarTipDto, IntervalPreviewDto, NextDeckDto, NoteContentDto, PreviewInput, QueueState,
+    RateCardInput, Rating, RatingCountsDto, RatingIntervalsDto, RatingPreviewDto,
+    ResolveWordLinkInput, ReviewResultDto, ReviewedCardDto, SessionCardDto, SessionSummaryDto,
     SetFavoriteAssociationInput, StartStudyInput, StudyCardDto, StudySessionAction,
     StudySessionDto, StudySessionStatus, UndoInput, UpdateStudySessionInput, WordCandidateDto,
     WordLinkDto, WordLinkResolution,
@@ -203,6 +204,7 @@ fn tip_dto(tip: GrammarTip, order: usize) -> GrammarTipDto {
         id: text_id(tip.id.0),
         note_id: text_id(tip.note_id.0),
         text: tip.text,
+        translations: tip.translations,
         order: u32::try_from(order).unwrap_or(u32::MAX),
     }
 }
@@ -248,6 +250,8 @@ fn study_card_dto(card: StudyCard) -> StudyCardDto {
         card_id: text_id(card.card.id.0),
         note_id: text_id(card.note.id.0),
         deck_id: text_id(card.deck.id.0),
+        deck_name: card.deck.name.clone(),
+        note_type_kind: crate::content::note_type(card.note_kind),
         version: clamp(card.card.version),
         deck_type: deck_type(card.deck.deck_type),
         capabilities: capabilities(card.deck.deck_type),
@@ -719,6 +723,31 @@ pub async fn resolve_word_link(
     .await?;
     emit(collection, &[CollectionScope::Notes], now);
     Ok(link_dto(view))
+}
+
+#[tauri::command]
+pub async fn add_word_link(
+    backend: State<'_, Backend>,
+    input: Value,
+) -> Result<Vec<WordLinkDto>, ErrorDto> {
+    let input: AddWordLinkInput = parse_input(input)?;
+    operation_id(&input.operation_id)?;
+    let sentence = NoteId(id("sentenceNoteId", &input.sentence_note_id)?);
+    let draft = management::LinkDraft {
+        start: input.start_index,
+        end: input.end_index,
+        surface: input.surface,
+        word: Some(NoteId(id("wordNoteId", &input.word_note_id)?)),
+    };
+    let collection = backend.collection()?;
+    let (db, now) = (collection.db.clone(), collection.clock.now());
+    let views = blocking(move || {
+        db.write(move |tx| management::add_word_link(tx, &input.operation_id, sentence, draft, now))
+            .map_err(app_error)
+    })
+    .await?;
+    emit(collection, &[CollectionScope::Notes], now);
+    Ok(views.into_iter().map(link_dto).collect())
 }
 
 #[cfg(test)]

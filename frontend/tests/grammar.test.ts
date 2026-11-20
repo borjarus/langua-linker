@@ -59,6 +59,22 @@ describe('GrammarScreen', () => {
     expect(within(region).getByText('Rodzaj męski: der Kühlschrank, die Kühlschränke.')).toBeInTheDocument()
   })
 
+  it('shows chapter titles and tips in the app language when the content translates them', async () => {
+    const services = await createTestServices({ language: 'en' })
+    renderWith(GrammarScreen, services, {})
+    const user = userEvent.setup()
+    await screen.findByRole('heading', { level: 2, name: 'Niemiecki — słówka A1' })
+    const chapter = screen.getByRole('button', { name: /1\. Home and everyday things/ })
+    await user.click(chapter)
+    const region = chapter.closest('section')!
+    expect(within(region).getByText('Masculine: der Kühlschrank, die Kühlschränke.')).toBeInTheDocument()
+    expect(within(region).queryByText('Rodzaj męski: der Kühlschrank, die Kühlschränke.')).not.toBeInTheDocument()
+    // The search finds a tip by its shown (English) text.
+    await user.type(screen.getByRole('searchbox'), 'Neuter')
+    expect(await screen.findByRole('status')).toHaveTextContent('1')
+    expect(screen.getByText('Neuter: das Frühstück.')).toBeVisible()
+  })
+
   it('filters tips and switches decks', async () => {
     const services = await createTestServices({ language: 'pl' })
     renderWith(GrammarScreen, services, {})

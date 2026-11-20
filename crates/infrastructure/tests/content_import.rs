@@ -1178,3 +1178,88 @@ fn install_keeps_deck_level_and_chapters_for_the_grammar_screen() {
     assert_eq!(deck.sections[0].section.as_ref().unwrap().title, "Sein");
     assert!(deck.sections[1].section.is_none());
 }
+
+#[test]
+fn grammar_translations_follow_the_bundle_until_the_text_changes() {
+    use langualinker_application::grammar;
+    let harness = Harness::new();
+    let content = harness.service(Arc::new(DirSource::new(content_dir())));
+    harness.wait(
+        &content
+            .complete_onboarding(onboarding(
+                "op-1",
+                &["bundled-de-words-a1", "bundled-de-sentences-a1"],
+            ))
+            .unwrap(),
+    );
+
+    // A later version translates the first tip and the first chapter.
+    let dir = copy_content();
+    let mut tip_guid = String::new();
+    rewrite(dir.path(), "de_sentences_a1", "2026.12.01", |records| {
+        let tip = records
+            .iter_mut()
+            .find_map(|record| {
+                record
+                    .get_mut("grammarTips")
+                    .and_then(Value::as_array_mut)
+                    .and_then(|tips| tips.first_mut())
+            })
+            .expect("a tip");
+        tip_guid = tip["guid"].as_str().unwrap().to_owned();
+        tip["translations"] = serde_json::json!({ "en": "First tip in English." });
+    });
+    let path = dir.path().join("de_sentences_a1.json");
+    let mut manifest: Value =
+        serde_json::from_str(&std::fs::read_to_string(&path).unwrap()).unwrap();
+    manifest["sections"][0]["translations"] = serde_json::json!({ "en": "Chapter one" });
+    std::fs::write(&path, serde_json::to_string_pretty(&manifest).unwrap()).unwrap();
+    let updated = harness.service(Arc::new(DirSource::new(dir.path())));
+    let job = harness.wait(&updated.resume().unwrap().expect("an update job"));
+    assert!(job.error.is_none(), "{job:?}");
+
+    let deck = harness
+        .db
+        .read(|tx| grammar::grammar(tx, None))
+        .unwrap()
+        .selected
+        .unwrap();
+    let first = deck.sections[0].section.as_ref().unwrap();
+    assert_eq!(
+        first.title_translations.get("en").map(String::as_str),
+        Some("Chapter one")
+    );
+    let tip = deck
+        .sections
+        .iter()
+        .flat_map(|section| &section.tips)
+        .find(|tip| {
+            tip.translations.get("en").map(String::as_str) == Some("First tip in English.")
+        });
+    assert!(tip.is_some(), "the changed translation is stored");
+    let translated = harness.count("SELECT COUNT(*) FROM grammar_tips WHERE translations <> '{}'");
+
+    // The tip's text changes in the next version without a translation: the old one goes.
+    let next = copy_content();
+    rewrite(next.path(), "de_sentences_a1", "2026.12.02", |records| {
+        for record in records.iter_mut() {
+            let tips = record.get_mut("grammarTips").and_then(Value::as_array_mut);
+            for tip in tips.into_iter().flatten() {
+                if tip["guid"] == tip_guid.as_str() {
+                    tip["text"] = "Nowy tekst wskazówki.".into();
+                    tip.as_object_mut().unwrap().remove("translations");
+                }
+            }
+        }
+    });
+    let again = harness.service(Arc::new(DirSource::new(next.path())));
+    harness.wait(&again.resume().unwrap().expect("an update job"));
+    assert_eq!(
+        harness.count("SELECT COUNT(*) FROM grammar_tips WHERE translations <> '{}'"),
+        translated - 1
+    );
+    assert_eq!(
+        harness.count("SELECT COUNT(*) FROM grammar_tips WHERE text = 'Nowy tekst wskazówki.'"),
+        1
+    );
+}

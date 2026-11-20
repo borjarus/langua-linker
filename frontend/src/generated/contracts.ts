@@ -275,7 +275,15 @@ export type AssociationDto = { id: string, noteId: string, text: string, provena
  */
 extended?: string, };
 
-export type GrammarTipDto = { id: string, noteId: string, text: string, order: number, };
+export type GrammarTipDto = { id: string, noteId: string, 
+/**
+ * As written (and as edited); `translations` hold bundled texts in other UI languages.
+ */
+text: string, 
+/**
+ * `{ "en": "…" }`: the UI shows the one of its language, else `text` (contract 1.9).
+ */
+translations: { [key in string]: string }, order: number, };
 
 export type WordLinkResolution = "resolved" | "unresolved" | "ambiguous" | "userOverridden";
 
@@ -289,7 +297,15 @@ startIndex: number, endIndex: number, lemma: string | null, resolution: WordLink
 
 export type NoteContentDto = { noteId: string, deckId: string, front: string, back: string, targetLanguage: TargetLanguage, capabilities: DeckCapabilitiesDto, associations: Array<AssociationDto>, grammarTips: Array<GrammarTipDto>, };
 
-export type StudyCardDto = { cardId: string, noteId: string, deckId: string, version: number, deckType: DeckType, capabilities: DeckCapabilitiesDto, direction: CardDirection, state: CardState, flag: CardFlag, front: string, back: string, targetLanguage: TargetLanguage, associations: Array<AssociationDto>, grammarTips: Array<GrammarTipDto>, wordLinks: Array<WordLinkDto>, };
+export type StudyCardDto = { cardId: string, noteId: string, deckId: string, 
+/**
+ * Name of the card's own deck (a session over a parent deck or "all" mixes several).
+ */
+deckName: string, 
+/**
+ * Sentences (`Sentence`, `SentenceAndReversed`) can link more of their words (contract 1.9).
+ */
+noteTypeKind: NoteTypeKind, version: number, deckType: DeckType, capabilities: DeckCapabilitiesDto, direction: CardDirection, state: CardState, flag: CardFlag, front: string, back: string, targetLanguage: TargetLanguage, associations: Array<AssociationDto>, grammarTips: Array<GrammarTipDto>, wordLinks: Array<WordLinkDto>, };
 
 export type StudySessionStatus = "active" | "paused" | "finished";
 
@@ -382,7 +398,15 @@ export type SetAiApiKeyInput = { operationId: string,
  */
 apiKey: string | null, };
 
+export type AiModelInput = { operationId: string, 
+/**
+ * An id of `AiSettingsDto.localModels`.
+ */
+modelId: string, };
+
 export type ResolveWordLinkInput = { operationId: string, linkId: string, wordNoteId: string, };
+
+export type AddWordLinkInput = { operationId: string, sentenceNoteId: string, startIndex: number, endIndex: number, surface: string, wordNoteId: string, };
 
 export type HiddenSectionCountsDto = { associations: number, grammarTips: number, wordLinks: number, };
 
@@ -528,7 +552,7 @@ export type GrammarDeckSummaryDto = { deckId: string, name: string, targetLangua
  */
 sectionCount: number, };
 
-export type GrammarEntryDto = { tipId: string, text: string, noteId: string, 
+export type GrammarEntryDto = { tipId: string, text: string, translations: { [key in string]: string }, noteId: string, 
 /**
  * Opens the card (first card of the note).
  */
@@ -538,7 +562,11 @@ cardId: string,
  */
 front: string, back: string, };
 
-export type GrammarSectionDto = { tag: string | null, title: string | null, entries: Array<GrammarEntryDto>, };
+export type GrammarSectionDto = { tag: string | null, title: string | null, 
+/**
+ * The title in other UI languages.
+ */
+titleTranslations: { [key in string]: string }, entries: Array<GrammarEntryDto>, };
 
 export type GrammarDeckDto = { deckId: string, name: string, targetLanguage: TargetLanguage, level: string | null, 
 /**
@@ -777,7 +805,28 @@ models: Array<string>,
 /**
  * The user supplies an HTTPS endpoint (OpenAI-compatible servers).
  */
-customEndpoint: boolean, };
+customEndpoint: boolean, 
+/**
+ * Runs a downloaded model on the device; `models` are the ids in `AiSettingsDto.localModels`
+ * (contract 1.10, ADR-23).
+ */
+onDevice: boolean, };
+
+export type LocalModelState = "notDownloaded" | "downloading" | "ready" | "failed";
+
+export type LocalModelDto = { id: string, name: string, 
+/**
+ * Download size.
+ */
+bytes: number, state: LocalModelState, 
+/**
+ * Bytes on the device: progress while downloading, the part kept for a resume otherwise.
+ */
+downloadedBytes: number, 
+/**
+ * `failed` only: `network`, `http`, `refused`, `size`, `checksum`, `storage`.
+ */
+error: string | null, };
 
 export type AiQuotaDto = { used: number, limit: number, resetsAt: string, };
 
@@ -789,7 +838,11 @@ hasApiKey: boolean, providers: Array<AiProviderOptionDto>,
 /**
  * `null` = the provider reports no limit.
  */
-quota: AiQuotaDto | null, };
+quota: AiQuotaDto | null, 
+/**
+ * Models of the on-device provider; empty when this build or catalog offers none.
+ */
+localModels: Array<LocalModelDto>, };
 
 export type BackupLocation = "app" | "external";
 

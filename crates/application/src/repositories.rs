@@ -7,7 +7,7 @@
 
 use langualinker_domain::card::{Card, NewCard};
 use langualinker_domain::content::{
-    Association, GrammarTip, NewAssociation, SentenceWordLink, TipProvenance,
+    Association, GrammarTip, NewAssociation, SentenceWordLink, TipProvenance, Translations,
 };
 use langualinker_domain::deck::NewCardOrder;
 use langualinker_domain::deck::{Deck, DeckConfig, DeckConfigOptions, NewDeck};
@@ -221,11 +221,18 @@ pub trait BundledContentRepository {
     ) -> AppResult<()>;
     /// Any grammar tip with this GUID, including a soft-deleted one.
     fn grammar_tip_by_guid(&mut self, guid: &Guid) -> AppResult<Option<GrammarTip>>;
+    /// Changes the text of a tip and drops its translations (they belonged to the old text).
     fn update_grammar_tip_text(
         &mut self,
         id: GrammarTipId,
         text: &str,
         at: TimestampMs,
+    ) -> AppResult<()>;
+    /// Stores the translations of a bundled tip (not a user edit: `updated_at` stays).
+    fn set_grammar_tip_translations(
+        &mut self,
+        id: GrammarTipId,
+        translations: &Translations,
     ) -> AppResult<()>;
     /// Archives (`Some`) or restores (`None`) every active card of a note; scheduling columns
     /// are not touched. Returns the number of cards changed.
@@ -894,6 +901,8 @@ pub trait OptimizerRepository {
 pub struct DeckSection {
     pub tag: String,
     pub title: String,
+    /// The title in other UI languages.
+    pub title_translations: Translations,
 }
 
 /// A live grammar tip with the note it explains and that note's deck (the deck of its first
@@ -903,6 +912,7 @@ pub struct GrammarTipEntry {
     pub deck_id: DeckId,
     pub tip_id: GrammarTipId,
     pub text: String,
+    pub translations: Translations,
     pub note_id: NoteId,
     /// First live card of the note (lowest template), for opening the card.
     pub card_id: CardId,

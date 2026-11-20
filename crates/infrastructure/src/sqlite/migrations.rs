@@ -90,6 +90,11 @@ pub const MIGRATIONS: &[Migration] = &[
         name: "deck_in_study",
         sql: include_str!("../../migrations/0008_deck_in_study.sql"),
     },
+    Migration {
+        version: 9,
+        name: "grammar_translations",
+        sql: include_str!("../../migrations/0009_grammar_translations.sql"),
+    },
 ];
 
 /// Highest schema version this build understands.
@@ -618,7 +623,7 @@ mod tests {
         let mut conn = memory();
         migrate(&mut conn, None, &MIGRATIONS[..7], 1).unwrap();
         insert_deck(&conn);
-        let report = migrate(&mut conn, None, MIGRATIONS, 2).unwrap();
+        let report = migrate(&mut conn, None, &MIGRATIONS[..8], 2).unwrap();
         assert_eq!((report.from_version, report.to_version), (7, 8));
         let in_study: i64 = conn
             .query_row("SELECT in_study FROM decks", [], |row| row.get(0))
@@ -626,6 +631,29 @@ mod tests {
         assert_eq!(in_study, 1);
         assert!(conn.execute("UPDATE decks SET in_study = 0", []).is_ok());
         assert!(conn.execute("UPDATE decks SET in_study = 2", []).is_err());
+    }
+
+    /// v8 → v9: existing chapters get no translations (an empty object) until the next content
+    /// update brings them.
+    #[test]
+    fn v8_collection_upgrades_to_grammar_translations() {
+        let mut conn = memory();
+        migrate(&mut conn, None, &MIGRATIONS[..8], 1).unwrap();
+        insert_deck(&conn);
+        conn.execute(
+            "INSERT INTO deck_sections (deck_id, tag, title, sort_order)
+             SELECT id, 'lekcja-01', 't', 0 FROM decks",
+            [],
+        )
+        .unwrap();
+        let report = migrate(&mut conn, None, MIGRATIONS, 2).unwrap();
+        assert_eq!((report.from_version, report.to_version), (8, 9));
+        let translations: String = conn
+            .query_row("SELECT title_translations FROM deck_sections", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(translations, "{}");
     }
 
     /// v3 → v4 (Phase 13): the never-written v1 outbox is rebuilt with its new columns and
