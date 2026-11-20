@@ -1,6 +1,6 @@
 [package]
 name = "langualinker"
-version = "0.5.1-beta.1"
+version = "0.5.2-beta.1"
 description = "LanguaLinker Tauri shell"
 edition.workspace = true
 rust-version.workspace = true

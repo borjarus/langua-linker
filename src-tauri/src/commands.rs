@@ -64,6 +64,7 @@ pub const IMPLEMENTED: &[&str] = &[
     "get_note_content",
     "set_favorite_association",
     "resolve_word_link",
+    "add_word_link",
     "get_deck",
     "create_deck",
     "update_deck",
@@ -98,6 +99,8 @@ pub const IMPLEMENTED: &[&str] = &[
     "request_notification_permission",
     "generate_association",
     "set_ai_api_key",
+    "download_ai_model",
+    "delete_ai_model",
 ];
 
 /// Lines returned by the diagnostic report.
@@ -502,6 +505,9 @@ mod tests {
             "every implemented command is in the catalogue"
         );
         assert_eq!(pending.len() + implemented.len(), commands.len());
+        // Every catalogue command has a backend since Phase 15; a new command without an
+        // IMPLEMENTED entry would silently answer NOT_IMPLEMENTED (found on the device, 1.10).
+        assert!(pending.is_empty(), "not marked implemented: {pending:?}");
     }
 
     #[test]

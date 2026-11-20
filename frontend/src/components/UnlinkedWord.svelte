@@ -10,28 +10,33 @@
 
   let { run, onselect }: Props = $props()
   const { i18n } = useServices()
+
+  function onkeydown(event: KeyboardEvent) {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    onselect()
+  }
 </script>
 
-<!-- A word the content left without a link: tapping it offers to link it to a word note. -->
-<button type="button" class="word" aria-label={i18n.t('wordLink.addLabel', { word: run.text })} aria-haspopup="dialog" onclick={onselect}
-  >{#if run.bold && run.italic}<strong><em>{run.text}</em></strong>{:else if run.bold}<strong>{run.text}</strong>{:else if run.italic}<em>{run.text}</em>{:else}{run.text}{/if}</button
+<!-- A word the content left without a link: tapping it offers to link it to a word note. An inline
+     span like WordLink, so the punctuation after it never wraps onto the next line. -->
+<span role="button" tabindex="0" class="word" aria-label={i18n.t('wordLink.addLabel', { word: run.text })} aria-haspopup="dialog" onclick={onselect} {onkeydown}
+  >{#if run.bold && run.italic}<strong><em>{run.text}</em></strong>{:else if run.bold}<strong>{run.text}</strong>{:else if run.italic}<em>{run.text}</em>{:else}{run.text}{/if}</span
 >
 
 <style>
   .word {
     display: inline;
-    min-height: auto;
-    margin: 0;
-    padding: 0 0.1em;
-    border: 0;
     border-bottom: 2px dotted var(--color-border);
-    border-radius: 0;
-    background: transparent;
-    font: inherit;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    text-align: inherit;
     cursor: pointer;
+    overflow-wrap: anywhere;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .word:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 
   .word:hover {

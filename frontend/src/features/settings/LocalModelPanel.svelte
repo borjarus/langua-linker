@@ -56,7 +56,7 @@
     <p class="muted hint">{i18n.t('ai.local.wifi')}</p>
     <div class="row">
       <button type="button" class="btn btn-primary" disabled={busy} aria-busy={busy} onclick={() => run('downloadAiModel')}>
-        <Icon name="refresh" />{i18n.t(resumable ? 'ai.local.resume' : 'ai.local.download', { size: gigabytes(model.bytes) })}
+        <Icon name="download" />{i18n.t(resumable ? 'ai.local.resume' : 'ai.local.download', { size: gigabytes(model.bytes) })}
       </button>
       {#if resumable}
         <button type="button" class="btn btn-ghost danger" disabled={busy} onclick={() => run('deleteAiModel')}><Icon name="trash" />{i18n.t('ai.local.discard')}</button>

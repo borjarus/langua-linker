@@ -213,6 +213,13 @@ describe('splitWords (words without a link)', () => {
     expect(words(text, []).map(([word]) => word)).toEqual(['Yes', 'No'])
   })
 
+  it('does not offer the tail of a contraction whose head is linked', () => {
+    const text = "**– How are you? – I'm fine.** /haʊ ɑr juː ‖ aɪm faɪn/"
+    expect(words(text, [link(text, 'How'), link(text, 'I')]).map(([word]) => word)).toEqual(['are', 'you', 'fine'])
+    const dont = "I don't know."
+    expect(words(dont, [link(dont, 'do')]).map(([word]) => word)).toEqual(['I', 'know'])
+  })
+
   it('keeps apostrophes and hyphens inside a word', () => {
     const text = "I don't like well-known songs."
     expect(words(text, []).map(([word]) => word)).toEqual(['I', "don't", 'like', 'well-known', 'songs'])

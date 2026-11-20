@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- LanguaLinker app icon: "LL" in the app's primary green (light theme #1d5a48) with the
+       dark-theme primary (#80d0b3) for the second L. Shapes only, no font, so every renderer
+       draws the same icon. Content stays inside the central 60 % (Android adaptive safe zone).
+       Regenerate every size with the Tauri CLI icon command on this file (from frontend: npm run tauri, then icon and this path). -->
+  <rect width="1024" height="1024" fill="#1d5a48"/>
+  <g>
+    <rect x="252" y="262" width="120" height="500" rx="14" fill="#ffffff"/>
+    <rect x="252" y="642" width="220" height="120" rx="14" fill="#ffffff"/>
+  </g>
+  <g>
+    <rect x="492" y="262" width="120" height="380" rx="14" fill="#80d0b3"/>
+    <rect x="492" y="522" width="280" height="120" rx="14" fill="#80d0b3"/>
+  </g>
+</svg>

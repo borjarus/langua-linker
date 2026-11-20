@@ -10,34 +10,40 @@
   let { link, onselect }: Props = $props()
   const { i18n } = useServices()
   const state = $derived(i18n.t(`wordLink.resolution.${link.resolution}`))
+
+  function onkeydown(event: KeyboardEvent) {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    event.preventDefault()
+    onselect(link)
+  }
 </script>
 
-<button
-  type="button"
+<!-- An inline span, not a <button>: a button is an atomic box, and the line may break between it
+     and the punctuation that follows ("fine" / ", and"). The span keeps the word with its comma. -->
+<span
+  role="button"
+  tabindex="0"
   class="word resolution-{link.resolution}"
   aria-label={i18n.t('wordLink.label', { word: link.surface, state })}
   aria-haspopup="dialog"
   onclick={() => onselect(link)}
->
-  {link.surface}{#if link.resolution === 'ambiguous'}<span class="marker" aria-hidden="true">?</span>{/if}
-</button>
+  {onkeydown}
+>{link.surface}{#if link.resolution === 'ambiguous'}<span class="marker" aria-hidden="true">?</span>{/if}</span>
 
 <style>
   .word {
     display: inline;
-    min-height: auto;
-    margin: 0;
-    padding: 0 0.1em;
-    border: 0;
     border-bottom: 2px solid var(--color-primary);
-    border-radius: 0;
-    background: transparent;
-    font: inherit;
-    /* A button is an atomic inline box: a multi-word phrase must still wrap at 200% text. */
-    white-space: normal;
-    overflow-wrap: anywhere;
-    text-align: inherit;
     cursor: pointer;
+    /* Inline text: a multi-word phrase wraps like the rest of the sentence. */
+    overflow-wrap: anywhere;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .word:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 2px;
   }
 
   .word:hover {

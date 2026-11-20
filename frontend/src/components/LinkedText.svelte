@@ -49,8 +49,16 @@
 
   /** Splits the plain runs into words (`word`) and the rest (`run`), skipping IPA. */
   export function splitWords(segments: RichSegment[], text: string): RichSegment[] {
-    const ipa = ipaRanges(text.normalize('NFC'))
+    const normalized = text.normalize('NFC')
+    const ipa = ipaRanges(normalized)
     const inIpa = (start: number, end: number) => ipa.some(([from, to]) => start < to && end > from)
+    /**
+     * A piece of a word whose other part is linked: "m" of "I'm" ("I" linked), "n't" of "don't"
+     * ("do" linked). Within a run the word pattern takes whole words, so a letter (or a letter and
+     * an apostrophe) right before a match can only belong to the link before it.
+     */
+    const letter = (index: number) => /[\p{L}\p{M}\p{N}]/u.test(normalized[index] ?? '')
+    const contractionTail = (start: number) => letter(start - 1) || (/['’]/u.test(normalized[start - 1] ?? '') && letter(start - 2))
     const result: RichSegment[] = []
     for (const segment of segments) {
       if (segment.kind !== 'run') {
@@ -63,7 +71,7 @@
       for (const match of run.text.matchAll(WORD)) {
         const from = match.index
         const to = from + match[0].length
-        if (inIpa(run.start + from, run.start + to)) continue
+        if (inIpa(run.start + from, run.start + to) || contractionTail(run.start + from)) continue
         if (from > cursor) result.push({ kind: 'run', run: piece(cursor, from) })
         result.push({ kind: 'word', run: piece(from, to) })
         cursor = to

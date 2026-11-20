@@ -4,12 +4,19 @@ All notable changes to LanguaLinker. Versions follow `X.Y.Z` / `X.Y.Z-(alpha|bet
 
 ## [Unreleased]
 
-Installed decks are updated to content version 2026.11.20 (English grammar texts) on the first start; progress stays.
+## [0.5.2-beta.1] — 2026-11-20
+
+GitHub pre-release for testers, like 0.5.1-beta.1: not for store upload. Installed decks are updated to content version 2026.11.20 (English grammar texts) on the first start; progress stays.
 
 ### Added
 - The study card names the deck the card comes from, also in a session over a parent deck or all decks.
-- A word of a sentence that the deck left without a link can be tapped like a linked one: the sheet links it to a word you already have or to a new word. Pronunciations in slashes (`/ʃiː ɪz/`) are never offered.
+- A word of a sentence that the deck left without a link can be tapped like a linked one: the sheet links it to a word you already have or to a new word. Pronunciations in slashes (`/ʃiː ɪz/`) and the rest of a contraction whose first part is linked ("m" of "I'm") are never offered.
 - Grammar tips and chapter titles of the bundled sentence decks follow the app language: with English selected they are shown in English. A tip you edit keeps your text.
+- New app icon: "LL" on the app's green.
+- Groundwork for an optional association model that runs on the phone (Android). It stays hidden until the first model is published; nothing is downloaded unless you choose it.
+
+### Fixed
+- Punctuation after a tappable word no longer wraps onto the next line on its own ("fine" / ", and").
 
 ## [0.5.1-beta.1] — 2026-11-19
 
