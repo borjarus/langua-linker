@@ -34,7 +34,6 @@ pub const FORECAST_DAYS: usize = 30;
 pub const MAX_SCATTER_POINTS: usize = 2_000;
 /// Days the "all" range looks back at most.
 const MAX_RANGE_DAYS: i64 = 3_650;
-const MAX_STREAK_DAYS: u32 = 3_660;
 /// Stability buckets in days, `[min, max)`.
 pub const STABILITY_BUCKETS: &[(u32, Option<u32>)] = &[
     (0, Some(1)),
@@ -172,17 +171,10 @@ pub fn stats(
     let (forecast, overdue) = forecast(&cards, |at| calendar.day_of(at), today, reviews_per_day);
     let (states, young, mature) = states(&cards);
 
-    let mut streak_days = 0;
-    let mut day = today;
-    if !tx.has_review_in(scope, calendar.day_start(day), calendar.day_end(day))? {
-        day = day.plus(-1);
-    }
-    while streak_days < MAX_STREAK_DAYS
-        && tx.has_review_in(scope, calendar.day_start(day), calendar.day_end(day))?
-    {
-        streak_days += 1;
-        day = day.plus(-1);
-    }
+    let free = settings::free_days(tx)?;
+    let streak_days = crate::dashboard::streak_back(today, &free, |day| {
+        tx.has_review_in(scope, calendar.day_start(day), calendar.day_end(day))
+    })?;
     let longest_streak_days = longest_run(&reviews_by_day).max(streak_days);
 
     Ok(Stats {

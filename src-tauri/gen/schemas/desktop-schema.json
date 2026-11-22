@@ -2241,6 +2241,12 @@
           "markdownDescription": "Enables the delete_ai_model command without any pre-configured scope."
         },
         {
+          "description": "Enables the delete_backup command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-delete-backup",
+          "markdownDescription": "Enables the delete_backup command without any pre-configured scope."
+        },
+        {
           "description": "Enables the delete_deck command without any pre-configured scope.",
           "type": "string",
           "const": "allow-delete-deck",
@@ -2677,6 +2683,12 @@
           "type": "string",
           "const": "deny-delete-ai-model",
           "markdownDescription": "Denies the delete_ai_model command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the delete_backup command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-delete-backup",
+          "markdownDescription": "Denies the delete_backup command without any pre-configured scope."
         },
         {
           "description": "Denies the delete_deck command without any pre-configured scope.",

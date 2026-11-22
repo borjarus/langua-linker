@@ -99,6 +99,9 @@
 
       <section class="stack" aria-labelledby="{ids}-today">
         <h2 id="{ids}-today" class="section-title">{i18n.t('dashboard.today')}</h2>
+        {#if data.freeToday}
+          <p class="free-today surface"><Icon name="info" />{i18n.t('dashboard.freeToday')}</p>
+        {/if}
         <dl class="tiles">
           <StatTile label={i18n.t('dashboard.dueToday')} value={i18n.formatNumber(data.dueToday)} tone="info" />
           <StatTile
@@ -162,6 +165,13 @@
 />
 
 <style>
+  .free-today {
+    display: flex;
+    align-items: start;
+    gap: var(--space-2);
+    margin: 0;
+  }
+
   .resume {
     display: flex;
     flex-wrap: wrap;

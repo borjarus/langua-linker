@@ -66,6 +66,7 @@
     "allow-share-file",
     "allow-list-backups",
     "allow-create-backup",
+    "allow-delete-backup",
     "allow-validate-restore",
     "allow-restore-backup",
     "allow-get-job-status",

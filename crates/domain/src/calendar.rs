@@ -21,6 +21,15 @@ impl StudyDay {
         Self(self.0 + days)
     }
 
+    /// The study day starting on a `YYYY-MM-DD` local date; `None` for anything else.
+    pub fn from_iso_date(text: &str) -> Option<Self> {
+        if text.len() != 10 {
+            return None;
+        }
+        let date = NaiveDate::parse_from_str(text, "%Y-%m-%d").ok()?;
+        Some(Self((date - epoch_date()).num_days()))
+    }
+
     /// `YYYY-MM-DD` of the local date the study day starts on (contract `StudyDay`).
     pub fn iso_date(self) -> String {
         epoch_date()

@@ -555,8 +555,8 @@ fn phase12_outputs_round_trip_through_their_rust_dtos() {
 #[test]
 fn phase12_inputs_deserialize_into_their_rust_dtos() {
     use langualinker_contracts::dto::{
-        BackupInput, ResetInput, ResetPreviewInput, RestoreInput, ShareFileInput, StatsInput,
-        UpdateSettingsInput, ValidateRestoreInput,
+        BackupDto, BackupInput, DeleteBackupInput, ResetInput, ResetPreviewInput, RestoreInput,
+        ShareFileInput, StatsInput, UpdateSettingsInput, ValidateRestoreInput,
     };
     fn back<T: DeserializeOwned + Serialize>(input: &Value) -> Value {
         serde_json::to_value(serde_json::from_value::<T>(input.clone()).unwrap()).unwrap()
@@ -571,6 +571,7 @@ fn phase12_inputs_deserialize_into_their_rust_dtos() {
             Some("previewReset") => back::<ResetPreviewInput>(input),
             Some("resetCollection") => back::<ResetInput>(input),
             Some("createBackup") => back::<BackupInput>(input),
+            Some("deleteBackup") => back::<DeleteBackupInput>(input),
             Some("shareFile") => back::<ShareFileInput>(input),
             Some("validateRestore") => back::<ValidateRestoreInput>(input),
             Some("restoreBackup") => back::<RestoreInput>(input),
@@ -579,7 +580,8 @@ fn phase12_inputs_deserialize_into_their_rust_dtos() {
         assert_eq!(&read, input, "{}", call["operation"]);
         seen += 1;
     }
-    assert!(seen >= 9);
+    assert!(seen >= 10);
+    assert!(round_trips::<Vec<BackupDto>>("deleteBackup") >= 1);
 }
 
 #[test]

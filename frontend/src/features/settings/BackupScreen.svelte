@@ -3,6 +3,7 @@
   import type { BackupDto, ErrorDto, RestorePreviewDto, RestoreSource } from '../../api/types'
   import { useServices } from '../../app/context'
   import Chip from '../../components/Chip.svelte'
+  import Dialog from '../../components/Dialog.svelte'
   import EmptyState from '../../components/EmptyState.svelte'
   import ErrorState from '../../components/ErrorState.svelte'
   import Icon from '../../components/Icon.svelte'
@@ -32,6 +33,9 @@
   let sharing = $state<string | null>(null)
   let shareError = $state<ErrorDto | null>(null)
   let folderError = $state<ErrorDto | null>(null)
+  let confirmingDelete = $state<BackupDto | null>(null)
+  let deleting = $state(false)
+  let deleteError = $state<ErrorDto | null>(null)
 
   const date = (iso: string) => i18n.formatDate(iso, { dateStyle: 'medium', timeStyle: 'short' })
   const size = (bytes: number) => i18n.formatNumber(bytes / 1000, { style: 'unit', unit: 'kilobyte', maximumFractionDigits: 0 })
@@ -80,6 +84,23 @@
       shareError = toErrorDto(caught)
     } finally {
       sharing = null
+    }
+  }
+
+  async function deleteConfirmed() {
+    const backup = confirmingDelete
+    if (!backup || deleting) return
+    deleting = true
+    deleteError = null
+    try {
+      await api.deleteBackup({ operationId: newOperationId(), backupId: backup.id })
+      toasts.show(i18n.t('backup.deleted'), 'success')
+      void backups.refresh()
+    } catch (caught) {
+      deleteError = toErrorDto(caught)
+    } finally {
+      deleting = false
+      confirmingDelete = null
     }
   }
 
@@ -165,6 +186,7 @@
     </div>
     {#if restoreError}<ErrorState error={restoreError} compact />{/if}
     {#if shareError}<ErrorState error={shareError} compact />{/if}
+    {#if deleteError}<ErrorState error={deleteError} compact />{/if}
     <QueryView query={backups}>
       {#snippet empty()}
         <EmptyState title={i18n.t('backup.emptyTitle')} description={i18n.t('backup.emptyBody')} icon="folder" />
@@ -189,6 +211,9 @@
                 <button type="button" class="btn" disabled={validating !== null} aria-busy={validating === backup.id} onclick={() => validate({ kind: 'backup', backupId: backup.id }, backup.id)}>
                   {i18n.t('backup.restore.open')}<span class="visually-hidden"> {date(backup.createdAt)}</span>
                 </button>
+                <button type="button" class="btn btn-ghost danger" disabled={deleting} onclick={() => (confirmingDelete = backup)}>
+                  <Icon name="trash" />{i18n.t('backup.delete')}<span class="visually-hidden"> {date(backup.createdAt)}</span>
+                </button>
               </div>
             </li>
           {/each}
@@ -200,6 +225,18 @@
   {#if restoring}
     <RestoreDialog preview={restoring} onclose={() => (restoring = null)} onrestored={restored} />
   {/if}
+
+  <!-- Destructive: a stray backdrop tap must not decide it. -->
+  <Dialog open={confirmingDelete !== null} title={i18n.t('backup.deleteTitle')} onclose={() => (confirmingDelete = null)} dismissible={false}>
+    {#if confirmingDelete}
+      <p>{i18n.t('backup.deleteBody', { date: date(confirmingDelete.createdAt) })}</p>
+      {#if confirmingDelete.location === 'external'}<p class="muted">{i18n.t('backup.deleteExternal')}</p>{/if}
+    {/if}
+    {#snippet actions()}
+      <button type="button" class="btn" onclick={() => (confirmingDelete = null)}>{i18n.t('common.cancel')}</button>
+      <button type="button" class="btn btn-danger" disabled={deleting} aria-busy={deleting} onclick={deleteConfirmed}>{i18n.t('backup.deleteConfirm')}</button>
+    {/snippet}
+  </Dialog>
 </Screen>
 
 <style>
@@ -276,5 +313,9 @@
   .info {
     display: grid;
     gap: var(--space-1);
+  }
+
+  .danger {
+    color: var(--color-error);
   }
 </style>

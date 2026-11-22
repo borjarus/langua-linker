@@ -170,6 +170,7 @@ fn configure<R: Runtime>(
         settings::reset_collection,
         settings::list_backups,
         settings::create_backup,
+        settings::delete_backup,
         settings::validate_restore,
         settings::restore_backup,
         settings::share_file,

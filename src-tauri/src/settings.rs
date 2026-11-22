@@ -17,12 +17,12 @@ use langualinker_contracts::ErrorDto;
 use langualinker_contracts::dto::{
     AiProviderOptionDto, AiQuotaDto, AiSettingsDto, BackupDto, BackupInput, BackupKind,
     BackupLocation, BackupSettingsDto, CardStatesDto, CollectionCountsDto, ConsentState,
-    DifficultyStabilityPointDto, ForecastAssumptionsDto, ForecastDayDto, JobDto, LocalModelDto,
-    LocalModelState, MaturityDto, NativeLanguage, PermissionState, RatioDto, ResetInput,
-    ResetPreviewDto, ResetPreviewInput, ResetScope, RestoreInput, RestorePreviewDto, RestoreSource,
-    ReviewDayDto, SettingsDto, ShareFileInput, ShareResultDto, ShareTarget, StabilityBucketDto,
-    StatsDto, StatsInput, StatsRange, ThemePreference, TrueRetentionDto, UiLanguage,
-    UpdateSettingsInput, ValidateRestoreInput,
+    DeleteBackupInput, DifficultyStabilityPointDto, ForecastAssumptionsDto, ForecastDayDto, JobDto,
+    LocalModelDto, LocalModelState, MaturityDto, NativeLanguage, PermissionState, RatioDto,
+    ResetInput, ResetPreviewDto, ResetPreviewInput, ResetScope, RestoreInput, RestorePreviewDto,
+    RestoreSource, ReviewDayDto, SettingsDto, ShareFileInput, ShareResultDto, ShareTarget,
+    StabilityBucketDto, StatsDto, StatsInput, StatsRange, ThemePreference, TrueRetentionDto,
+    UiLanguage, UpdateSettingsInput, ValidateRestoreInput,
 };
 use langualinker_domain::{DeckConfigId, DeckId, TimestampMs};
 use langualinker_infrastructure::backup::{self, BackupInfo};
@@ -248,6 +248,8 @@ fn settings_dto(
         // Filled in by the commands from the OS (`reminders::permission`).
         notifications: PermissionState::Unsupported,
         reminder_time: doc.reminder_time,
+        free_weekdays: doc.free_weekdays,
+        free_dates: doc.free_dates,
         tts_enabled: doc.tts_enabled,
         tts_rate: doc.tts_rate,
         ai: AiSettingsDto {
@@ -459,6 +461,8 @@ pub async fn update_settings<R: Runtime>(
             .map(|value| id("defaultPresetId", value).map(DeckConfigId))
             .transpose()?,
         reminder_time: patch.reminder_time,
+        free_weekdays: patch.free_weekdays,
+        free_dates: patch.free_dates,
         tts_enabled: patch.tts_enabled,
         tts_rate: patch.tts_rate,
         telemetry_opt_in: patch.telemetry_opt_in,
@@ -520,6 +524,9 @@ pub async fn update_settings<R: Runtime>(
                 CollectionScope::Cards,
                 CollectionScope::Stats,
             ]);
+        } else if effects.free_days_changed {
+            // The dashboard shows today's free day and the streak skips free days.
+            scopes.extend([CollectionScope::Decks, CollectionScope::Stats]);
         }
         emit(collection, &scopes, collection.clock.now());
         // Opting out deletes the collected metrics at once (Phase 16).
@@ -617,6 +624,24 @@ pub async fn create_backup(backend: State<'_, Backend>, input: Value) -> Result<
     let backups = backend.collection()?.backups.clone();
     blocking(move || job(backups.create(Some(input.operation_id), backup::BackupKind::Manual)))
         .await
+}
+
+/// Deletes one backup file and returns the backups that remain (contract 1.11).
+#[tauri::command]
+pub async fn delete_backup(
+    backend: State<'_, Backend>,
+    input: Value,
+) -> Result<Vec<BackupDto>, ErrorDto> {
+    let input: DeleteBackupInput = parse_input(input)?;
+    operation_id(&input.operation_id)?;
+    let backups = backend.collection()?.backups.clone();
+    blocking(move || {
+        backups
+            .delete(&input.backup_id)
+            .map(|list| list.into_iter().map(backup_dto).collect())
+            .map_err(app_error)
+    })
+    .await
 }
 
 #[tauri::command]

@@ -110,6 +110,7 @@ export const OPERATIONS = {
   exportDeck: op({ kind: 'job', command: 'export_deck', errors: ['NOT_FOUND', 'STORAGE_FULL', 'CANCELLED'], emits: ['job_progress'], permission: 'file', screens: ['transfer'], backendPhase: 14 }),
   shareFile: op({ kind: 'mutation', command: 'share_file', errors: ['NOT_FOUND', 'PERMISSION_DENIED'], emits: [], permission: 'file', screens: ['transfer', 'backup'], backendPhase: 15 }),
   listBackups: op({ kind: 'query', command: 'list_backups', errors: ['PERMISSION_DENIED'], emits: [], permission: 'none', screens: ['backup', 'privacy'], backendPhase: 12 }),
+  deleteBackup: op({ kind: 'mutation', command: 'delete_backup', errors: ['NOT_FOUND', 'PERMISSION_DENIED'], emits: ['collection_changed'], permission: 'file', screens: ['backup'], backendPhase: 12 }),
   createBackup: op({ kind: 'job', command: 'create_backup', errors: ['STORAGE_FULL', 'PERMISSION_DENIED', 'CANCELLED'], emits: ['job_progress', 'collection_changed'], permission: 'file', screens: ['backup', 'privacy'], backendPhase: 12 }),
   validateRestore: op({ kind: 'query', command: 'validate_restore', errors: ['BACKUP_CORRUPT', 'SCHEMA_TOO_NEW', 'UNSUPPORTED_FORMAT', 'NOT_FOUND'], emits: [], permission: 'file', screens: ['backup'], backendPhase: 12 }),
   restoreBackup: op({ kind: 'job', command: 'restore_backup', errors: ['PREVIEW_STALE', 'BACKUP_CORRUPT', 'STORAGE_FULL'], emits: ['job_progress', 'collection_changed'], permission: 'file', screens: ['backup'], backendPhase: 12 }),

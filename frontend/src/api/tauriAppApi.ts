@@ -129,6 +129,7 @@ export function createTauriAppApi(invokeFn: InvokeFn = invoke, listenFn: ListenF
     exportDeck: call('exportDeck'),
     shareFile: call('shareFile'),
     listBackups: call('listBackups'),
+    deleteBackup: call('deleteBackup'),
     createBackup: call('createBackup'),
     validateRestore: call('validateRestore'),
     restoreBackup: call('restoreBackup'),

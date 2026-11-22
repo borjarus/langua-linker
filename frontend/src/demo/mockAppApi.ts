@@ -14,6 +14,7 @@ import {
   type AttributionDto,
   type BackupDto,
   type BackupInput,
+  type DeleteBackupInput,
   type BulkAction,
   type BulkActionInput,
   type BulkPreviewDto,
@@ -448,6 +449,8 @@ export class MockAppApi implements AppApi {
       defaultPresetId: 'preset-default',
       notifications: 'prompt',
       reminderTime: null,
+      freeWeekdays: [],
+      freeDates: [],
       ttsEnabled: true,
       ttsRate: 1,
       ai: {
@@ -588,6 +591,13 @@ export class MockAppApi implements AppApi {
     this.#jobTimers.set(job.jobId, setTimeout(step, this.#options.jobStepMs))
     queueMicrotask(() => this.#emitJob(job))
     return job
+  }
+
+  /** The study day starting at `dayStart` is study-free (ISO weekday or date in the settings). */
+  #isFreeDay(dayStart: number): boolean {
+    const date = new Date(dayStart)
+    const weekday = ((date.getUTCDay() + 6) % 7) + 1
+    return this.#settings.freeWeekdays.includes(weekday) || this.#settings.freeDates.includes(iso(dayStart).slice(0, 10))
   }
 
   #studyDayStart(): number {
@@ -921,7 +931,10 @@ export class MockAppApi implements AppApi {
 
   getDashboard() {
     return this.#query('getDashboard', (): DashboardDto => {
-      const decks = this.#collection.decks.map((deck) => this.#deckSummary(deck))
+      // Decks studied in sessions first, reference-only decks after them; each group by name.
+      const decks = this.#collection.decks
+        .map((deck) => this.#deckSummary(deck))
+        .sort((a, b) => Number(b.inStudy) - Number(a.inStudy) || a.name.localeCompare(b.name, 'pl', { sensitivity: 'base' }))
       const roots = decks.filter((deck) => deck.parentId === null)
       for (const session of this.#sessions.values()) this.#currentCard(session)
       const open = [...this.#sessions.values()].filter((session) => session.status !== 'finished').at(-1)
@@ -948,6 +961,7 @@ export class MockAppApi implements AppApi {
         resumable,
         nextDueAt: futureDues.length > 0 ? iso(Math.min(...futureDues)) : null,
         generatedAt: iso(this.#nowMs),
+        freeToday: this.#isFreeDay(dayStart),
       }
     })
   }
@@ -2102,6 +2116,16 @@ export class MockAppApi implements AppApi {
       integer('dayCutoffHour', patch.dayCutoffHour, 0, 23)
       integer('backupRetention', backupRetention, 1, 50)
       if (patch.reminderTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(patch.reminderTime)) fail('VALIDATION_FAILED', { field: 'reminderTime' })
+      if (patch.freeWeekdays !== undefined) {
+        if (patch.freeWeekdays.some((day) => !Number.isInteger(day) || day < 1 || day > 7)) fail('VALIDATION_FAILED', { field: 'freeWeekdays', reason: 'range' })
+        patch.freeWeekdays = [...new Set(patch.freeWeekdays)].sort((a, b) => a - b)
+      }
+      if (patch.freeDates !== undefined) {
+        const valid = (date: string) => /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(`${date}T00:00:00Z`)) && new Date(`${date}T00:00:00Z`).toISOString().startsWith(date)
+        if (!patch.freeDates.every(valid)) fail('VALIDATION_FAILED', { field: 'freeDates', reason: 'format' })
+        patch.freeDates = [...new Set(patch.freeDates)].sort()
+        if (patch.freeDates.length > 400) fail('VALIDATION_FAILED', { field: 'freeDates', reason: 'tooMany' })
+      }
       if (patch.ttsRate !== undefined && (!Number.isFinite(patch.ttsRate) || patch.ttsRate < 0.5 || patch.ttsRate > 1.5)) fail('VALIDATION_FAILED', { field: 'ttsRate', min: 0.5, max: 1.5 })
       if (patch.timeZone !== undefined) {
         try {
@@ -2589,6 +2613,15 @@ export class MockAppApi implements AppApi {
       this.#snapshots.delete(old.id)
     }
     return backup
+  }
+
+  deleteBackup(input: DeleteBackupInput) {
+    return this.#mutate('deleteBackup', input.operationId, ['backups'], (): BackupDto[] => {
+      if (!this.#backups.some((item) => item.id === input.backupId)) fail('NOT_FOUND', { entity: 'backup', id: input.backupId })
+      this.#backups = this.#backups.filter((item) => item.id !== input.backupId)
+      this.#snapshots.delete(input.backupId)
+      return [...this.#backups].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    })
   }
 
   createBackup(input: BackupInput) {

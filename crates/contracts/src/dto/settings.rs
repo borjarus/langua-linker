@@ -273,6 +273,13 @@ pub struct SettingsDto {
     pub default_preset_id: String,
     pub notifications: PermissionState,
     pub reminder_time: Option<String>,
+    /// Since 1.11: study-free weekdays repeating every week, ISO 1 = Monday … 7 = Sunday,
+    /// ascending.
+    #[serde(default)]
+    pub free_weekdays: Vec<u8>,
+    /// Since 1.11: single study-free dates (`YYYY-MM-DD`), ascending.
+    #[serde(default)]
+    pub free_dates: Vec<String>,
     pub tts_enabled: bool,
     /// Speech rate, 0.5–1.5.
     pub tts_rate: f64,
@@ -315,6 +322,14 @@ pub struct SettingsPatch {
     )]
     #[ts(optional, as = "Option<Option<String>>")]
     pub reminder_time: Option<Option<String>>,
+    /// The whole list of study-free weekdays (1–7); `[]` clears it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub free_weekdays: Option<Vec<u8>>,
+    /// The whole list of single study-free dates (`YYYY-MM-DD`); `[]` clears it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub free_dates: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub tts_enabled: Option<bool>,
@@ -441,6 +456,14 @@ pub struct BackupDto {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct BackupInput {
     pub operation_id: String,
+}
+
+/// `deleteBackup` (contract 1.11).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct DeleteBackupInput {
+    pub operation_id: String,
+    pub backup_id: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS)]

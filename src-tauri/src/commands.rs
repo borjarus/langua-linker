@@ -93,6 +93,7 @@ pub const IMPLEMENTED: &[&str] = &[
     "reset_collection",
     "list_backups",
     "create_backup",
+    "delete_backup",
     "validate_restore",
     "restore_backup",
     "share_file",

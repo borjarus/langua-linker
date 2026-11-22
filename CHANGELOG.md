@@ -4,13 +4,23 @@ All notable changes to LanguaLinker. Versions follow `X.Y.Z` / `X.Y.Z-(alpha|bet
 
 ## [Unreleased]
 
+## [0.5.3-beta.1] — 2026-11-22
+
+GitHub pre-release for testers, like 0.5.2-beta.2: not for store upload. No content update; progress stays.
+
+### Added
+- Study-free days (Settings → Study-free days): weekdays that repeat every week (every Sunday, say) and single dates such as a holiday. On a free day there is no reminder and the streak does not break; new review dates avoid free days by moving 1–3 days, earlier when possible. Studying on a free day is still allowed, and the dashboard says when today is one. Reviews already scheduled keep their dates.
+- Backups can be deleted from the backup list, after a confirmation.
+
+### Changed
+- Decks you study come first on the dashboard, in alphabetical order, followed by reference-only decks (also alphabetical).
+
 ## [0.5.2-beta.2] — 2026-11-20
 
 GitHub pre-release for testers: on-device association model Bielik 1.5B (GGUF Q4_K_M) published in the catalog.
 
 ### Added
 - On-device AI provider ("On this device") with `Bielik 1.5B (skojarzenia)` in the catalog: downloads over HTTPS with checksum verification from GitHub Releases, runs locally via llama.cpp without an API key or network traffic. Tested and verified on Samsung Galaxy A56 (Android 17).
-
 
 ## [0.5.2-beta.1] — 2026-11-20
 

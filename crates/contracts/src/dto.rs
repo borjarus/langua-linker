@@ -283,6 +283,9 @@ pub struct DashboardDto {
     /// Earliest future due date over all decks; lets "nothing due today" say when the next review is.
     pub next_due_at: Option<String>,
     pub generated_at: String,
+    /// Since 1.11: today is a study-free day (settings `freeWeekdays` / `freeDates`).
+    #[serde(default)]
+    pub free_today: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
@@ -2028,6 +2031,7 @@ pub fn typescript() -> String {
         BackupKind::decl(&cfg),
         BackupDto::decl(&cfg),
         BackupInput::decl(&cfg),
+        DeleteBackupInput::decl(&cfg),
         ShareTarget::decl(&cfg),
         ShareFileInput::decl(&cfg),
         ShareResultDto::decl(&cfg),

@@ -528,6 +528,21 @@ impl BackupService {
             .ok_or(AppError::NotFound { entity: "backup" })
     }
 
+    /// Deletes one backup file (app or external folder) and returns the backups that remain,
+    /// newest first. An unknown id is `NOT_FOUND`; a file that cannot be removed is
+    /// `PERMISSION_DENIED { reason: "backupFolder" }`.
+    pub fn delete(&self, id: &str) -> AppResult<Vec<BackupInfo>> {
+        let backup = self.find(id)?;
+        match fs::remove_file(&backup.path) {
+            Ok(()) => {}
+            Err(error) if error.kind() == io::ErrorKind::NotFound => {}
+            Err(error) => return Err(io_error(&error, "backupFolder")),
+        }
+        self.events
+            .collection_changed(&[CollectionScope::Backups], self.clock.now());
+        self.list()
+    }
+
     /// Writes a backup now (the job body; also the safety copy of restore and migration).
     /// `progress(step)` is called after each of four steps.
     pub fn write_backup(

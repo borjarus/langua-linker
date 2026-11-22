@@ -26,6 +26,17 @@
   const HOURS = Array.from({ length: 24 }, (_, hour) => hour)
   const FALLBACK_ZONES = ['Europe/Warsaw', 'Europe/Berlin', 'Europe/London', 'Europe/Dublin', 'America/New_York', 'UTC']
 
+  /** ISO weekdays, Monday first; 2026-11-23 is a Monday, used only to name the days. */
+  const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const
+  const weekdayName = (day: number) => i18n.formatDate(`2026-11-${String(22 + day).padStart(2, '0')}T12:00:00Z`, { weekday: 'long', timeZone: 'UTC' })
+  const freeDateLabel = (date: string) => i18n.formatDate(`${date}T12:00:00Z`, { dateStyle: 'full', timeZone: 'UTC' })
+  /** Local `YYYY-MM-DD` of today; past single dates are hidden and dropped on the next change. */
+  const todayIso = () => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  }
+  let newFreeDate = $state('')
+
   let goal = $state(20)
   let requesting = $state(false)
   let permissionError = $state<ErrorDto | null>(null)
@@ -69,6 +80,24 @@
   async function saveGoal(settings: SettingsDto) {
     if (!goalValid || goal === settings.dailyGoal) return
     await controller.update('dailyGoal', { dailyGoal: goal })
+  }
+
+  async function toggleFreeWeekday(settings: SettingsDto, day: number, free: boolean) {
+    const weekdays = free ? [...settings.freeWeekdays, day] : settings.freeWeekdays.filter((item) => item !== day)
+    await controller.update('freeWeekdays', { freeWeekdays: [...new Set(weekdays)].sort((a, b) => a - b) })
+  }
+
+  const upcomingFreeDates = (settings: SettingsDto) => settings.freeDates.filter((date) => date >= todayIso())
+
+  async function addFreeDate(settings: SettingsDto) {
+    const date = newFreeDate
+    if (!date || date < todayIso()) return
+    const dates = [...new Set([...upcomingFreeDates(settings), date])].sort()
+    if (await controller.update('freeDates', { freeDates: dates })) newFreeDate = ''
+  }
+
+  async function removeFreeDate(settings: SettingsDto, date: string) {
+    await controller.update('freeDates', { freeDates: upcomingFreeDates(settings).filter((item) => item !== date) })
   }
 
   async function allowNotifications() {
@@ -225,6 +254,46 @@
       </div>
     </section>
 
+    <section class="surface stack" aria-labelledby="{ids}-free">
+      <h2 id="{ids}-free">{i18n.t('settings.freeDays.title')}</h2>
+      <p class="muted hint">{i18n.t('settings.freeDays.hint')}</p>
+      <fieldset class="field">
+        <legend>{i18n.t('settings.freeDays.weekly')}</legend>
+        <div class="weekdays">
+          {#each WEEKDAYS as day (day)}
+            <label class="choice">
+              <input type="checkbox" checked={settings.freeWeekdays.includes(day)} onchange={(event) => toggleFreeWeekday(settings, day, event.currentTarget.checked)} />
+              {weekdayName(day)}
+            </label>
+          {/each}
+        </div>
+        {#if settings.freeWeekdays.length === 7}<p class="muted hint">{i18n.t('settings.freeDays.wholeWeek')}</p>{/if}
+        <SaveStatus {controller} field="freeWeekdays" />
+      </fieldset>
+      <div class="field">
+        <label for="{ids}-free-date">{i18n.t('settings.freeDays.single')}</label>
+        <div class="row">
+          <input id="{ids}-free-date" class="input narrow" type="date" min={todayIso()} bind:value={newFreeDate} />
+          <button type="button" class="btn" disabled={!newFreeDate || newFreeDate < todayIso()} onclick={() => addFreeDate(settings)}><Icon name="plus" />{i18n.t('settings.freeDays.add')}</button>
+        </div>
+        {#if upcomingFreeDates(settings).length > 0}
+          <ul class="free-dates">
+            {#each upcomingFreeDates(settings) as date (date)}
+              <li>
+                <span>{freeDateLabel(date)}</span>
+                <button type="button" class="btn btn-ghost" onclick={() => removeFreeDate(settings, date)}>
+                  <Icon name="trash" />{i18n.t('settings.freeDays.remove')}<span class="visually-hidden"> {freeDateLabel(date)}</span>
+                </button>
+              </li>
+            {/each}
+          </ul>
+        {:else}
+          <p class="muted hint">{i18n.t('settings.freeDays.none')}</p>
+        {/if}
+        <SaveStatus {controller} field="freeDates" />
+      </div>
+    </section>
+
     <section class="surface stack" aria-labelledby="{ids}-reminders">
       <h2 id="{ids}-reminders">{i18n.t('settings.reminders')}</h2>
       <p class="permission">
@@ -353,6 +422,28 @@
   .permission {
     display: flex;
     align-items: start;
+    gap: var(--space-2);
+  }
+
+  .weekdays {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-2);
+  }
+
+  .free-dates {
+    display: grid;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .free-dates li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
     gap: var(--space-2);
   }
 

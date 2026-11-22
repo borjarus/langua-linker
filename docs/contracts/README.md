@@ -73,6 +73,14 @@ Phase 7 extends the Rust side per command: the DTO deserializes its frozen input
 - `collection_changed` after a committed rating/undo (`cards`, `stats`; undo also `notes`), card action (`cards`, `decks`; a delete also `notes`, `stats`), favorite or link choice (`notes`), and ending a session (`stats`).
 - Known deviation from checklist rule 3, fixed with the next minor version: `startStudy`, `getRatingPreview` and `rateCard` can answer `VALIDATION_FAILED` (paused or finished session, card outside the session, card not studyable) or `DELETED`; `setFavoriteAssociation` and `resolveWordLink` can answer `DELETED` for a deleted note.
 
+## Changes in v1.11 (Study-free days, deleting backups, 2026-11-22)
+
+- Minor (additive). New mutation `deleteBackup` (`delete_backup`, `permission: file`, `DeleteBackupInput { operationId, backupId }` → `BackupDto[]`, the backups that remain, newest first). It removes the backup file from the app folder or the external folder and emits `collection_changed { backups }`. Errors: `NOT_FOUND` (unknown id), `PERMISSION_DENIED { reason: "backupFolder" }` (the file cannot be removed).
+- `SettingsDto` gains `freeWeekdays: number[]` (study-free ISO weekdays, 1 = Monday … 7 = Sunday) and `freeDates: string[]` (single `YYYY-MM-DD` dates), both ascending; `SettingsPatch` gains optional `freeWeekdays` and `freeDates`, each replacing the whole list. Errors `VALIDATION_FAILED { field: "freeWeekdays", reason: "range" }`, `{ field: "freeDates", reason: "format" | "tooMany" }` (at most 400 dates). A change emits `collection_changed` `settings`, `decks`, `stats`. Older payloads deserialize with `[]`.
+- `DashboardDto` gains `freeToday: boolean`. Older payloads deserialize with `false`.
+- Behaviour: a review interval of whole days that ends on a free day moves to the nearest day that is not free, at most 3 days away, earlier first, never to today and never above the preset's maximum interval (`getRatingPreview` shows the moved interval; its token covers the free days). Reminders skip free days. Streaks (`getDashboard`, `getStats`) skip free days without a rating (up to 62 in a row). With all seven weekdays free, nothing is moved.
+- `getDashboard.decks` lists decks in study first, then reference-only decks, each group by name.
+
 ## Changes in v1.10 (On-device association model, 2026-11-20)
 
 - Minor (additive), [ADR-23](../adr/ADR-23-on-device-associations.md). `AiProviderOptionDto.onDevice` marks the provider `onDevice` (no key; `models` are the ids of `localModels`). `AiSettingsDto.localModels: LocalModelDto[]` with `id`, `name`, `bytes`, `state` (`notDownloaded` | `downloading` | `ready` | `failed`), `downloadedBytes` and `error` (`network`, `http`, `refused`, `size`, `checksum`, `storage`). Older payloads deserialize with `false` and `[]`.

@@ -4,17 +4,19 @@
 //! they match what a session would show. `total` and progress come from the cards' stored state.
 //! Today's boundaries, the streak and "studied today" follow the collection calendar (IANA zone
 //! and cutoff). The streak counts consecutive study days with at least one valid rating, ending
-//! today or yesterday; v1 has no protection days (ADR-16).
+//! today or yesterday; study-free days without a rating neither count nor break it.
 
 use std::collections::{HashMap, HashSet};
 
+use langualinker_domain::calendar::StudyDay;
 use langualinker_domain::deck::Deck;
+use langualinker_domain::free_days::FreeDays;
 use langualinker_domain::{DeckId, TimestampMs};
 
 use crate::AppResult;
 use crate::content::{DAILY_GOAL_KEY, DEFAULT_DAILY_GOAL};
 use crate::repositories::{DeckCardCounts, Repositories, SessionStatus};
-use crate::study;
+use crate::{settings, study};
 
 pub const DAY_MS: i64 = 86_400_000;
 
@@ -50,6 +52,8 @@ pub struct Dashboard {
     pub daily_goal: u32,
     pub next_due_at: Option<TimestampMs>,
     pub generated_at: TimestampMs,
+    /// Today is a study-free day.
+    pub free_today: bool,
 }
 
 /// Start of the study day containing `now`: the last `cutoff` (minutes after midnight, UTC).
@@ -75,27 +79,47 @@ pub fn streak(days: &[i64], today: i64) -> u32 {
 }
 
 /// Longest streak looked back on (ten years of study days).
-const MAX_STREAK_DAYS: u32 = 3_660;
+pub const MAX_STREAK_DAYS: u32 = 3_660;
+/// Study-free days in a row without a rating that a streak is carried over (a long holiday).
+const MAX_FREE_GAP: u32 = 62;
 
-/// Consecutive study days with a valid rating, ending today or yesterday, in the collection
-/// calendar (days of 23 or 25 hours across DST count as one day).
-pub fn zoned_streak(
-    tx: &mut dyn Repositories,
-    moment: &langualinker_domain::scheduling::StudyMoment,
+/// Streak ending today or yesterday: days with a rating count, study-free days without one are
+/// skipped, any other day without one ends it. `studied(day)` tells whether a day has a rating.
+pub fn streak_back(
+    today: StudyDay,
+    free: &FreeDays,
+    mut studied: impl FnMut(StudyDay) -> AppResult<bool>,
 ) -> AppResult<u32> {
-    let calendar = &moment.calendar;
-    let mut day = moment.today;
-    if !tx.has_review_between(calendar.day_start(day), calendar.day_end(day))? {
+    let mut day = today;
+    if !studied(day)? {
         day = day.plus(-1);
     }
-    let mut count = 0;
-    while count < MAX_STREAK_DAYS
-        && tx.has_review_between(calendar.day_start(day), calendar.day_end(day))?
-    {
-        count += 1;
+    let (mut count, mut gap) = (0, 0);
+    while count < MAX_STREAK_DAYS {
+        if studied(day)? {
+            count += 1;
+            gap = 0;
+        } else if free.is_free(day) && gap < MAX_FREE_GAP {
+            gap += 1;
+        } else {
+            break;
+        }
         day = day.plus(-1);
     }
     Ok(count)
+}
+
+/// Consecutive study days with a valid rating, ending today or yesterday, in the collection
+/// calendar (days of 23 or 25 hours across DST count as one day). Study-free days are skipped.
+pub fn zoned_streak(
+    tx: &mut dyn Repositories,
+    moment: &langualinker_domain::scheduling::StudyMoment,
+    free: &FreeDays,
+) -> AppResult<u32> {
+    let calendar = moment.calendar;
+    streak_back(moment.today, free, |day| {
+        tx.has_review_between(calendar.day_start(day), calendar.day_end(day))
+    })
 }
 
 /// Builds the dashboard inside one write transaction (expired burials return to their queues
@@ -108,7 +132,11 @@ pub fn dashboard(
     let moment = study::study_moment(tx, now)?;
     study::unbury_expired(tx, &moment)?;
     let decks = tx.active_decks()?;
-    let ids: Vec<DeckId> = decks.iter().map(|deck| deck.id).collect();
+    // Decks studied in sessions first, reference-only decks after them; each group by name (the
+    // repository order).
+    let mut ids: Vec<DeckId> = decks.iter().map(|deck| deck.id).collect();
+    ids.sort_by_key(|id| !decks.iter().any(|deck| deck.id == *id && deck.in_study));
+    let free = settings::free_days(tx)?;
     let result = summaries(tx, &moment, &decks, &ids, pending)?;
     let all = study::scope_counts(tx, None, &moment)?;
     let daily_goal = tx
@@ -136,12 +164,13 @@ pub fn dashboard(
     Ok(Dashboard {
         decks: result,
         resumable,
-        streak_days: zoned_streak(tx, &moment)?,
+        streak_days: zoned_streak(tx, &moment, &free)?,
         studied_today: tx.reviews_since(moment.day_start)?,
         due_today: all.review + all.learning,
         daily_goal,
         next_due_at: tx.next_due_after(moment.day_end)?,
         generated_at: now,
+        free_today: free.is_free(moment.today),
     })
 }
 
@@ -229,5 +258,26 @@ mod tests {
         assert_eq!(streak(&[10, 9, 8, 6], 10), 3);
         assert_eq!(streak(&[9, 8], 10), 2, "today not studied yet");
         assert_eq!(streak(&[8, 7], 10), 0);
+    }
+
+    fn streak_over(studied: &[i64], today: i64, free: &FreeDays) -> u32 {
+        streak_back(StudyDay(today), free, |day| Ok(studied.contains(&day.0))).unwrap()
+    }
+
+    #[test]
+    fn study_free_days_carry_the_streak_over() {
+        // 2026-11-22 is a Sunday.
+        let sunday = StudyDay::from_iso_date("2026-11-22").unwrap().0;
+        let sundays = FreeDays::new([7], []);
+        let studied = [sunday + 1, sunday - 1, sunday - 2];
+        // Mon studied, Sun free and skipped, Sat and Fri studied.
+        assert_eq!(streak_over(&studied, sunday + 1, &sundays), 3);
+        assert_eq!(streak_over(&studied, sunday + 1, &FreeDays::default()), 1);
+        // Today is the free day itself, not studied yet: the streak stands.
+        assert_eq!(streak_over(&[sunday - 1], sunday, &sundays), 1);
+        // A studied free day counts.
+        assert_eq!(streak_over(&[sunday, sunday - 1], sunday, &sundays), 2);
+        // Nothing studied: no streak, whatever is free.
+        assert_eq!(streak_over(&[], sunday + 1, &FreeDays::new(1..=7, [])), 0);
     }
 }

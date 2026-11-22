@@ -10,11 +10,13 @@
 //!   of its study day (stored due dates, i.e. a forecast) or new cards are waiting;
 //! - **done today, no reminder**: today's reminder is dropped once the daily goal is reached and
 //!   no review is due any more;
+//! - **free day, no reminder**: a study-free day (a weekday or a date in the settings) gets none;
 //! - the review count in the text is a forecast from the stored due dates at planning time.
 
 use langualinker_domain::TimestampMs;
 use langualinker_domain::calendar::StudyCalendar;
 use langualinker_domain::card::{CardState, QueueState};
+use langualinker_domain::free_days::FreeDays;
 
 use crate::repositories::{CardFact, Repositories};
 use crate::{AppResult, settings, study};
@@ -79,6 +81,7 @@ pub fn plan(tx: &mut dyn Repositories, now: TimestampMs) -> AppResult<ReminderPl
             reviewed_today,
             daily_goal: settings.daily_goal,
         },
+        &settings.doc.free_days(),
     );
     Ok(ReminderPlan { slots, language })
 }
@@ -96,6 +99,7 @@ pub fn slots(
     minutes: u32,
     cards: &[CardFact],
     progress: Progress,
+    free: &FreeDays,
 ) -> Vec<ReminderSlot> {
     let today = calendar.day_of(now);
     let first_date = calendar.local_date(now);
@@ -109,6 +113,9 @@ pub fn slots(
             continue;
         }
         let day = calendar.day_of(at);
+        if free.is_free(day) {
+            continue;
+        }
         let reviews = cards
             .iter()
             .filter(|card| card.state != CardState::New)
@@ -232,10 +239,48 @@ mod tests {
     }
 
     #[test]
+    fn a_study_free_day_gets_no_reminder() {
+        let cards = [card(1, CardState::New, QueueState::New, None)];
+        let all = slots(
+            &warsaw(),
+            TimestampMs(NOW),
+            19 * 60,
+            &cards,
+            idle(),
+            &FreeDays::default(),
+        );
+        let first = warsaw().day_of(all[0].at);
+        let free = FreeDays::new([FreeDays::weekday(first)], []);
+        let planned = slots(&warsaw(), TimestampMs(NOW), 19 * 60, &cards, idle(), &free);
+        assert!(planned.iter().all(|slot| warsaw().day_of(slot.at) != first));
+        assert!(planned.len() < all.len());
+    }
+
+    #[test]
     fn nothing_to_study_means_no_reminder() {
         let cards = [card(1, CardState::Review, QueueState::Suspended, Some(NOW))];
-        assert!(slots(&warsaw(), TimestampMs(NOW), 19 * 60, &cards, idle()).is_empty());
-        assert!(slots(&warsaw(), TimestampMs(NOW), 19 * 60, &[], idle()).is_empty());
+        assert!(
+            slots(
+                &warsaw(),
+                TimestampMs(NOW),
+                19 * 60,
+                &cards,
+                idle(),
+                &FreeDays::default()
+            )
+            .is_empty()
+        );
+        assert!(
+            slots(
+                &warsaw(),
+                TimestampMs(NOW),
+                19 * 60,
+                &[],
+                idle(),
+                &FreeDays::default()
+            )
+            .is_empty()
+        );
     }
 
     #[test]
@@ -243,7 +288,14 @@ mod tests {
         // One review card due in three days; no new cards.
         let due = NOW + 3 * DAY;
         let cards = [card(1, CardState::Review, QueueState::Review, Some(due))];
-        let planned = slots(&warsaw(), TimestampMs(NOW), 19 * 60, &cards, idle());
+        let planned = slots(
+            &warsaw(),
+            TimestampMs(NOW),
+            19 * 60,
+            &cards,
+            idle(),
+            &FreeDays::default(),
+        );
         // Days 3..=6 after today plus the 7th: every day from the due day on keeps the card due.
         assert_eq!(planned.len(), 5);
         // 19:00 in Warsaw (UTC+1 in March) = 18:00 UTC.
@@ -258,7 +310,14 @@ mod tests {
     #[test]
     fn new_cards_keep_the_daily_reminder_and_a_past_time_starts_tomorrow() {
         let cards = [card(1, CardState::New, QueueState::New, None)];
-        let planned = slots(&warsaw(), TimestampMs(NOW), 8 * 60, &cards, idle());
+        let planned = slots(
+            &warsaw(),
+            TimestampMs(NOW),
+            8 * 60,
+            &cards,
+            idle(),
+            &FreeDays::default(),
+        );
         assert_eq!(planned.len() as i64, REMINDER_DAYS);
         // 08:00 already passed today (11:00): the first one is tomorrow 07:00 UTC.
         assert_eq!(planned[0].at.0, NOW + DAY - 3 * 3_600_000);
@@ -276,14 +335,28 @@ mod tests {
             reviewed_today: 20,
             daily_goal: 20,
         };
-        let planned = slots(&warsaw(), TimestampMs(NOW), 19 * 60, &cards, done);
+        let planned = slots(
+            &warsaw(),
+            TimestampMs(NOW),
+            19 * 60,
+            &cards,
+            done,
+            &FreeDays::default(),
+        );
         assert_eq!(planned[0].at.0, NOW + DAY + 8 * 3_600_000);
         // A review still due keeps today's reminder.
         let due = [
             cards[0],
             card(2, CardState::Review, QueueState::Review, Some(NOW - DAY)),
         ];
-        let planned = slots(&warsaw(), TimestampMs(NOW), 19 * 60, &due, done);
+        let planned = slots(
+            &warsaw(),
+            TimestampMs(NOW),
+            19 * 60,
+            &due,
+            done,
+            &FreeDays::default(),
+        );
         assert_eq!(planned[0].at.0, NOW + 8 * 3_600_000);
     }
 
@@ -295,7 +368,14 @@ mod tests {
             QueueState::UserBuried,
             Some(NOW - DAY),
         )];
-        let planned = slots(&warsaw(), TimestampMs(NOW), 19 * 60, &cards, idle());
+        let planned = slots(
+            &warsaw(),
+            TimestampMs(NOW),
+            19 * 60,
+            &cards,
+            idle(),
+            &FreeDays::default(),
+        );
         assert_eq!(planned[0].at.0, NOW + DAY + 8 * 3_600_000);
     }
 
@@ -304,7 +384,14 @@ mod tests {
         // 2026-03-28 12:00 UTC; 02:30 on 2026-03-29 does not exist in Warsaw → 03:00 CEST.
         let now = 1_774_699_200_000;
         let cards = [card(1, CardState::New, QueueState::New, None)];
-        let planned = slots(&warsaw(), TimestampMs(now), 150, &cards, idle());
+        let planned = slots(
+            &warsaw(),
+            TimestampMs(now),
+            150,
+            &cards,
+            idle(),
+            &FreeDays::default(),
+        );
         // 2026-03-29 01:00 UTC.
         assert_eq!(planned[0].at.0, 1_774_746_000_000);
     }

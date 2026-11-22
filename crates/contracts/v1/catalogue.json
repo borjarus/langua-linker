@@ -1,5 +1,5 @@
 {
-  "apiVersion": "1.10",
+  "apiVersion": "1.11",
   "errorCodes": [
     "VALIDATION_FAILED",
     "VERSION_CONFLICT",
@@ -675,6 +675,18 @@
       ],
       "emits": [],
       "permission": "none"
+    },
+    "deleteBackup": {
+      "kind": "mutation",
+      "command": "delete_backup",
+      "errors": [
+        "NOT_FOUND",
+        "PERMISSION_DENIED"
+      ],
+      "emits": [
+        "collection_changed"
+      ],
+      "permission": "file"
     },
     "createBackup": {
       "kind": "job",

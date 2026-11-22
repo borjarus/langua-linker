@@ -7,6 +7,7 @@ pub mod calendar;
 pub mod card;
 pub mod content;
 pub mod deck;
+pub mod free_days;
 pub mod fsrs;
 pub mod ids;
 pub mod note;

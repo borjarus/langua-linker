@@ -202,6 +202,7 @@ pub fn dashboard_dto(dashboard: Dashboard) -> DashboardDto {
         }),
         next_due_at: dashboard.next_due_at.map(iso),
         generated_at: iso(dashboard.generated_at),
+        free_today: dashboard.free_today,
     }
 }
 

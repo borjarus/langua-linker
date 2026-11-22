@@ -6,6 +6,7 @@ import type {
   AttributionDto,
   BackupDto,
   BackupInput,
+  DeleteBackupInput,
   BulkActionInput,
   BulkPreviewDto,
   BulkPreviewInput,
@@ -186,6 +187,8 @@ export interface AppApi {
   shareFile(input: ShareFileInput): Promise<ShareResultDto>
   listBackups(): Promise<BackupDto[]>
   createBackup(input: BackupInput): Promise<JobDto>
+  /** Deletes one backup file; returns the backups that remain, newest first. */
+  deleteBackup(input: DeleteBackupInput): Promise<BackupDto[]>
   validateRestore(input: ValidateRestoreInput): Promise<RestorePreviewDto>
   /** Makes a safety copy of the current collection first; a failed restore leaves it untouched. */
   restoreBackup(input: RestoreInput): Promise<JobDto>

@@ -521,6 +521,21 @@ fn rotation_keeps_the_newest_backups_and_automatic_backups_follow_studying() {
         app.dir.join("staging").read_dir().unwrap().next().is_none(),
         "no leftovers"
     );
+
+    // Deleting one backup removes its file and leaves the others.
+    let doomed = list[1].clone();
+    let remaining = app.backups.delete(&doomed.id).unwrap();
+    assert_eq!(remaining.len(), list.len() - 1);
+    assert!(remaining.iter().all(|backup| backup.id != doomed.id));
+    assert!(!doomed.path.exists());
+    assert!(matches!(
+        app.backups.delete(&doomed.id),
+        Err(AppError::NotFound { .. })
+    ));
+    assert!(matches!(
+        app.backups.delete("../collection"),
+        Err(AppError::NotFound { .. })
+    ));
 }
 
 fn phrase_error() -> AppError {

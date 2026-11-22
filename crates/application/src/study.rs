@@ -19,6 +19,7 @@ use std::collections::{HashMap, HashSet};
 use langualinker_domain::calendar::StudyCalendar;
 use langualinker_domain::card::{Card, CardState, QueueState};
 use langualinker_domain::deck::{Deck, DeckConfig, LeechAction, NewCardOrder};
+use langualinker_domain::free_days::FreeDays;
 use langualinker_domain::fsrs::{FSRS_VERSION, SchedulerConfig, is_leech};
 use langualinker_domain::queue::{
     Candidate, Candidates, DailyLimits, DeckNode, LimitTree, QueueCounts, QueuePlan,
@@ -36,7 +37,7 @@ use crate::repositories::{
     NewStudySession, RecordedOperation, Repositories, SessionItemStatus, SessionStatus,
     SiblingChange, StudySession, UndoChanges,
 };
-use crate::{AppError, AppResult};
+use crate::{AppError, AppResult, settings};
 
 /// Longest answer time counted per rating (Anki's default cap).
 pub const MAX_ANSWER_MS: i64 = 60_000;
@@ -190,6 +191,25 @@ pub fn study_moment(tx: &mut dyn Repositories, now: TimestampMs) -> AppResult<St
     Ok(StudyMoment::new(calendar, now))
 }
 
+/// Rates a card and keeps a review interval off the study-free days. Preview and rating both go
+/// through here, so the preview promises what the rating writes.
+fn schedule_card(
+    card: &Card,
+    scheduler: &SchedulerConfig,
+    hash: &str,
+    rating: Rating,
+    moment: &StudyMoment,
+    free: &FreeDays,
+) -> scheduling::ScheduledReview {
+    let scheduled = scheduling::schedule(card, scheduler, hash, rating, moment);
+    scheduling::avoid_free_days(
+        scheduled,
+        free,
+        scheduler.parameters.maximum_interval_days(),
+        moment,
+    )
+}
+
 fn check_operation_id(operation_id: &str) -> AppResult<()> {
     if operation_id.is_empty() || operation_id.len() > 128 {
         return Err(ValidationError::new("operationId", "format").into());
@@ -274,8 +294,9 @@ fn preview_token(
     parameters_hash: &str,
     session: SessionId,
     moment: &StudyMoment,
+    free: &FreeDays,
 ) -> String {
-    let text = format!(
+    let mut text = format!(
         "preview-v1|{}|{}|{}|{}|{}|{}|{}",
         card.id.0,
         card.version,
@@ -285,6 +306,11 @@ fn preview_token(
         session.0,
         moment.today.0
     );
+    // Without free days the token stays what it was before they existed.
+    if !free.is_empty() {
+        text.push_str("|free:");
+        text.push_str(&free.fingerprint());
+    }
     Sha256::digest(text.as_bytes())[..16]
         .iter()
         .map(|byte| format!("{byte:02x}"))
@@ -876,10 +902,11 @@ pub fn preview(
     let card = load_studyable_card(tx, card_id, card_version)?;
     let moment = study_moment(tx, now)?;
     let (config, scheduler, hash) = scheduler_for(tx, &card)?;
+    let free = settings::free_days(tx)?;
     let intervals = Rating::ALL
         .iter()
         .map(|rating| {
-            let scheduled = scheduling::schedule(&card, &scheduler, &hash, *rating, &moment);
+            let scheduled = schedule_card(&card, &scheduler, &hash, *rating, &moment, &free);
             IntervalPreview {
                 rating: *rating,
                 due_at: scheduled.due_at(),
@@ -890,7 +917,7 @@ pub fn preview(
     Ok(RatingPreview {
         card_id,
         card_version,
-        token: preview_token(&card, &config, &hash, session.id, &moment),
+        token: preview_token(&card, &config, &hash, session.id, &moment, &free),
         intervals,
     })
 }
@@ -934,11 +961,12 @@ pub fn rate_card(
     }
     let moment = study_moment(tx, now)?;
     let (config, scheduler, hash) = scheduler_for(tx, &card)?;
-    if input.preview_token != preview_token(&card, &config, &hash, session.id, &moment) {
+    let free = settings::free_days(tx)?;
+    if input.preview_token != preview_token(&card, &config, &hash, session.id, &moment, &free) {
         return Err(AppError::PreviewStale);
     }
 
-    let scheduled = scheduling::schedule(&card, &scheduler, &hash, input.rating, &moment);
+    let scheduled = schedule_card(&card, &scheduler, &hash, input.rating, &moment, &free);
     let mut after = scheduled.card.clone();
     let mut changes = UndoChanges::default();
     if scheduled.lapse && is_leech(after.lapses, config.options.leech_threshold) {
@@ -1365,8 +1393,22 @@ mod tests {
         let source = card();
         let preset = config(5, 2);
         let now = moment(NOON);
-        let first = preview_token(&source, &preset, "hash", SessionId(9), &now);
-        let second = preview_token(&source, &preset, "hash", SessionId(9), &now);
+        let first = preview_token(
+            &source,
+            &preset,
+            "hash",
+            SessionId(9),
+            &now,
+            &FreeDays::default(),
+        );
+        let second = preview_token(
+            &source,
+            &preset,
+            "hash",
+            SessionId(9),
+            &now,
+            &FreeDays::default(),
+        );
         assert_eq!(first.len(), 32);
         assert!(first.chars().all(|c| c.is_ascii_hexdigit()));
         assert_eq!(first, second);
@@ -1377,36 +1419,96 @@ mod tests {
         let source = card();
         let preset = config(5, 2);
         let now = moment(NOON);
-        let base = preview_token(&source, &preset, "hash", SessionId(9), &now);
+        let base = preview_token(
+            &source,
+            &preset,
+            "hash",
+            SessionId(9),
+            &now,
+            &FreeDays::default(),
+        );
 
         let mut newer_card = source.clone();
         newer_card.version += 1;
         assert_ne!(
             base,
-            preview_token(&newer_card, &preset, "hash", SessionId(9), &now)
+            preview_token(
+                &newer_card,
+                &preset,
+                "hash",
+                SessionId(9),
+                &now,
+                &FreeDays::default()
+            )
         );
 
         assert_ne!(
             base,
-            preview_token(&source, &config(5, 3), "hash", SessionId(9), &now)
+            preview_token(
+                &source,
+                &config(5, 3),
+                "hash",
+                SessionId(9),
+                &now,
+                &FreeDays::default()
+            )
         );
         assert_ne!(
             base,
-            preview_token(&source, &config(6, 2), "hash", SessionId(9), &now)
+            preview_token(
+                &source,
+                &config(6, 2),
+                "hash",
+                SessionId(9),
+                &now,
+                &FreeDays::default()
+            )
         );
         assert_ne!(
             base,
-            preview_token(&source, &preset, "other-hash", SessionId(9), &now)
+            preview_token(
+                &source,
+                &preset,
+                "other-hash",
+                SessionId(9),
+                &now,
+                &FreeDays::default()
+            )
         );
         assert_ne!(
             base,
-            preview_token(&source, &preset, "hash", SessionId(10), &now)
+            preview_token(
+                &source,
+                &preset,
+                "hash",
+                SessionId(10),
+                &now,
+                &FreeDays::default()
+            )
         );
 
         let next_day = moment(NOON + 2 * 86_400_000);
         assert_ne!(
             base,
-            preview_token(&source, &preset, "hash", SessionId(9), &next_day)
+            preview_token(
+                &source,
+                &preset,
+                "hash",
+                SessionId(9),
+                &next_day,
+                &FreeDays::default()
+            )
+        );
+        assert_ne!(
+            base,
+            preview_token(
+                &source,
+                &preset,
+                "hash",
+                SessionId(9),
+                &now,
+                &FreeDays::new([7], [])
+            )
         );
     }
 

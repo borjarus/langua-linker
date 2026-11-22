@@ -250,6 +250,8 @@ export async function recordContractSamples(raw: AppApi): Promise<ContractSample
   // backup / restore / reset
   const backups = await api.listBackups()
   await finish(await api.createBackup({ operationId: operationId() }))
+  const newBackup = required((await api.listBackups()).find((item) => !backups.some((before) => before.id === item.id)), 'new backup')
+  await api.deleteBackup({ operationId: operationId(), backupId: newBackup.id })
   await api.shareFile({ operationId: operationId(), target: { kind: 'backup', backupId: required(backups[0], 'backup').id } })
   await api.validateRestore({ source: { kind: 'file', fileToken: 'demo-restore-corrupt' } }).catch(() => null)
   const restore = await api.validateRestore({ source: { kind: 'backup', backupId: required(backups[0], 'backup').id } })

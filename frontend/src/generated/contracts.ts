@@ -128,7 +128,11 @@ export type DashboardDto = { decks: Array<DeckSummaryDto>, streakDays: number, s
 /**
  * Earliest future due date over all decks; lets "nothing due today" say when the next review is.
  */
-nextDueAt: string | null, generatedAt: string, };
+nextDueAt: string | null, generatedAt: string, 
+/**
+ * Since 1.11: today is a study-free day (settings `freeWeekdays` / `freeDates`).
+ */
+freeToday: boolean, };
 
 export type BundledDeckDto = { guid: string, name: string, description: string, targetLanguage: TargetLanguage, deckType: DeckType, noteCount: number, cardCount: number, level: string, };
 
@@ -876,7 +880,16 @@ dayCutoffHour: number,
 /**
  * Preset given to new decks.
  */
-defaultPresetId: string, notifications: PermissionState, reminderTime: string | null, ttsEnabled: boolean, 
+defaultPresetId: string, notifications: PermissionState, reminderTime: string | null, 
+/**
+ * Since 1.11: study-free weekdays repeating every week, ISO 1 = Monday … 7 = Sunday,
+ * ascending.
+ */
+freeWeekdays: Array<number>, 
+/**
+ * Since 1.11: single study-free dates (`YYYY-MM-DD`), ascending.
+ */
+freeDates: Array<string>, ttsEnabled: boolean, 
 /**
  * Speech rate, 0.5–1.5.
  */
@@ -886,7 +899,15 @@ export type SettingsPatch = { uiLanguage?: UiLanguage, defaultTargetLanguage?: T
 /**
  * `null` turns the reminder off.
  */
-reminderTime?: string | null, ttsEnabled?: boolean, ttsRate?: number, telemetryOptIn?: boolean, aiConsent?: ConsentState, aiProvider?: string, 
+reminderTime?: string | null, 
+/**
+ * The whole list of study-free weekdays (1–7); `[]` clears it.
+ */
+freeWeekdays?: Array<number>, 
+/**
+ * The whole list of single study-free dates (`YYYY-MM-DD`); `[]` clears it.
+ */
+freeDates?: Array<string>, ttsEnabled?: boolean, ttsRate?: number, telemetryOptIn?: boolean, aiConsent?: ConsentState, aiProvider?: string, 
 /**
  * `null` clears the model.
  */
@@ -929,6 +950,8 @@ export type BackupDto = { id: string, createdAt: string,
 sizeBytes: number, schemaVersion: number, cardCount: number, location: BackupLocation, kind: BackupKind, };
 
 export type BackupInput = { operationId: string, };
+
+export type DeleteBackupInput = { operationId: string, backupId: string, };
 
 export type ShareTarget = { "kind": "backup", backupId: string, } | { "kind": "export", jobId: string, };
 

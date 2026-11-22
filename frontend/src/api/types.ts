@@ -190,6 +190,7 @@ import type {
   BackupKind,
   BackupDto,
   BackupInput,
+  DeleteBackupInput,
   ShareTarget,
   ShareFileInput,
   ShareResultDto,
@@ -368,6 +369,7 @@ export type {
   BackupKind,
   BackupDto,
   BackupInput,
+  DeleteBackupInput,
   ShareTarget,
   ShareFileInput,
   ShareResultDto,
@@ -390,7 +392,7 @@ export type {
   ExportLossDto,
 }
 
-export const API_VERSION = '1.10'
+export const API_VERSION = '1.11'
 
 /** Equal sets of members: guards runtime lists against the Rust enums. */
 type SameMembers<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false

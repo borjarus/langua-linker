@@ -10,6 +10,7 @@
 use crate::TimestampMs;
 use crate::calendar::{StudyCalendar, StudyDay};
 use crate::card::{Card, CardState, QueueState};
+use crate::free_days::FreeDays;
 use crate::fsrs::{MemoryState, NextInterval, Phase, ReviewInput, SchedulerConfig, fuzz_uniform};
 use crate::review::{Rating, ReviewKind};
 
@@ -145,6 +146,31 @@ pub fn schedule(
         interval: output.interval,
         lapse,
     }
+}
+
+/// Moves a review interval (whole days) off a study-free day ([`FreeDays::shift_interval`]).
+/// Learning steps in minutes stay. Pure, like [`schedule`], so a preview and its rating agree.
+pub fn avoid_free_days(
+    mut review: ScheduledReview,
+    free: &FreeDays,
+    maximum_days: u32,
+    moment: &StudyMoment,
+) -> ScheduledReview {
+    let NextInterval::Days(days) = review.interval else {
+        return review;
+    };
+    let shifted = free.shift_interval(moment.today, days, maximum_days);
+    if shifted == days {
+        return review;
+    }
+    review.interval = NextInterval::Days(shifted);
+    review.card.due_at = Some(
+        moment
+            .calendar
+            .day_start(moment.today.plus(i64::from(shifted))),
+    );
+    review.card.fsrs.scheduled_days = i64::from(shifted);
+    review
 }
 
 /// The queue a card belongs in when nothing hides it (unsuspend, unbury).
@@ -286,6 +312,47 @@ mod tests {
         let good = rate(&card, Rating::Good, NOON);
         assert!(!good.lapse);
         assert_eq!(good.card.lapses, 0);
+    }
+
+    #[test]
+    fn a_review_due_on_a_free_day_moves_to_a_study_day() {
+        let options = DeckConfigOptions {
+            fuzz: false,
+            ..DeckConfigOptions::default()
+        };
+        let cfg = SchedulerConfig::from_options(&options).unwrap();
+        let mut card = new_card();
+        card.state = CardState::Review;
+        card.queue = QueueState::Review;
+        card.due_at = Some(NOON);
+        card.fsrs = CardFsrsState {
+            stability: Some(20.0),
+            difficulty: Some(5.0),
+            last_review_at: Some(TimestampMs(NOON.0 - 20 * DAY)),
+            scheduled_days: 20,
+            elapsed_days: 0,
+        };
+        let at = moment(NOON);
+        let plain = schedule(&card, &cfg, "hash", Rating::Good, &at);
+        let NextInterval::Days(days) = plain.interval else {
+            panic!("a review card gets whole days")
+        };
+        let target = at.today.plus(i64::from(days));
+        let free = FreeDays::new([FreeDays::weekday(target)], []);
+        let moved = avoid_free_days(plain.clone(), &free, 36_500, &at);
+        let NextInterval::Days(shifted) = moved.interval else {
+            panic!("still whole days")
+        };
+        assert_eq!(shifted, days - 1);
+        assert_eq!(moved.card.fsrs.scheduled_days, i64::from(days - 1));
+        assert_eq!(
+            moved.card.due_at,
+            Some(at.calendar.day_start(at.today.plus(i64::from(days - 1))))
+        );
+        assert_eq!(
+            avoid_free_days(plain.clone(), &FreeDays::default(), 36_500, &at),
+            plain
+        );
     }
 
     #[test]

@@ -11,8 +11,9 @@
 //! the user agreed to and the time; withdrawing AI consent blocks queued requests in the same
 //! transaction, before any of them can reach the network.
 
-use langualinker_domain::calendar::StudyCalendar;
+use langualinker_domain::calendar::{StudyCalendar, StudyDay};
 use langualinker_domain::deck::TargetLanguage;
+use langualinker_domain::free_days::FreeDays;
 use langualinker_domain::{DeckConfigId, TimestampMs, ValidationError};
 use serde::{Deserialize, Serialize};
 
@@ -32,6 +33,8 @@ pub const MAX_DAILY_GOAL: u32 = 500;
 pub const MIN_BACKUP_RETENTION: u32 = 1;
 pub const MAX_BACKUP_RETENTION: u32 = 50;
 pub const DEFAULT_BACKUP_RETENTION: u32 = 3;
+/// Single study-free dates kept at most (a year of them, and then some).
+pub const MAX_FREE_DATES: usize = 400;
 const MAX_MODEL_CHARS: usize = 100;
 const MAX_ENDPOINT_CHARS: usize = 300;
 
@@ -174,6 +177,10 @@ pub struct SettingsDoc {
     pub default_preset_id: Option<i64>,
     /// `HH:MM`, local time.
     pub reminder_time: Option<String>,
+    /// Study-free weekdays repeating every week, ISO 1 = Monday … 7 = Sunday, ascending.
+    pub free_weekdays: Vec<u8>,
+    /// Single study-free dates, `YYYY-MM-DD` in the collection calendar, ascending.
+    pub free_dates: Vec<String>,
     pub tts_enabled: bool,
     pub tts_rate: f64,
     pub telemetry_opt_in: bool,
@@ -192,6 +199,8 @@ impl Default for SettingsDoc {
             theme: Theme::System,
             default_preset_id: None,
             reminder_time: None,
+            free_weekdays: Vec::new(),
+            free_dates: Vec::new(),
             tts_enabled: true,
             tts_rate: 1.0,
             telemetry_opt_in: false,
@@ -228,6 +237,8 @@ pub struct SettingsChange {
     pub day_cutoff_hour: Option<u32>,
     pub default_preset_id: Option<DeckConfigId>,
     pub reminder_time: Option<Option<String>>,
+    pub free_weekdays: Option<Vec<u8>>,
+    pub free_dates: Option<Vec<String>>,
     pub tts_enabled: Option<bool>,
     pub tts_rate: Option<f64>,
     pub telemetry_opt_in: Option<bool>,
@@ -251,6 +262,25 @@ pub struct SettingsEffects {
     pub blocked_requests: u64,
     /// Zone or cutoff changed: today's counts change.
     pub calendar_changed: bool,
+    /// Study-free days changed: the dashboard and the streak read them.
+    pub free_days_changed: bool,
+}
+
+impl SettingsDoc {
+    /// The study-free days of the document (malformed stored dates are skipped).
+    pub fn free_days(&self) -> FreeDays {
+        FreeDays::new(
+            self.free_weekdays.iter().copied(),
+            self.free_dates
+                .iter()
+                .filter_map(|date| StudyDay::from_iso_date(date)),
+        )
+    }
+}
+
+/// The collection's study-free days.
+pub fn free_days(tx: &mut dyn Repositories) -> AppResult<FreeDays> {
+    Ok(load_doc(tx)?.free_days())
 }
 
 pub fn load_doc(tx: &mut dyn Repositories) -> AppResult<SettingsDoc> {
@@ -432,6 +462,34 @@ pub fn update(
         }
         doc.reminder_time = reminder;
     }
+    if let Some(weekdays) = change.free_weekdays {
+        if weekdays.iter().any(|day| !(1..=7).contains(day)) {
+            return Err(invalid("freeWeekdays", "range"));
+        }
+        let mut weekdays = weekdays;
+        weekdays.sort_unstable();
+        weekdays.dedup();
+        if weekdays != doc.free_weekdays {
+            doc.free_weekdays = weekdays;
+            effects.free_days_changed = true;
+        }
+    }
+    if let Some(dates) = change.free_dates {
+        let mut days = dates
+            .iter()
+            .map(|date| StudyDay::from_iso_date(date).ok_or_else(|| invalid("freeDates", "format")))
+            .collect::<AppResult<Vec<_>>>()?;
+        days.sort_unstable();
+        days.dedup();
+        if days.len() > MAX_FREE_DATES {
+            return Err(invalid("freeDates", "tooMany"));
+        }
+        let dates: Vec<String> = days.into_iter().map(StudyDay::iso_date).collect();
+        if dates != doc.free_dates {
+            doc.free_dates = dates;
+            effects.free_days_changed = true;
+        }
+    }
     if let Some(enabled) = change.tts_enabled {
         doc.tts_enabled = enabled;
     }
@@ -582,6 +640,18 @@ mod tests {
         assert_eq!(doc.version, 4);
         assert_eq!(doc.backup.retention, DEFAULT_BACKUP_RETENTION);
         assert!(doc.tts_enabled);
+    }
+
+    #[test]
+    fn free_days_come_from_the_document() {
+        let doc: SettingsDoc =
+            serde_json::from_str(r#"{"freeWeekdays":[7],"freeDates":["2026-12-24","bad"]}"#)
+                .unwrap();
+        let free = doc.free_days();
+        assert!(free.is_free(StudyDay::from_iso_date("2026-11-22").unwrap()));
+        assert!(free.is_free(StudyDay::from_iso_date("2026-12-24").unwrap()));
+        assert!(!free.is_free(StudyDay::from_iso_date("2026-11-23").unwrap()));
+        assert!(SettingsDoc::default().free_days().is_empty());
     }
 
     #[test]

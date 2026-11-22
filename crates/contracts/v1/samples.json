@@ -1,12 +1,12 @@
 {
-  "apiVersion": "1.10",
+  "apiVersion": "1.11",
   "calls": [
     {
       "operation": "getAppInfo",
       "command": "get_app_info",
       "args": [],
       "output": {
-        "apiVersion": "1.10",
+        "apiVersion": "1.11",
         "appName": "LanguaLinker",
         "appVersion": "0.1.0",
         "mode": "demo"
@@ -55,7 +55,7 @@
       "args": [],
       "output": {
         "appVersion": "0.1.0",
-        "apiVersion": "1.10",
+        "apiVersion": "1.11",
         "schemaVersion": null,
         "fsrsVersion": "FSRS-6",
         "contentVersion": "2026.02-demo",
@@ -116,90 +116,6 @@
       "output": {
         "decks": [
           {
-            "id": "1",
-            "guid": "deck-de-words-a1",
-            "name": "Niemiecki — słówka A1",
-            "parentId": null,
-            "targetLanguage": "de",
-            "nativeLanguage": "pl",
-            "deckType": "Linguistic",
-            "capabilities": {
-              "associations": true,
-              "grammarTips": true,
-              "wordLinks": true,
-              "tts": true
-            },
-            "counts": {
-              "new": 4,
-              "learning": 1,
-              "review": 4,
-              "overdue": 4,
-              "total": 13
-            },
-            "progress": 0.38,
-            "bundled": true,
-            "contentState": "ready",
-            "version": 1,
-            "level": "A1",
-            "inStudy": true
-          },
-          {
-            "id": "5",
-            "guid": "deck-de-compounds",
-            "name": "Złożenia (Komposita)",
-            "parentId": "1",
-            "targetLanguage": "de",
-            "nativeLanguage": "pl",
-            "deckType": "Linguistic",
-            "capabilities": {
-              "associations": true,
-              "grammarTips": true,
-              "wordLinks": true,
-              "tts": true
-            },
-            "counts": {
-              "new": 1,
-              "learning": 1,
-              "review": 0,
-              "overdue": 0,
-              "total": 3
-            },
-            "progress": 0.33,
-            "bundled": true,
-            "contentState": "ready",
-            "version": 1,
-            "level": "A1-A2",
-            "inStudy": true
-          },
-          {
-            "id": "2",
-            "guid": "deck-de-sentences-a1",
-            "name": "Niemiecki — zdania A1",
-            "parentId": null,
-            "targetLanguage": "de",
-            "nativeLanguage": "pl",
-            "deckType": "Linguistic",
-            "capabilities": {
-              "associations": true,
-              "grammarTips": true,
-              "wordLinks": true,
-              "tts": true
-            },
-            "counts": {
-              "new": 1,
-              "learning": 1,
-              "review": 0,
-              "overdue": 0,
-              "total": 4
-            },
-            "progress": 0.25,
-            "bundled": true,
-            "contentState": "ready",
-            "version": 1,
-            "level": "A1",
-            "inStudy": true
-          },
-          {
             "id": "3",
             "guid": "deck-en-words-a1",
             "name": "English — words A1",
@@ -254,6 +170,90 @@
             "version": 1,
             "level": null,
             "inStudy": true
+          },
+          {
+            "id": "1",
+            "guid": "deck-de-words-a1",
+            "name": "Niemiecki — słówka A1",
+            "parentId": null,
+            "targetLanguage": "de",
+            "nativeLanguage": "pl",
+            "deckType": "Linguistic",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": true,
+              "wordLinks": true,
+              "tts": true
+            },
+            "counts": {
+              "new": 4,
+              "learning": 1,
+              "review": 4,
+              "overdue": 4,
+              "total": 13
+            },
+            "progress": 0.38,
+            "bundled": true,
+            "contentState": "ready",
+            "version": 1,
+            "level": "A1",
+            "inStudy": true
+          },
+          {
+            "id": "2",
+            "guid": "deck-de-sentences-a1",
+            "name": "Niemiecki — zdania A1",
+            "parentId": null,
+            "targetLanguage": "de",
+            "nativeLanguage": "pl",
+            "deckType": "Linguistic",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": true,
+              "wordLinks": true,
+              "tts": true
+            },
+            "counts": {
+              "new": 1,
+              "learning": 1,
+              "review": 0,
+              "overdue": 0,
+              "total": 4
+            },
+            "progress": 0.25,
+            "bundled": true,
+            "contentState": "ready",
+            "version": 1,
+            "level": "A1",
+            "inStudy": true
+          },
+          {
+            "id": "5",
+            "guid": "deck-de-compounds",
+            "name": "Złożenia (Komposita)",
+            "parentId": "1",
+            "targetLanguage": "de",
+            "nativeLanguage": "pl",
+            "deckType": "Linguistic",
+            "capabilities": {
+              "associations": true,
+              "grammarTips": true,
+              "wordLinks": true,
+              "tts": true
+            },
+            "counts": {
+              "new": 1,
+              "learning": 1,
+              "review": 0,
+              "overdue": 0,
+              "total": 3
+            },
+            "progress": 0.33,
+            "bundled": true,
+            "contentState": "ready",
+            "version": 1,
+            "level": "A1-A2",
+            "inStudy": true
           }
         ],
         "streakDays": 6,
@@ -262,7 +262,8 @@
         "dailyGoal": 20,
         "resumable": null,
         "nextDueAt": "2026-03-03T04:03:32.054Z",
-        "generatedAt": "2026-03-02T08:00:00.000Z"
+        "generatedAt": "2026-03-02T08:00:00.000Z",
+        "freeToday": false
       }
     },
     {
@@ -3377,6 +3378,8 @@
         "defaultPresetId": "preset-default",
         "notifications": "prompt",
         "reminderTime": null,
+        "freeWeekdays": [],
+        "freeDates": [],
         "ttsEnabled": true,
         "ttsRate": 1,
         "ai": {
@@ -3487,6 +3490,8 @@
         "defaultPresetId": "preset-default",
         "notifications": "prompt",
         "reminderTime": null,
+        "freeWeekdays": [],
+        "freeDates": [],
         "ttsEnabled": true,
         "ttsRate": 1,
         "ai": {
@@ -3848,6 +3853,8 @@
         "defaultPresetId": "preset-default",
         "notifications": "granted",
         "reminderTime": null,
+        "freeWeekdays": [],
+        "freeDates": [],
         "ttsEnabled": true,
         "ttsRate": 1,
         "ai": {
@@ -4629,11 +4636,93 @@
       }
     },
     {
+      "operation": "listBackups",
+      "command": "list_backups",
+      "args": [],
+      "output": [
+        {
+          "id": "backup-90055",
+          "createdAt": "2026-03-02T08:01:13.300Z",
+          "sizeBytes": 190500,
+          "schemaVersion": 1,
+          "cardCount": 45,
+          "location": "app",
+          "kind": "manual"
+        },
+        {
+          "id": "backup-3",
+          "createdAt": "2026-02-27T08:00:00.000Z",
+          "sizeBytes": 200000,
+          "schemaVersion": 1,
+          "cardCount": 30,
+          "location": "external",
+          "kind": "automatic"
+        },
+        {
+          "id": "backup-2",
+          "createdAt": "2026-02-20T08:00:00.000Z",
+          "sizeBytes": 191000,
+          "schemaVersion": 1,
+          "cardCount": 30,
+          "location": "app",
+          "kind": "manual"
+        },
+        {
+          "id": "backup-1",
+          "createdAt": "2026-02-13T08:00:00.000Z",
+          "sizeBytes": 182000,
+          "schemaVersion": 1,
+          "cardCount": 30,
+          "location": "app",
+          "kind": "automatic"
+        }
+      ]
+    },
+    {
+      "operation": "deleteBackup",
+      "command": "delete_backup",
+      "args": [
+        {
+          "operationId": "contract-37",
+          "backupId": "backup-90055"
+        }
+      ],
+      "output": [
+        {
+          "id": "backup-3",
+          "createdAt": "2026-02-27T08:00:00.000Z",
+          "sizeBytes": 200000,
+          "schemaVersion": 1,
+          "cardCount": 30,
+          "location": "external",
+          "kind": "automatic"
+        },
+        {
+          "id": "backup-2",
+          "createdAt": "2026-02-20T08:00:00.000Z",
+          "sizeBytes": 191000,
+          "schemaVersion": 1,
+          "cardCount": 30,
+          "location": "app",
+          "kind": "manual"
+        },
+        {
+          "id": "backup-1",
+          "createdAt": "2026-02-13T08:00:00.000Z",
+          "sizeBytes": 182000,
+          "schemaVersion": 1,
+          "cardCount": 30,
+          "location": "app",
+          "kind": "automatic"
+        }
+      ]
+    },
+    {
       "operation": "shareFile",
       "command": "share_file",
       "args": [
         {
-          "operationId": "contract-37",
+          "operationId": "contract-38",
           "target": {
             "kind": "backup",
             "backupId": "backup-3"
@@ -4691,7 +4780,7 @@
         },
         "compatible": true,
         "issues": [],
-        "previewToken": "restore-44-3"
+        "previewToken": "restore-45-3"
       }
     },
     {
@@ -4699,8 +4788,8 @@
       "command": "restore_backup",
       "args": [
         {
-          "operationId": "contract-38",
-          "previewToken": "restore-44-3"
+          "operationId": "contract-39",
+          "previewToken": "restore-45-3"
         }
       ],
       "output": {
@@ -4760,7 +4849,7 @@
         },
         "confirmationPhrase": "RESETUJ POSTĘP",
         "latestBackupAt": "2026-03-02T08:02:13.300Z",
-        "previewToken": "reset-46-progress"
+        "previewToken": "reset-47-progress"
       }
     },
     {
@@ -4768,8 +4857,8 @@
       "command": "reset_collection",
       "args": [
         {
-          "operationId": "contract-39",
-          "previewToken": "reset-46-progress",
+          "operationId": "contract-40",
+          "previewToken": "reset-47-progress",
           "safetyBackupId": null,
           "confirmationPhrase": "RESETUJ POSTĘP"
         }
